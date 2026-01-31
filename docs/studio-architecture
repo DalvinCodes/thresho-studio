@@ -1,0 +1,547 @@
+# Building Thresho Studio: A comprehensive architecture for multi-provider AI creative platforms
+
+**Thresho Studio requires a layered architecture combining provider abstraction, prompt versioning, secure local persistence, and reactive state management** to handle the complexity of orchestrating multiple AI backends for creative workflows. The key architectural decisions center on three pillars: a unified adapter layer that normalizes heterogeneous provider APIs, a SQLite-based local persistence system with OS-level credential encryption, and a feature-based React architecture using Zustand for state with XState for workflow orchestration.
+
+This guide synthesizes current best practices for production deployment as of early 2025, covering the rapidly evolving landscape where **Flux Pro and Runway Gen-4** have emerged as the most API-friendly options while Midjourney remains Discord-only.
+
+---
+
+## Multi-provider abstraction demands adapter pattern with capability detection
+
+The core challenge in building a provider-agnostic creative studio is that AI services vary dramatically in their access patterns, capabilities, and response formats. OpenAI and Anthropic offer clean REST APIs; Midjourney operates exclusively through Discord; video providers like Runway use async task-based patterns with polling.
+
+**Recommended architecture: Adapter + Strategy + Factory**
+
+```typescript
+// Unified interface that all providers implement
+interface AIProvider {
+  readonly name: string;
+  readonly capabilities: ProviderCapabilities;
+  generateText?(request: TextRequest): Promise<TextResponse>;
+  generateImage?(request: ImageRequest): Promise<ImageResponse>;
+  generateVideo?(request: VideoRequest): Promise<VideoResponse>;
+}
+
+interface ProviderCapabilities {
+  text: boolean;
+  image: boolean;
+  video: boolean;
+  streaming: boolean;
+  maxResolution?: string;
+  asyncTaskBased?: boolean;
+}
+```
+
+Each provider gets an adapter that normalizes requests and responses to this unified interface. The **strategy pattern** handles provider selection based on capability requirements, cost optimization, or explicit user preference. A **factory** instantiates adapters from configuration.
+
+**Provider API status as of early 2025:**
+
+| Provider | Access Method | API Maturity | Best For |
+|----------|--------------|--------------|----------|
+| OpenAI (DALL-E 3, GPT-4) | REST API | Production-ready | Text, images, function calling |
+| Anthropic Claude | REST API | Production-ready | Long-context text, tool use |
+| **Flux Pro (BFL)** | REST API (docs.bfl.ml) | Production-ready | High-quality images, excellent text rendering |
+| Midjourney | Discord bot only | No official API | Artistic/stylized imagery (manual use) |
+| **Runway Gen-4** | REST + SDK | Production-ready | Professional video, best motion control |
+| Kling AI | REST API | Production-ready | Budget-friendly video, up to 2 minutes |
+| Pika Labs | Via fal.ai | Partner access | Creative effects, fast prototyping |
+| Google Veo 3 | Vertex AI | Enterprise | Native audio, photorealism |
+| Kimi K2.5 | OpenAI-compatible REST | Production-ready | 256K context, agent orchestration |
+
+**Critical insight:** Midjourney has no official public API and likely won't until late 2025 at earliest. Third-party services (ImagineAPI, PiAPI) automate Discord interactions but violate ToS and risk account bans. For production systems, **use Flux Pro as the primary high-quality image provider** and DALL-E 3 for interactive refinement.
+
+### Handling async video generation with task queues
+
+Video providers require a different pattern than synchronous image APIs. Runway, Kling, and Luma all use job submission followed by polling or webhooks:
+
+```typescript
+abstract class AsyncTaskAdapter implements AIProvider {
+  async generateVideo(request: VideoRequest): Promise<VideoResponse> {
+    const taskId = await this.submitTask(request);
+    return this.pollUntilComplete(taskId);
+  }
+  
+  private async pollUntilComplete(taskId: string, timeout = 600000): Promise<VideoResponse> {
+    const startTime = Date.now();
+    while (Date.now() - startTime < timeout) {
+      const status = await this.getTaskStatus(taskId);
+      if (status.state === 'completed') return this.getTaskResult(taskId);
+      if (status.state === 'failed') throw new VideoGenerationError(status.error);
+      await this.sleep(status.estimatedWaitMs ?? 5000);
+    }
+    throw new TimeoutError('Video generation timed out');
+  }
+}
+```
+
+For production, **prefer webhooks over polling** when available—they reduce API calls by 90%+ and provide faster notification of completion.
+
+---
+
+## Prompt template system requires versioning, lineage tracking, and brand injection
+
+A creative studio's prompt system must support iteration, rollback, A/B testing, and full traceability from generated assets back to exact prompts. The recommended architecture separates templates, versions, and deployment labels.
+
+**Database schema pattern:**
+
+```sql
+-- Immutable prompt versions
+CREATE TABLE prompt_versions (
+  id UUID PRIMARY KEY,
+  template_id UUID REFERENCES prompt_templates(id),
+  version_number VARCHAR(20) NOT NULL,  -- Semantic: "1.2.3"
+  content_hash VARCHAR(64) NOT NULL,    -- SHA-256 for reproducibility
+  content JSONB NOT NULL,               -- {system_prompt, user_prompt, variables[]}
+  model_config JSONB,                   -- {model, temperature, provider}
+  created_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE(template_id, version_number)
+);
+
+-- Mutable deployment labels
+CREATE TABLE prompt_labels (
+  template_id UUID REFERENCES prompt_templates(id),
+  label VARCHAR(50) NOT NULL,           -- 'production', 'staging', 'experiment-a'
+  version_id UUID REFERENCES prompt_versions(id),
+  UNIQUE(template_id, label)
+);
+```
+
+**Key principle:** Versions are immutable once created. Hot-swapping happens by moving labels between versions, enabling instant rollback without code deployment.
+
+### Asset-to-prompt lineage tracking
+
+Every generated asset must link back to its exact creation context for reproducibility and audit:
+
+```sql
+CREATE TABLE generation_records (
+  id UUID PRIMARY KEY,
+  asset_id UUID NOT NULL,
+  prompt_version_id UUID REFERENCES prompt_versions(id),
+  rendered_prompt TEXT NOT NULL,        -- Exact prompt sent after variable substitution
+  variables_used JSONB,                 -- All interpolated values
+  provider VARCHAR(50),
+  model_name VARCHAR(100),
+  generation_params JSONB,              -- {seed, temperature, guidance_scale}
+  request_id VARCHAR(255),              -- Provider's correlation ID
+  created_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+Store the **rendered prompt**, not just the template reference—this ensures perfect reproducibility even if the template is later modified.
+
+### Brand token injection architecture
+
+Professional brand consistency requires systematic injection of brand attributes into prompts. Define a brand context schema:
+
+```json
+{
+  "brand_id": "uuid",
+  "tokens": {
+    "colors": {
+      "primary": "#FF5733",
+      "palette_description": "warm, energetic, modern"
+    },
+    "typography": {
+      "primary_font": "Helvetica Neue",
+      "style_descriptor": "clean sans-serif with elegant serif accents"
+    },
+    "visual_style": {
+      "aesthetic": "minimalist modern",
+      "photography_style": "high-key, natural lighting, lifestyle"
+    },
+    "voice": {
+      "tone": ["professional", "approachable"],
+      "forbidden_terms": ["cheap", "basic"]
+    }
+  }
+}
+```
+
+Use **Jinja2 templating** for composition with inheritance:
+
+```jinja2
+{# brand_base.j2 #}
+{% block brand_context %}
+You are creating assets for {{ brand.name }}.
+Visual style: {{ brand.visual_style.aesthetic }}
+Color palette: {{ brand.colors.palette_description }}
+{% endblock %}
+
+{# campaign_template.j2 - extends brand_base #}
+{% extends "brand_base.j2" %}
+{% block campaign_context %}
+Campaign: {{ campaign.name }}
+Target audience: {{ campaign.audience }}
+{% endblock %}
+```
+
+---
+
+## SQLite persistence with encrypted credential storage
+
+For a React application supporting both browser and Electron deployment, SQLite provides a robust local-first database with different implementations per environment.
+
+### Browser deployment: wa-sqlite with OPFS
+
+**wa-sqlite** with the `IDBBatchAtomicVFS` or OPFS (Origin Private File System) provides the best browser SQLite performance:
+
+```typescript
+// Browser SQLite via wa-sqlite
+import { sqlite3Worker1Promiser } from '@sqlite.org/sqlite-wasm';
+
+const promiser = await new Promise((resolve) => {
+  const _promiser = sqlite3Worker1Promiser({
+    onready: () => resolve(_promiser)
+  });
+});
+
+await promiser('open', {
+  filename: 'file:thresho.sqlite3?vfs=opfs'
+});
+```
+
+OPFS requires cross-origin isolation headers:
+```
+Cross-Origin-Opener-Policy: same-origin
+Cross-Origin-Embedder-Policy: require-corp
+```
+
+### Electron deployment: better-sqlite3 with safeStorage
+
+For Electron, run **better-sqlite3** in the main process only (security requirement), communicating via IPC:
+
+```typescript
+// main.ts
+import { safeStorage } from 'electron';
+import Database from 'better-sqlite3';
+import Store from 'electron-store';
+
+const db = new Database('thresho.db');
+db.pragma('journal_mode = WAL');
+
+// Encrypted credential storage using OS keychain
+const credentialStore = new Store({ name: 'credentials' });
+
+export const credentialManager = {
+  setApiKey(provider: string, apiKey: string) {
+    const encrypted = safeStorage.encryptString(apiKey);
+    credentialStore.set(provider, encrypted.toString('latin1'));
+  },
+  
+  getApiKey(provider: string): string | null {
+    const encrypted = credentialStore.get(provider);
+    if (!encrypted) return null;
+    return safeStorage.decryptString(Buffer.from(encrypted, 'latin1'));
+  }
+};
+```
+
+**safeStorage** uses platform-native encryption: Keychain on macOS, DPAPI on Windows, libsecret on Linux. This is significantly more secure than application-level encryption.
+
+### Multi-provider credential schema
+
+```sql
+CREATE TABLE provider_credentials (
+  id TEXT PRIMARY KEY,
+  provider_id TEXT NOT NULL,
+  workspace_id TEXT,
+  credential_key TEXT NOT NULL,        -- Reference to safeStorage lookup
+  key_type TEXT CHECK(key_type IN ('api_key', 'oauth_token')),
+  last_rotated DATETIME,
+  expires_at DATETIME,
+  is_active INTEGER DEFAULT 1
+);
+
+CREATE TABLE api_usage (
+  id TEXT PRIMARY KEY,
+  provider_id TEXT NOT NULL,
+  request_timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+  input_tokens INTEGER,
+  output_tokens INTEGER,
+  cost_usd REAL,
+  status_code INTEGER
+);
+```
+
+---
+
+## Image generation: Flux Pro leads for API-first workflows
+
+The image generation landscape has consolidated around a few production-ready options, with **Flux Pro** emerging as the best choice for API-driven creative studios.
+
+### Provider comparison for production use
+
+| Capability | Flux Pro | DALL-E 3 | Midjourney v7 | Imagen 3 |
+|------------|----------|----------|---------------|----------|
+| API access | ✅ Direct REST | ✅ OpenAI API | ❌ Discord only | ✅ Vertex AI |
+| Text in images | Excellent | Good | Good | Excellent |
+| Photorealism | Excellent | Excellent | Good | Excellent |
+| Artistic style | Good | Moderate | Excellent | Moderate |
+| Resolution | Up to 4MP | 1792×1024 | 2048×2048 | 2K |
+| Price per image | ~$0.04 | $0.04-0.12 | Subscription | Varies |
+
+**Flux Pro** excels at legible text rendering in images—a common pain point with other models. Access via the official BFL API or through Replicate/fal.ai for simplified billing.
+
+### Style consistency techniques
+
+For brand-consistent imagery across generations:
+
+- **Midjourney** (if using manually): `--sref [url]` for style reference, `--cref [url]` for character reference
+- **Flux Pro**: Use Flux Redux for style variations, or train custom LoRA for brand-specific models
+- **DALL-E 3**: Maintain conversation context in ChatGPT for iterative refinement; describe style in detail
+
+**Best practice workflow:**
+1. Generate initial concept with fast model (Flux Schnell at $0.003/image)
+2. Select best candidates and regenerate at production quality
+3. Lock seed values for reproducible variations
+4. Apply consistent negative prompts across generations
+
+---
+
+## Video generation enters production viability in 2025
+
+AI video generation crossed a production threshold in 2024-2025, with multiple providers now offering API access, 4K output, and clips up to 2 minutes.
+
+### Provider capabilities matrix
+
+| Provider | Max Duration | Resolution | API Access | Price/10s |
+|----------|-------------|------------|------------|-----------|
+| **Runway Gen-4** | 10s (extendable to 40s) | 1080p, 4K upscale | SDK + REST | ~$1.20 |
+| **Kling 2.6** | 5-10s (up to 2min) | 1080p | REST + third-party | $0.25-0.80 |
+| Pika 2.2 | 5-10s | 1080p | Via fal.ai | ~$0.50 |
+| Luma Ray3 | 5-10s | Up to 4K HDR | REST API | ~$0.35 |
+| Google Veo 3.1 | 8s | Up to 4K | Vertex AI | ~$0.30/s |
+
+**Runway Gen-4** offers the best creative control with keyframes, motion brush, and professional camera guidance. **Kling** provides the best value for longer content. **Veo 3** uniquely generates synchronized audio natively.
+
+### Integration pattern for async video jobs
+
+```typescript
+function useVideoGeneration() {
+  const [jobId, setJobId] = useState<string | null>(null);
+  
+  const { data: status } = useQuery({
+    queryKey: ['video-status', jobId],
+    queryFn: () => fetch(`/api/video/status/${jobId}`).then(r => r.json()),
+    enabled: !!jobId,
+    refetchInterval: (data) => {
+      if (data?.status === 'completed' || data?.status === 'failed') return false;
+      return 5000; // Poll every 5 seconds
+    }
+  });
+  
+  const startGeneration = async (params: VideoParams) => {
+    const { id } = await submitVideoJob(params);
+    setJobId(id);
+  };
+  
+  return { status, startGeneration, isGenerating: !!jobId && status?.status === 'processing' };
+}
+```
+
+**Critical insight:** Image-to-video consistently produces better results than text-to-video across all providers. Generate your initial frame with Midjourney or Flux, then animate with Runway or Kling.
+
+---
+
+## React architecture: Zustand core with XState for workflows
+
+For a complex creative studio with multi-step generation workflows, layers, undo/redo, and real-time streaming, a **hybrid state management approach** works best.
+
+### State management strategy
+
+- **Zustand**: Primary store for UI state, project data, asset collections
+- **Jotai**: Fine-grained atoms for frequently-updating values (canvas position, selection state)
+- **XState**: State machines for complex workflows (generation pipeline, upload flows)
+- **TanStack Query**: Server state, API caching, polling
+
+```typescript
+// Zustand store with immer for immutable updates
+const useStudioStore = create<StudioStore>()(
+  devtools(
+    subscribeWithSelector(
+      immer((set, get) => ({
+        project: null,
+        layers: new Map(),
+        selectedLayerIds: [],
+        
+        // Undo/redo via history stack
+        history: { past: [], present: null, future: [] },
+        
+        selectLayer: (id) => set((state) => {
+          state.selectedLayerIds = [id];
+        }),
+        
+        undo: () => set((state) => {
+          if (state.history.past.length === 0) return;
+          state.history.future.unshift(state.history.present);
+          state.history.present = state.history.past.pop();
+        })
+      }))
+    )
+  )
+);
+```
+
+### XState for generation workflow orchestration
+
+Model the generation pipeline as an explicit state machine:
+
+```typescript
+const generationMachine = createMachine({
+  id: 'generation',
+  initial: 'idle',
+  context: { prompt: '', result: null, progress: 0 },
+  states: {
+    idle: {
+      on: { START: 'validating' }
+    },
+    validating: {
+      invoke: {
+        src: 'validatePrompt',
+        onDone: 'generating',
+        onError: 'error'
+      }
+    },
+    generating: {
+      on: {
+        PROGRESS: { actions: 'updateProgress' },
+        CANCEL: 'cancelling',
+        COMPLETE: { target: 'reviewing', actions: 'setResult' }
+      }
+    },
+    reviewing: {
+      on: {
+        ACCEPT: { target: 'idle', actions: 'applyToCanvas' },
+        REGENERATE: 'generating',
+        DISCARD: 'idle'
+      }
+    },
+    error: {
+      on: { RETRY: 'generating', DISMISS: 'idle' }
+    }
+  }
+});
+```
+
+### Streaming LLM responses with SSE
+
+```typescript
+function useStreamingGeneration() {
+  const [response, setResponse] = useState('');
+  const abortRef = useRef<AbortController | null>(null);
+  
+  const startGeneration = async (prompt: string) => {
+    abortRef.current = new AbortController();
+    setResponse('');
+    
+    const res = await fetch('/api/generate', {
+      method: 'POST',
+      body: JSON.stringify({ prompt }),
+      signal: abortRef.current.signal
+    });
+    
+    const reader = res.body!.getReader();
+    const decoder = new TextDecoder();
+    
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      
+      const chunk = decoder.decode(value);
+      // Parse SSE format: "data: {...}\n\n"
+      const lines = chunk.split('\n').filter(l => l.startsWith('data: '));
+      for (const line of lines) {
+        const data = JSON.parse(line.slice(6));
+        setResponse(prev => prev + data.content);
+      }
+    }
+  };
+  
+  const cancel = () => abortRef.current?.abort();
+  
+  return { response, startGeneration, cancel };
+}
+```
+
+### Virtual scrolling for asset galleries
+
+Use **TanStack Virtual** for galleries with thousands of assets:
+
+```typescript
+function AssetGallery({ assets }: { assets: Asset[] }) {
+  const parentRef = useRef<HTMLDivElement>(null);
+  
+  const virtualizer = useVirtualizer({
+    count: Math.ceil(assets.length / 4), // 4 columns
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 200,
+    overscan: 5
+  });
+  
+  return (
+    <div ref={parentRef} className="h-full overflow-auto">
+      <div style={{ height: virtualizer.getTotalSize() }} className="relative">
+        {virtualizer.getVirtualItems().map((row) => (
+          <div key={row.key} className="absolute grid grid-cols-4 gap-2"
+               style={{ top: row.start, height: row.size }}>
+            {/* Render 4 assets per row */}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+```
+
+---
+
+## Feature-based project structure
+
+Organize the codebase by feature domain rather than technical layer:
+
+```
+src/
+├── features/
+│   ├── canvas/
+│   │   ├── components/
+│   │   ├── hooks/
+│   │   └── store/
+│   ├── generation/
+│   │   ├── components/
+│   │   ├── hooks/
+│   │   └── machines/        # XState machines
+│   ├── gallery/
+│   ├── providers/           # AI provider adapters
+│   │   ├── adapters/
+│   │   │   ├── openai.ts
+│   │   │   ├── flux.ts
+│   │   │   └── runway.ts
+│   │   └── registry.ts
+│   └── prompts/
+│       ├── components/
+│       └── templates/
+├── shared/
+│   ├── components/
+│   └── utils/
+└── app/
+```
+
+---
+
+## Conclusion: Key architectural decisions
+
+Building Thresho Studio requires navigating a fragmented provider landscape while maintaining a clean, extensible architecture. The critical decisions:
+
+1. **Provider abstraction**: Build adapter interfaces now for OpenAI, Flux Pro, Anthropic, and Runway—these have mature APIs. Design the abstraction to accommodate Midjourney when an official API eventually ships.
+
+2. **Prompt system**: Invest heavily in versioned, traceable prompt management. The ability to A/B test prompts and trace assets to exact generation contexts becomes invaluable as the system scales.
+
+3. **Local persistence**: Use wa-sqlite/OPFS for browser, better-sqlite3 for Electron, with Electron's safeStorage for credential encryption. Never store raw API keys.
+
+4. **Image generation**: Default to Flux Pro for API workflows; use DALL-E 3 for interactive refinement. Consider Midjourney a manual-use tool until official API access arrives.
+
+5. **Video generation**: Runway Gen-4 for quality and control; Kling for cost-effective longer content. Always start from generated images, not text-to-video.
+
+6. **React architecture**: Zustand + Jotai for state, XState for workflow machines, TanStack Query for server state and polling. Use TanStack Virtual for asset galleries handling thousands of items.
+
+The AI creative tools landscape evolves rapidly—architect for provider substitutability from day one, and you'll be well-positioned as capabilities and access patterns shift.
