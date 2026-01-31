@@ -3,7 +3,7 @@
  * Browse, search, and manage prompt templates
  */
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import type { ContentType } from '../../../core/types/common';
 import type { TemplateWithVersion } from '../../../core/types/prompt';
 import {
@@ -23,11 +23,13 @@ export function TemplateLibrary({
 }: TemplateLibraryProps) {
   const templates = useTemplates();
   const selectedTemplate = useSelectedTemplate();
-  const { selectTemplate, createTemplate, setSearchParams } = useTemplateStore();
+  const { selectTemplate, createTemplate, setSearchParams, exportTemplate, importTemplate } = useTemplateStore();
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<ContentType | ''>('');
+  const [importError, setImportError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
@@ -48,18 +50,73 @@ export function TemplateLibrary({
     onEditTemplate?.(template.template.id);
   };
 
+  const handleExport = async (template: TemplateWithVersion) => {
+    try {
+      const json = await exportTemplate(template.template.id);
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${template.template.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_template.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Failed to export template:', error);
+      alert('Failed to export template');
+    }
+  };
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setImportError(null);
+    try {
+      const text = await file.text();
+      await importTemplate(text);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    } catch (error) {
+      console.error('Failed to import template:', error);
+      setImportError('Failed to import template. Please check the file format.');
+    }
+  };
+
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
       <div className="p-4 border-b border-border">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-text-primary">Templates</h2>
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="px-3 py-1.5 bg-primary text-white text-sm rounded-lg hover:bg-primary/90 transition-colors"
-          >
-            + New Template
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={handleImportClick}
+              className="px-3 py-1.5 border border-border text-text-primary text-sm rounded-lg hover:bg-surface-hover transition-colors"
+            >
+              Import
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".json"
+              onChange={handleFileSelect}
+              className="hidden"
+            />
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="px-3 py-1.5 bg-primary text-white text-sm rounded-lg hover:bg-primary/90 transition-colors"
+            >
+              + New Template
+            </button>
+          </div>
         </div>
 
         {/* Search and filters */}
@@ -82,6 +139,13 @@ export function TemplateLibrary({
             <option value="video">Video</option>
           </select>
         </div>
+
+        {/* Import error message */}
+        {importError && (
+          <div className="mt-3 p-2 bg-red-500/10 border border-red-500/30 rounded-lg text-sm text-red-400">
+            {importError}
+          </div>
+        )}
       </div>
 
       {/* Template list */}
@@ -105,6 +169,7 @@ export function TemplateLibrary({
                 isSelected={selectedTemplate?.id === item.template.id}
                 onSelect={() => handleSelect(item)}
                 onEdit={() => handleEdit(item)}
+                onExport={() => handleExport(item)}
               />
             ))}
           </div>
@@ -133,7 +198,15 @@ interface TemplateCardProps {
   onEdit: () => void;
 }
 
-function TemplateCard({ item, isSelected, onSelect, onEdit }: TemplateCardProps) {
+interface TemplateCardProps {
+  item: TemplateWithVersion;
+  isSelected: boolean;
+  onSelect: () => void;
+  onEdit: () => void;
+  onExport: () => void;
+}
+
+function TemplateCard({ item, isSelected, onSelect, onEdit, onExport }: TemplateCardProps) {
   const { template, currentVersion, labels, versionCount } = item;
 
   const typeIcons = {
@@ -180,15 +253,27 @@ function TemplateCard({ item, isSelected, onSelect, onEdit }: TemplateCardProps)
             </div>
           </div>
         </div>
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onEdit();
-          }}
-          className="px-2 py-1 text-xs text-primary hover:bg-primary/10 rounded transition-colors"
-        >
-          Edit
-        </button>
+        <div className="flex gap-1">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onExport();
+            }}
+            className="px-2 py-1 text-xs text-text-secondary hover:text-primary hover:bg-primary/10 rounded transition-colors"
+            title="Export template"
+          >
+            Export
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit();
+            }}
+            className="px-2 py-1 text-xs text-primary hover:bg-primary/10 rounded transition-colors"
+          >
+            Edit
+          </button>
+        </div>
       </div>
 
       {/* Tags */}
