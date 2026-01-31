@@ -15,6 +15,7 @@ import {
 } from '../store';
 import { renderPrompt, extractVariables, validateVariables, generateSampleValues } from '../services/templateService';
 import { MonacoEditor } from '../../../components/MonacoEditor';
+import { VersionDiff } from './VersionDiff';
 
 interface TemplateEditorProps {
   templateId: UUID;
@@ -47,6 +48,7 @@ export function TemplateEditor({ templateId, onClose }: TemplateEditorProps) {
   const [useSampleData, setUseSampleData] = useState(true);
   const [showPublishModal, setShowPublishModal] = useState(false);
   const [changeLog, setChangeLog] = useState('');
+  const [compareVersions, setCompareVersions] = useState<{ old: PromptVersion; new: PromptVersion } | null>(null);
 
   // Initialize editor when template changes
   useEffect(() => {
@@ -146,6 +148,17 @@ export function TemplateEditor({ templateId, onClose }: TemplateEditorProps) {
       <div className="h-full flex items-center justify-center">
         <p className="text-text-secondary">Loading template...</p>
       </div>
+    );
+  }
+
+  // Show diff view when comparing versions
+  if (compareVersions) {
+    return (
+      <VersionDiff
+        oldVersion={compareVersions.old}
+        newVersion={compareVersions.new}
+        onClose={() => setCompareVersions(null)}
+      />
     );
   }
 
@@ -253,6 +266,7 @@ export function TemplateEditor({ templateId, onClose }: TemplateEditorProps) {
                 setLabel(templateId, label, currentVersion.id);
               }
             }}
+            onCompareVersions={(oldVersion, newVersion) => setCompareVersions({ old: oldVersion, new: newVersion })}
           />
         )}
       </div>
@@ -641,6 +655,7 @@ interface HistoryTabProps {
   templateId: UUID;
   onSelectVersion: (templateId: string, versionId: string) => void;
   onSetLabel: (label: 'draft' | 'staging' | 'production') => void;
+  onCompareVersions: (oldVersion: PromptVersion, newVersion: PromptVersion) => void;
 }
 
 function HistoryTab({
@@ -649,9 +664,43 @@ function HistoryTab({
   templateId,
   onSelectVersion,
   onSetLabel,
+  onCompareVersions,
 }: HistoryTabProps) {
+  const [selectedForCompare, setSelectedForCompare] = useState<PromptVersion | null>(null);
+
+  const handleCompareClick = (version: PromptVersion) => {
+    if (selectedForCompare) {
+      if (selectedForCompare.id === version.id) {
+        // Deselect if clicking the same version
+        setSelectedForCompare(null);
+      } else {
+        // Compare the two versions (older first)
+        const oldVersion = selectedForCompare.createdAt < version.createdAt ? selectedForCompare : version;
+        const newVersion = selectedForCompare.createdAt < version.createdAt ? version : selectedForCompare;
+        onCompareVersions(oldVersion, newVersion);
+        setSelectedForCompare(null);
+      }
+    } else {
+      setSelectedForCompare(version);
+    }
+  };
+
   return (
     <div className="h-full p-4 overflow-y-auto">
+      {selectedForCompare && (
+        <div className="mb-4 p-3 bg-primary/10 border border-primary/30 rounded-lg">
+          <p className="text-sm text-text-primary">
+            Select another version to compare with v{selectedForCompare.version}
+          </p>
+          <button
+            onClick={() => setSelectedForCompare(null)}
+            className="text-xs text-text-secondary hover:text-text-primary mt-1"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
+
       <div className="space-y-2">
         {versions.map((version) => (
           <div
@@ -663,6 +712,7 @@ function HistoryTab({
                 ? 'border-primary bg-primary/10'
                 : 'border-border bg-surface hover:bg-surface-hover'
               }
+              ${selectedForCompare?.id === version.id ? 'ring-2 ring-primary' : ''}
             `}
           >
             <div className="flex items-center justify-between">
@@ -678,22 +728,37 @@ function HistoryTab({
                 </p>
               </div>
 
-              {version.id === currentVersionId && (
-                <div className="flex gap-1">
-                  {(['draft', 'staging', 'production'] as const).map((label) => (
-                    <button
-                      key={label}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onSetLabel(label);
-                      }}
-                      className="px-2 py-1 text-xs bg-surface-hover rounded hover:bg-primary/20 hover:text-primary transition-colors"
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              )}
+              <div className="flex gap-1">
+                {version.id === currentVersionId && (
+                  <>
+                    {(['draft', 'staging', 'production'] as const).map((label) => (
+                      <button
+                        key={label}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onSetLabel(label);
+                        }}
+                        className="px-2 py-1 text-xs bg-surface-hover rounded hover:bg-primary/20 hover:text-primary transition-colors"
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </>
+                )}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleCompareClick(version);
+                  }}
+                  className={`px-2 py-1 text-xs rounded transition-colors ${
+                    selectedForCompare?.id === version.id
+                      ? 'bg-primary text-white'
+                      : 'bg-surface-hover hover:bg-primary/20 hover:text-primary'
+                  }`}
+                >
+                  {selectedForCompare?.id === version.id ? 'Selected' : 'Compare'}
+                </button>
+              </div>
             </div>
           </div>
         ))}
