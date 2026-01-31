@@ -349,16 +349,14 @@ export function validateVariables(
 }
 
 /**
- * Preview a prompt with sample data
+ * Generate sample values for variables
  */
-export function previewPrompt(
-  version: PromptVersion,
-  brand?: BrandProfile
-): RenderedPrompt {
-  // Generate sample values for each variable
+export function generateSampleValues(
+  variables: PromptVariable[]
+): Record<string, string | number | boolean> {
   const sampleValues: Record<string, string | number | boolean> = {};
 
-  for (const variable of version.variables) {
+  for (const variable of variables) {
     if (variable.defaultValue !== undefined) {
       sampleValues[variable.name] = variable.defaultValue;
     } else {
@@ -382,6 +380,17 @@ export function previewPrompt(
     }
   }
 
+  return sampleValues;
+}
+
+/**
+ * Preview a prompt with sample data
+ */
+export function previewPrompt(
+  version: PromptVersion,
+  brand?: BrandProfile
+): RenderedPrompt {
+  const sampleValues = generateSampleValues(version.variables);
   return renderPrompt(version, sampleValues, brand!);
 }
 

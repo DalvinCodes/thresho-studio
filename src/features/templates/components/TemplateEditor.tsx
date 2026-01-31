@@ -13,7 +13,8 @@ import {
   useEditorDraft,
   useHasUnsavedChanges,
 } from '../store';
-import { renderPrompt, extractVariables, validateVariables } from '../services/templateService';
+import { renderPrompt, extractVariables, validateVariables, generateSampleValues } from '../services/templateService';
+import { MonacoEditor } from '../../../components/MonacoEditor';
 
 interface TemplateEditorProps {
   templateId: UUID;
@@ -43,6 +44,7 @@ export function TemplateEditor({ templateId, onClose }: TemplateEditorProps) {
 
   const [activeTab, setActiveTab] = useState<'edit' | 'preview' | 'variables' | 'history'>('edit');
   const [previewVariables, setPreviewVariables] = useState<Record<string, string>>({});
+  const [useSampleData, setUseSampleData] = useState(true);
   const [showPublishModal, setShowPublishModal] = useState(false);
   const [changeLog, setChangeLog] = useState('');
 
@@ -68,15 +70,22 @@ export function TemplateEditor({ templateId, onClose }: TemplateEditorProps) {
     return validateVariables(content, editorDraft.variables);
   }, [editorDraft]);
 
+  // Generate sample values for preview
+  const sampleValues = useMemo(() => {
+    if (!editorDraft) return {};
+    return generateSampleValues(editorDraft.variables);
+  }, [editorDraft?.variables]);
+
   // Render preview
   const previewContent = useMemo(() => {
     if (!editorDraft) return '';
     try {
-      return renderPrompt(editorDraft.userPrompt, previewVariables);
+      const values = useSampleData ? sampleValues : previewVariables;
+      return renderPrompt(editorDraft.userPrompt, values);
     } catch {
       return editorDraft.userPrompt;
     }
-  }, [editorDraft?.userPrompt, previewVariables]);
+  }, [editorDraft, editorDraft?.userPrompt, previewVariables, sampleValues, useSampleData]);
 
   const handleUserPromptChange = useCallback((userPrompt: string) => {
     updateEditorDraft({ userPrompt });
@@ -213,9 +222,12 @@ export function TemplateEditor({ templateId, onClose }: TemplateEditorProps) {
             content={previewContent}
             variables={editorDraft.variables}
             previewValues={previewVariables}
+            sampleValues={sampleValues}
+            useSampleData={useSampleData}
             onVariableChange={(name, value) =>
               setPreviewVariables(prev => ({ ...prev, [name]: value }))
             }
+            onToggleSampleData={() => setUseSampleData(prev => !prev)}
           />
         )}
 
@@ -302,37 +314,42 @@ function EditTab({
   detectedVariables,
 }: EditTabProps) {
   return (
-    <div className="h-full flex flex-col p-4 overflow-y-auto">
+    <div className="h-full flex flex-col p-4 overflow-hidden">
       {/* System Prompt */}
-      <div className="mb-4">
+      <div className="mb-4 h-[150px] flex flex-col">
         <label className="block text-sm font-medium text-text-primary mb-2">
           System Prompt (optional)
         </label>
-        <textarea
-          value={systemPrompt}
-          onChange={(e) => onSystemPromptChange(e.target.value)}
-          placeholder="Set the context and instructions for the AI..."
-          rows={4}
-          className="w-full px-3 py-2 bg-surface border border-border rounded-lg text-text-primary placeholder:text-text-secondary font-mono text-sm resize-none"
-        />
+        <div className="flex-1 min-h-0 border border-border rounded-lg overflow-hidden">
+          <MonacoEditor
+            value={systemPrompt}
+            onChange={onSystemPromptChange}
+            placeholder="Set the context and instructions for the AI..."
+            language="plaintext"
+            lineNumbers="off"
+          />
+        </div>
       </div>
 
       {/* User Prompt */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col min-h-0">
         <label className="block text-sm font-medium text-text-primary mb-2">
           User Prompt
         </label>
-        <textarea
-          value={userPrompt}
-          onChange={(e) => onUserPromptChange(e.target.value)}
-          placeholder="Write your prompt template here. Use {{variable_name}} for variables..."
-          className="flex-1 min-h-[200px] px-3 py-2 bg-surface border border-border rounded-lg text-text-primary placeholder:text-text-secondary font-mono text-sm resize-none"
-        />
+        <div className="flex-1 min-h-0 border border-border rounded-lg overflow-hidden">
+          <MonacoEditor
+            value={userPrompt}
+            onChange={onUserPromptChange}
+            placeholder="Write your prompt template here. Use {{variable_name}} for variables..."
+            language="plaintext"
+            lineNumbers="off"
+          />
+        </div>
       </div>
 
       {/* Detected Variables */}
       {detectedVariables.length > 0 && (
-        <div className="mt-4 p-3 bg-surface rounded-lg border border-border">
+        <div className="mt-4 p-3 bg-surface rounded-lg border border-border shrink-0">
           <p className="text-sm text-text-secondary mb-2">Detected Variables:</p>
           <div className="flex flex-wrap gap-2">
             {detectedVariables.map((v) => (
@@ -356,7 +373,10 @@ interface PreviewTabProps {
   content: string;
   variables: PromptVariable[];
   previewValues: Record<string, string>;
+  sampleValues: Record<string, string | number | boolean>;
+  useSampleData: boolean;
   onVariableChange: (name: string, value: string) => void;
+  onToggleSampleData: () => void;
 }
 
 function PreviewTab({
@@ -364,34 +384,63 @@ function PreviewTab({
   content,
   variables,
   previewValues,
+  sampleValues,
+  useSampleData,
   onVariableChange,
+  onToggleSampleData,
 }: PreviewTabProps) {
   return (
     <div className="h-full grid grid-cols-2 divide-x divide-border">
       {/* Variables Input */}
       <div className="p-4 overflow-y-auto">
-        <h4 className="text-sm font-medium text-text-primary mb-4">Test Values</h4>
+        <div className="flex items-center justify-between mb-4">
+          <h4 className="text-sm font-medium text-text-primary">Test Values</h4>
+          {variables.length > 0 && (
+            <button
+              onClick={onToggleSampleData}
+              className={`px-3 py-1 text-xs rounded-full transition-colors ${
+                useSampleData
+                  ? 'bg-primary/20 text-primary'
+                  : 'bg-surface-hover text-text-secondary hover:text-text-primary'
+              }`}
+            >
+              {useSampleData ? 'Using Sample Data' : 'Use Sample Data'}
+            </button>
+          )}
+        </div>
         {variables.length === 0 ? (
           <p className="text-sm text-text-secondary">
             No variables defined. Add variables in the Variables tab.
           </p>
         ) : (
           <div className="space-y-3">
-            {variables.map((variable) => (
-              <div key={variable.name}>
-                <label className="block text-xs text-text-secondary mb-1">
-                  {variable.name}
-                  {variable.required && <span className="text-red-500 ml-1">*</span>}
-                </label>
-                <input
-                  type="text"
-                  value={previewValues[variable.name] || variable.defaultValue?.toString() || ''}
-                  onChange={(e) => onVariableChange(variable.name, e.target.value)}
-                  placeholder={variable.description || `Enter ${variable.name}`}
-                  className="w-full px-2 py-1.5 bg-background border border-border rounded text-sm text-text-primary"
-                />
-              </div>
-            ))}
+            {variables.map((variable) => {
+              const displayValue = useSampleData
+                ? sampleValues[variable.name]?.toString() || ''
+                : previewValues[variable.name] || variable.defaultValue?.toString() || '';
+              
+              return (
+                <div key={variable.name}>
+                  <label className="block text-xs text-text-secondary mb-1">
+                    {variable.name}
+                    {variable.required && <span className="text-red-500 ml-1">*</span>}
+                  </label>
+                  <input
+                    type="text"
+                    value={displayValue}
+                    onChange={(e) => onVariableChange(variable.name, e.target.value)}
+                    placeholder={variable.description || `Enter ${variable.name}`}
+                    disabled={useSampleData}
+                    className="w-full px-2 py-1.5 bg-background border border-border rounded text-sm text-text-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                  />
+                  {useSampleData && sampleValues[variable.name] !== undefined && (
+                    <p className="text-xs text-text-secondary mt-1">
+                      Sample: {sampleValues[variable.name].toString()}
+                    </p>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
