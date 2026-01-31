@@ -3,12 +3,12 @@
  * Create AI-generated content (text, images, videos)
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import type { UUID, ContentType } from '../core/types/common';
 import type { GenerationParameters } from '../core/types/generation';
-import type { TemplateWithVersion } from '../core/types/prompt';
+import type { TemplateWithVersion, PromptVariable } from '../core/types/prompt';
 import { useGenerationStore, GenerationPanel } from '../features/generation';
-import { useTemplates } from '../features/templates/store';
+import { useTemplates, useTemplateStore } from '../features/templates/store';
 import { useBrands, useDefaultBrand } from '../features/brands';
 
 export function GeneratePage() {
@@ -21,13 +21,37 @@ export function GeneratePage() {
   const [selectedTemplateId, setSelectedTemplateId] = useState<UUID | null>(null);
   const [selectedBrandId, setSelectedBrandId] = useState<UUID | null>(defaultBrand?.id || null);
   const [customPrompt, setCustomPrompt] = useState('');
-  const [variables] = useState<Record<string, string>>({});
+  const [variables, setVariables] = useState<Record<string, string | number | boolean>>({});
   const [parameters, setParameters] = useState<GenerationParameters>({
     temperature: 0.7,
     maxTokens: 1000,
     stream: true,
   });
   const [showAdvanced, setShowAdvanced] = useState(false);
+
+  // Get the selected template's current version
+  const templateStore = useTemplateStore();
+  const selectedTemplateVersion = useMemo(() => {
+    if (!selectedTemplateId) return null;
+    return templateStore.getLatestVersion(selectedTemplateId);
+  }, [selectedTemplateId, templateStore]);
+
+  // Extract variables from the selected template
+  const templateVariables = useMemo(() => {
+    if (!selectedTemplateVersion) return [];
+    return selectedTemplateVersion.variables || [];
+  }, [selectedTemplateVersion]);
+
+  // Handle variable value changes
+  const handleVariableChange = useCallback((name: string, value: string | number | boolean) => {
+    setVariables(prev => ({ ...prev, [name]: value }));
+  }, []);
+
+  // Reset variables when template changes
+  const handleTemplateChange = useCallback((templateId: UUID | null) => {
+    setSelectedTemplateId(templateId);
+    setVariables({});
+  }, [setSelectedTemplateId]);
 
   // Handle generation
   const handleGenerate = useCallback(() => {
@@ -96,7 +120,7 @@ export function GeneratePage() {
             <div className="mb-4">
               <select
                 value={selectedTemplateId || ''}
-                onChange={(e) => setSelectedTemplateId(e.target.value as UUID || null)}
+                onChange={(e) => handleTemplateChange(e.target.value as UUID || null)}
                 className="w-full px-3 py-2 bg-background border border-border rounded-lg text-text-primary"
               >
                 <option value="">Custom prompt</option>
@@ -127,10 +151,64 @@ export function GeneratePage() {
               />
             ) : (
               <div className="p-4 bg-background rounded-lg border border-border">
-                <p className="text-sm text-text-secondary mb-4">
-                  Template variables will appear here when you select a template with variables.
-                </p>
-                {/* Template variables would be rendered here */}
+                {templateVariables.length === 0 ? (
+                  <p className="text-sm text-text-secondary">
+                    This template has no variables. It will be used as-is.
+                  </p>
+                ) : (
+                  <div className="space-y-4">
+                    <p className="text-sm text-text-secondary mb-2">
+                      Fill in the template variables:
+                    </p>
+                    {templateVariables.map((variable: PromptVariable) => (
+                      <div key={variable.name}>
+                        <label className="block text-sm font-medium text-text-primary mb-1">
+                          {variable.name}
+                          {variable.required && <span className="text-red-500 ml-1">*</span>}
+                        </label>
+                        {variable.description && (
+                          <p className="text-xs text-text-secondary mb-1">{variable.description}</p>
+                        )}
+                        {variable.type === 'boolean' ? (
+                          <input
+                            type="checkbox"
+                            checked={Boolean(variables[variable.name] ?? variable.defaultValue ?? false)}
+                            onChange={(e) => handleVariableChange(variable.name, e.target.checked)}
+                            className="w-4 h-4"
+                          />
+                        ) : variable.type === 'number' ? (
+                          <input
+                            type="number"
+                            value={String(variables[variable.name] ?? variable.defaultValue ?? '')}
+                            onChange={(e) => handleVariableChange(variable.name, Number(e.target.value))}
+                            className="w-full px-3 py-2 bg-surface border border-border rounded-lg text-text-primary"
+                          />
+                        ) : variable.type === 'enum' && variable.enumValues ? (
+                          <select
+                            value={String(variables[variable.name] ?? variable.defaultValue ?? '')}
+                            onChange={(e) => handleVariableChange(variable.name, e.target.value)}
+                            className="w-full px-3 py-2 bg-surface border border-border rounded-lg text-text-primary"
+                          >
+                            <option value="">Select...</option>
+                            {variable.enumValues.map((value) => (
+                              <option key={value} value={value}>
+                                {value}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <input
+                            type="text"
+                            value={String(variables[variable.name] ?? variable.defaultValue ?? '')}
+                            onChange={(e) => handleVariableChange(variable.name, e.target.value)}
+                            placeholder={variable.defaultValue ? `Default: ${variable.defaultValue}` : ''}
+                            className="w-full px-3 py-2 bg-surface border border-border rounded-lg text-text-primary placeholder:text-text-secondary"
+                          />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>
