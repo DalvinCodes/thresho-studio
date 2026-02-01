@@ -42,6 +42,7 @@ export type {
 export { ShotListView } from './components/ShotListView';
 export { ShotEditor } from './components/ShotEditor';
 export { BatchCreateModal } from './components/BatchCreateModal';
+export { EnhancedShotTable } from './components/EnhancedShotTable';
 
 // Types (re-export from core)
 export type {
