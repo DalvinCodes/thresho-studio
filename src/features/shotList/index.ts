@@ -28,6 +28,16 @@ export {
   calculateShotComplexity,
 } from './services/shotPromptService';
 
+export {
+  parseShotCsv,
+  generateShotCsvTemplate,
+} from './services/csvImportService';
+
+export type {
+  ImportResult,
+  CsvShotRow,
+} from './services/csvImportService';
+
 // Components
 export { ShotListView } from './components/ShotListView';
 export { ShotEditor } from './components/ShotEditor';
