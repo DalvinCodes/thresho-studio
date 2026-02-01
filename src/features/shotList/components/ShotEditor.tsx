@@ -233,7 +233,7 @@ export function ShotEditor({ shotId: _shotId, onClose, onGenerate }: ShotEditorP
             onClick={handleGenerate}
             disabled={!canGenerate}
             title={generateButtonTitle}
-            className="px-4 py-2 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+            className="px-4 py-2 bg-primary/10 text-primary rounded-3xl hover:bg-primary/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
           >
             {isGenerating ? (
               <>
@@ -246,7 +246,7 @@ export function ShotEditor({ shotId: _shotId, onClose, onGenerate }: ShotEditorP
           </button>
           <button
             onClick={handleSave}
-            className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+            className="px-4 py-2 bg-primary text-white rounded-3xl hover:bg-primary/90 transition-colors"
           >
             Save Changes
           </button>
@@ -257,7 +257,7 @@ export function ShotEditor({ shotId: _shotId, onClose, onGenerate }: ShotEditorP
       {validation && (validation.issues.length > 0 || validation.warnings.length > 0) && (
         <div className="px-4 pt-4 space-y-2">
           {validation.issues.length > 0 && (
-            <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+            <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-3xl">
               <p className="text-sm text-red-400">
                 {validation.issues.map((issue, i) => (
                   <span key={i}>• {issue}<br /></span>
@@ -266,7 +266,7 @@ export function ShotEditor({ shotId: _shotId, onClose, onGenerate }: ShotEditorP
             </div>
           )}
           {validation.warnings.length > 0 && (
-            <div className="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+            <div className="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-3xl">
               <p className="text-sm text-yellow-400">
                 {validation.warnings.map((warning, i) => (
                   <span key={i}>• {warning}<br /></span>
@@ -379,7 +379,7 @@ function DetailsTab({ data, onChange, shotTypeSuggestions }: DetailsTabProps) {
             type="text"
             value={data.shotNumber || ''}
             onChange={(e) => onChange('shotNumber', e.target.value)}
-            className="w-full px-3 py-2 bg-surface border border-border rounded-lg text-text-primary"
+            className="w-full px-3 py-2 bg-surface border border-border rounded-3xl text-text-primary"
           />
         </div>
         <div>
@@ -390,7 +390,7 @@ function DetailsTab({ data, onChange, shotTypeSuggestions }: DetailsTabProps) {
             type="text"
             value={data.name || ''}
             onChange={(e) => onChange('name', e.target.value)}
-            className="w-full px-3 py-2 bg-surface border border-border rounded-lg text-text-primary"
+            className="w-full px-3 py-2 bg-surface border border-border rounded-3xl text-text-primary"
           />
         </div>
       </div>
@@ -405,7 +405,7 @@ function DetailsTab({ data, onChange, shotTypeSuggestions }: DetailsTabProps) {
           onChange={(e) => onChange('description', e.target.value)}
           placeholder="Describe what happens in this shot..."
           rows={4}
-          className="w-full px-3 py-2 bg-surface border border-border rounded-lg text-text-primary placeholder:text-text-secondary resize-none"
+          className="w-full px-3 py-2 bg-surface border border-border rounded-3xl text-text-primary placeholder:text-text-secondary resize-none"
         />
       </div>
 
@@ -417,7 +417,7 @@ function DetailsTab({ data, onChange, shotTypeSuggestions }: DetailsTabProps) {
         <select
           value={data.shotType || 'medium'}
           onChange={(e) => onChange('shotType', e.target.value as ShotType)}
-          className="w-full px-3 py-2 bg-surface border border-border rounded-lg text-text-primary"
+          className="w-full px-3 py-2 bg-surface border border-border rounded-3xl text-text-primary"
         >
           <option value="wide">Wide/Establishing</option>
           <option value="medium">Medium</option>
@@ -462,7 +462,7 @@ function DetailsTab({ data, onChange, shotTypeSuggestions }: DetailsTabProps) {
           value={data.location || ''}
           onChange={(e) => onChange('location', e.target.value)}
           placeholder="Where does this shot take place?"
-          className="w-full px-3 py-2 bg-surface border border-border rounded-lg text-text-primary placeholder:text-text-secondary"
+          className="w-full px-3 py-2 bg-surface border border-border rounded-3xl text-text-primary placeholder:text-text-secondary"
         />
       </div>
 
@@ -489,11 +489,11 @@ function DetailsTab({ data, onChange, shotTypeSuggestions }: DetailsTabProps) {
             onChange={(e) => setNewSubject(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && addSubject()}
             placeholder="Add subject..."
-            className="flex-1 px-3 py-2 bg-surface border border-border rounded-lg text-text-primary placeholder:text-text-secondary"
+            className="flex-1 px-3 py-2 bg-surface border border-border rounded-3xl text-text-primary placeholder:text-text-secondary"
           />
           <button
             onClick={addSubject}
-            className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90"
+            className="px-4 py-2 bg-primary text-white rounded-3xl hover:bg-primary/90"
           >
             Add
           </button>
@@ -523,11 +523,11 @@ function DetailsTab({ data, onChange, shotTypeSuggestions }: DetailsTabProps) {
             onChange={(e) => setNewProp(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && addProp()}
             placeholder="Add prop..."
-            className="flex-1 px-3 py-2 bg-surface border border-border rounded-lg text-text-primary placeholder:text-text-secondary"
+            className="flex-1 px-3 py-2 bg-surface border border-border rounded-3xl text-text-primary placeholder:text-text-secondary"
           />
           <button
             onClick={addProp}
-            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+            className="px-4 py-2 bg-blue-500 text-white rounded-3xl hover:bg-blue-600"
           >
             Add
           </button>
@@ -544,7 +544,7 @@ function DetailsTab({ data, onChange, shotTypeSuggestions }: DetailsTabProps) {
           onChange={(e) => onChange('notes', e.target.value)}
           placeholder="Additional notes for production..."
           rows={3}
-          className="w-full px-3 py-2 bg-surface border border-border rounded-lg text-text-primary placeholder:text-text-secondary resize-none"
+          className="w-full px-3 py-2 bg-surface border border-border rounded-3xl text-text-primary placeholder:text-text-secondary resize-none"
         />
       </div>
 
@@ -557,7 +557,7 @@ function DetailsTab({ data, onChange, shotTypeSuggestions }: DetailsTabProps) {
           <select
             value={data.priority || 3}
             onChange={(e) => onChange('priority', Number(e.target.value))}
-            className="w-full px-3 py-2 bg-surface border border-border rounded-lg text-text-primary"
+            className="w-full px-3 py-2 bg-surface border border-border rounded-3xl text-text-primary"
           >
             <option value={1}>1 - Critical</option>
             <option value={2}>2 - High</option>
@@ -573,7 +573,7 @@ function DetailsTab({ data, onChange, shotTypeSuggestions }: DetailsTabProps) {
           <select
             value={data.status || 'planned'}
             onChange={(e) => onChange('status', e.target.value as ShotStatus)}
-            className="w-full px-3 py-2 bg-surface border border-border rounded-lg text-text-primary"
+            className="w-full px-3 py-2 bg-surface border border-border rounded-3xl text-text-primary"
           >
             <option value="planned">Planned</option>
             <option value="scripted">Scripted</option>
@@ -619,7 +619,7 @@ function TechnicalTab({
               <button
                 key={preset.id}
                 onClick={() => onApplyPreset(preset.id)}
-                className="px-3 py-1.5 bg-surface border border-border rounded-lg text-sm text-text-primary hover:border-primary transition-colors"
+                className="px-3 py-1.5 bg-surface border border-border rounded-3xl text-sm text-text-primary hover:border-primary transition-colors"
               >
                 {preset.name}
               </button>
@@ -636,7 +636,7 @@ function TechnicalTab({
         <select
           value={data.cameraMovement || 'static'}
           onChange={(e) => onChange('cameraMovement', e.target.value as CameraMovement)}
-          className="w-full px-3 py-2 bg-surface border border-border rounded-lg text-text-primary"
+          className="w-full px-3 py-2 bg-surface border border-border rounded-3xl text-text-primary"
         >
           <option value="static">Static</option>
           <option value="pan-left">Pan Left</option>
@@ -668,7 +668,7 @@ function TechnicalTab({
         <select
           value={data.lighting || 'natural'}
           onChange={(e) => onChange('lighting', e.target.value as LightingSetup)}
-          className="w-full px-3 py-2 bg-surface border border-border rounded-lg text-text-primary"
+          className="w-full px-3 py-2 bg-surface border border-border rounded-3xl text-text-primary"
         >
           <option value="natural">Natural</option>
           <option value="golden-hour">Golden Hour</option>
@@ -712,7 +712,7 @@ function TechnicalTab({
         <select
           value={data.aspectRatio || '16:9'}
           onChange={(e) => onChange('aspectRatio', e.target.value as AspectRatio)}
-          className="w-full px-3 py-2 bg-surface border border-border rounded-lg text-text-primary"
+          className="w-full px-3 py-2 bg-surface border border-border rounded-3xl text-text-primary"
         >
           <option value="16:9">16:9 (Widescreen)</option>
           <option value="9:16">9:16 (Vertical)</option>
@@ -737,7 +737,7 @@ function TechnicalTab({
             placeholder="5"
             min={1}
             max={60}
-            className="w-full px-3 py-2 bg-surface border border-border rounded-lg text-text-primary"
+            className="w-full px-3 py-2 bg-surface border border-border rounded-3xl text-text-primary"
           />
         </div>
         <div>
@@ -747,7 +747,7 @@ function TechnicalTab({
           <select
             value={data.fps || ''}
             onChange={(e) => onChange('fps', e.target.value ? Number(e.target.value) : undefined)}
-            className="w-full px-3 py-2 bg-surface border border-border rounded-lg text-text-primary"
+            className="w-full px-3 py-2 bg-surface border border-border rounded-3xl text-text-primary"
           >
             <option value="">Default</option>
             <option value={24}>24 fps (Film)</option>
@@ -779,7 +779,7 @@ function PromptTab({ promptPreview, shot: _shot }: PromptTabProps) {
               <label className="block text-sm font-medium text-text-primary mb-2">
                 System Prompt
               </label>
-              <div className="p-3 bg-surface rounded-lg border border-border">
+              <div className="p-3 bg-surface rounded-3xl border border-border">
                 <pre className="text-sm text-text-primary whitespace-pre-wrap font-mono">
                   {promptPreview.systemPrompt}
                 </pre>
@@ -792,7 +792,7 @@ function PromptTab({ promptPreview, shot: _shot }: PromptTabProps) {
             <label className="block text-sm font-medium text-text-primary mb-2">
               Generated Prompt
             </label>
-            <div className="p-3 bg-surface rounded-lg border border-border">
+            <div className="p-3 bg-surface rounded-3xl border border-border">
               <pre className="text-sm text-text-primary whitespace-pre-wrap font-mono">
                 {promptPreview.userPrompt}
               </pre>
@@ -805,7 +805,7 @@ function PromptTab({ promptPreview, shot: _shot }: PromptTabProps) {
               <label className="block text-sm font-medium text-text-primary mb-2">
                 Negative Prompt
               </label>
-              <div className="p-3 bg-red-500/10 rounded-lg border border-red-500/20">
+              <div className="p-3 bg-red-500/10 rounded-3xl border border-red-500/20">
                 <pre className="text-sm text-red-400 whitespace-pre-wrap font-mono">
                   {promptPreview.negativePrompt}
                 </pre>
@@ -818,7 +818,7 @@ function PromptTab({ promptPreview, shot: _shot }: PromptTabProps) {
             <label className="block text-sm font-medium text-text-primary mb-2">
               Technical Parameters
             </label>
-            <div className="p-3 bg-surface rounded-lg border border-border">
+            <div className="p-3 bg-surface rounded-3xl border border-border">
               <dl className="grid grid-cols-2 gap-2 text-sm">
                 {Object.entries(promptPreview.technicalParameters)
                   .filter(([_, v]) => v)
@@ -871,7 +871,7 @@ function AudioTab({ data, onChange }: AudioTabProps) {
           onChange={(e) => onChange('dialogue', e.target.value)}
           placeholder="Enter any dialogue for this shot..."
           rows={4}
-          className="w-full px-3 py-2 bg-surface border border-border rounded-lg text-text-primary placeholder:text-text-secondary resize-none font-mono"
+          className="w-full px-3 py-2 bg-surface border border-border rounded-3xl text-text-primary placeholder:text-text-secondary resize-none font-mono"
         />
       </div>
 
@@ -898,11 +898,11 @@ function AudioTab({ data, onChange }: AudioTabProps) {
             onChange={(e) => setNewSfx(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && addSfx()}
             placeholder="Add sound effect..."
-            className="flex-1 px-3 py-2 bg-surface border border-border rounded-lg text-text-primary placeholder:text-text-secondary"
+            className="flex-1 px-3 py-2 bg-surface border border-border rounded-3xl text-text-primary placeholder:text-text-secondary"
           />
           <button
             onClick={addSfx}
-            className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600"
+            className="px-4 py-2 bg-purple-500 text-white rounded-3xl hover:bg-purple-600"
           >
             Add
           </button>
@@ -919,7 +919,7 @@ function AudioTab({ data, onChange }: AudioTabProps) {
           value={data.musicCue || ''}
           onChange={(e) => onChange('musicCue', e.target.value)}
           placeholder="e.g., Upbeat corporate track, builds tension..."
-          className="w-full px-3 py-2 bg-surface border border-border rounded-lg text-text-primary placeholder:text-text-secondary"
+          className="w-full px-3 py-2 bg-surface border border-border rounded-3xl text-text-primary placeholder:text-text-secondary"
         />
       </div>
     </div>

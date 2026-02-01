@@ -1,0 +1,160 @@
+{
+  "meta": {
+    "name": "thresho-core",
+    "version": "0.1.0",
+    "notes": [
+      "Primitives are your raw palette. Semantic tokens are what components use.",
+      "Derived neutrals are computed blends for surfaces/borders; tweak after contrast testing.",
+      "Brand primary = Often Orange. Brand secondary/info = Lush Aqua."
+    ]
+  },
+  "primitives": {
+    "color": {
+      "brand": {
+        "orange": { "value": "#FF714E" },
+        "aqua": { "value": "#004466" }
+      },
+      "neutral": {
+        "corbeau": { "value": "#111122" },
+        "graphite": { "value": "#3A383F" },
+        "darkAges": { "value": "#9698A3" },
+        "paper": { "value": "#F0EEEE" },
+        "white": { "value": "#FFFFFF" }
+      },
+      "derived": {
+        "paperSoft": { "value": "#F4F2F2", "comment": "paper + white blend" },
+        "surfaceDay": { "value": "#FBFBFB", "comment": "paper + white blend" },
+        "borderDay": { "value": "#D5D4D8", "comment": "corbeau + paper blend" },
+        "mutedDay": { "value": "#787784", "comment": "corbeau + paper blend" },
+
+        "surfaceNight": { "value": "#1E1D27", "comment": "corbeau + graphite blend" },
+        "surfaceNight2": { "value": "#25232E", "comment": "corbeau + graphite blend" },
+        "borderNight": { "value": "#323241", "comment": "corbeau + paper blend (low t)" },
+        "mutedNight": { "value": "#C8C6C8", "comment": "paper + darkAges blend" }
+      }
+    }
+  },
+  "semantic": {
+    "modes": {
+      "day": {
+        "color": {
+          "bg": { "value": "{primitives.color.neutral.paper}" },
+          "bg.subtle": { "value": "{primitives.color.derived.paperSoft}" },
+
+          "surface": { "value": "{primitives.color.derived.surfaceDay}" },
+          "surface.raised": { "value": "{primitives.color.neutral.white}" },
+
+          "text": { "value": "{primitives.color.neutral.corbeau}" },
+          "text.muted": { "value": "{primitives.color.neutral.darkAges}" },
+          "text.subtle": { "value": "{primitives.color.derived.mutedDay}" },
+          "text.onBrand": { "value": "{primitives.color.neutral.white}" },
+
+          "border": { "value": "{primitives.color.derived.borderDay}" },
+          "divider": { "value": "{primitives.color.derived.borderDay}" },
+
+          "primary": { "value": "{primitives.color.brand.orange}" },
+          "primary.hover": { "value": "#E7674A" },
+          "primary.active": { "value": "#DB6347" },
+
+          "secondary": { "value": "{primitives.color.brand.aqua}" },
+          "secondary.hover": { "value": "#1F5A78" },
+
+          "link": { "value": "{primitives.color.brand.aqua}" },
+          "link.hover": { "value": "#1F5A78" },
+
+          "focusRing": { "value": "{primitives.color.brand.orange}" },
+
+          "status": {
+            "info": { "value": "{primitives.color.brand.aqua}" },
+            "warning": { "value": "{primitives.color.brand.orange}" },
+            "danger": { "value": "{primitives.color.brand.orange}" },
+            "success": { "value": "{primitives.color.brand.aqua}", "comment": "placeholder until we add a true success hue" }
+          }
+        }
+      },
+      "night": {
+        "color": {
+          "bg": { "value": "{primitives.color.neutral.corbeau}" },
+          "bg.subtle": { "value": "{primitives.color.derived.surfaceNight}" },
+
+          "surface": { "value": "{primitives.color.derived.surfaceNight}" },
+          "surface.raised": { "value": "{primitives.color.derived.surfaceNight2}" },
+
+          "text": { "value": "{primitives.color.neutral.paper}" },
+          "text.muted": { "value": "{primitives.color.derived.mutedNight}" },
+          "text.subtle": { "value": "{primitives.color.neutral.darkAges}" },
+          "text.onBrand": { "value": "{primitives.color.neutral.corbeau}" },
+
+          "border": { "value": "{primitives.color.derived.borderNight}" },
+          "divider": { "value": "{primitives.color.derived.borderNight}" },
+
+          "primary": { "value": "{primitives.color.brand.orange}" },
+          "primary.hover": { "value": "#FF8A6D" },
+          "primary.active": { "value": "#FF9A82" },
+
+          "secondary": { "value": "{primitives.color.brand.aqua}" },
+          "secondary.hover": { "value": "#336985" },
+
+          "link": { "value": "{primitives.color.brand.orange}" },
+          "link.hover": { "value": "#FF8A6D" },
+
+          "focusRing": { "value": "{primitives.color.brand.orange}" },
+
+          "status": {
+            "info": { "value": "{primitives.color.brand.aqua}" },
+            "warning": { "value": "{primitives.color.brand.orange}" },
+            "danger": { "value": "{primitives.color.brand.orange}" },
+            "success": { "value": "{primitives.color.brand.aqua}", "comment": "placeholder until we add a true success hue" }
+          }
+        }
+      }
+    }
+  },
+  "component": {
+    "button": {
+      "radius": { "value": "999px" },
+      "paddingX": { "value": "16px" },
+      "paddingY": { "value": "10px" },
+      "primary": {
+        "bg": { "value": "{semantic.modes.$mode.color.primary}" },
+        "bgHover": { "value": "{semantic.modes.$mode.color.primary.hover}" },
+        "bgActive": { "value": "{semantic.modes.$mode.color.primary.active}" },
+        "text": { "value": "{semantic.modes.$mode.color.text.onBrand}" }
+      },
+      "secondary": {
+        "bg": { "value": "transparent" },
+        "border": { "value": "{semantic.modes.$mode.color.border}" },
+        "text": { "value": "{semantic.modes.$mode.color.text}" }
+      }
+    },
+    "card": {
+      "bg": { "value": "{semantic.modes.$mode.color.surface}" },
+      "border": { "value": "{semantic.modes.$mode.color.border}" },
+      "radius": { "value": "16px" },
+      "shadow": { "value": "0 10px 30px rgba(0,0,0,0.08)" }
+    },
+    "input": {
+      "bg": { "value": "{semantic.modes.$mode.color.surface.raised}" },
+      "border": { "value": "{semantic.modes.$mode.color.border}" },
+      "text": { "value": "{semantic.modes.$mode.color.text}" },
+      "placeholder": { "value": "{semantic.modes.$mode.color.text.muted}" },
+      "focusRing": { "value": "{semantic.modes.$mode.color.focusRing}" },
+      "radius": { "value": "12px" }
+    }
+  },
+  "layout": {
+    "radius": {
+      "sm": { "value": "10px" },
+      "md": { "value": "14px" },
+      "lg": { "value": "16px" },
+      "xl": { "value": "20px" }
+    },
+    "space": {
+      "2": { "value": "8px" },
+      "3": { "value": "12px" },
+      "4": { "value": "16px" },
+      "6": { "value": "24px" },
+      "8": { "value": "32px" }
+    }
+  }
+}

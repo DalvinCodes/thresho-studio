@@ -1,7 +1,25 @@
 /**
  * Google Veo Provider Adapter
- * Video generation with native audio via Vertex AI
- * https://cloud.google.com/vertex-ai/generative-ai/docs/video/generate-videos
+ * Supports: Veo 3.1, Veo 3, Veo 2 for video generation with native audio
+ * Access via Google AI Studio API (generativelanguage.googleapis.com)
+ * 
+ * Model families:
+ * - Veo 3.1: Latest with best quality
+ *   - veo-3.1-generate-001: Full quality
+ * - Veo 3: Text-to-video with native sound generation
+ *   - veo-3.0-generate-001: Standard quality
+ *   - veo-3.0-fast-generate-001: Lower latency
+ * - Veo 2: Stable video generation
+ *   - veo-2.0-generate-001: Standard quality
+ * 
+ * Features:
+ * - Text to video generation
+ * - Image to video (preview for some models)
+ * - Native sound/audio generation
+ * - 4-8 second video lengths
+ * - 720p and 1080p resolutions
+ * 
+ * https://cloud.google.com/vertex-ai/generative-ai/docs/video/overview
  */
 
 import { BaseAdapter } from './baseAdapter';
@@ -11,6 +29,24 @@ import type {
   VideoGenerationJob,
 } from '../../../core/types/provider';
 import type { ContentType } from '../../../core/types/common';
+
+// Veo 3.1 models (latest)
+const VEO_3_1_MODELS = [
+  'veo-3.1-generate-001',
+];
+
+// Veo 3 models
+const VEO_3_MODELS = [
+  'veo-3.0-generate-001',
+  'veo-3.0-fast-generate-001',
+];
+
+// Veo 2 models (stable)
+const VEO_2_MODELS = [
+  'veo-2.0-generate-001',
+];
+
+const ALL_MODELS = [...VEO_3_1_MODELS, ...VEO_3_MODELS, ...VEO_2_MODELS];
 
 export class VeoAdapter extends BaseAdapter {
   // Using AI Studio endpoint for simpler auth
@@ -25,20 +61,20 @@ export class VeoAdapter extends BaseAdapter {
   }
 
   get description() {
-    return 'Video generation with native audio - synchronized sound and music';
+    return 'Veo 3 - video generation with native audio, sound effects, and music';
   }
 
   getCapabilities(): ProviderCapability[] {
     return [
       {
         type: 'video',
-        models: ['veo-3.1-generate', 'veo-2.0-generate'],
-        maxResolution: '4K',
+        models: ALL_MODELS,
+        maxResolution: '1080p',
         supportsStreaming: false,
         supportsBatching: false,
         supportsAsyncJobs: true,
-        costPerUnit: 0.30, // ~$0.30 per second
-        rateLimitPerMinute: 5,
+        costPerUnit: 0.30, // ~$0.30 per second for Veo 3
+        rateLimitPerMinute: 10,
       },
     ];
   }
@@ -61,21 +97,25 @@ export class VeoAdapter extends BaseAdapter {
       throw this.createError('NO_CREDENTIALS', 'Google API key not configured', false);
     }
 
-    const model = request.model || 'veo-3.1-generate';
+    // Default to Veo 3.1
+    const model = request.model || 'veo-3.1-generate-001';
     const url = `${this.baseUrl}/models/${model}:generateVideo?key=${this.credential!.apiKey}`;
+
+    // Validate duration (Veo 3 supports 4, 6, or 8 seconds)
+    const duration = this.validateDuration(request.duration);
 
     const body: Record<string, unknown> = {
       prompt: request.prompt,
       generationConfig: {
-        videoDuration: `${request.duration || 8}s`,
+        videoDuration: `${duration}s`,
         aspectRatio: this.mapAspectRatio(request.aspectRatio),
         numberOfVideos: 1,
-        // Veo 3 specific - native audio generation
+        // Veo 3+ supports native audio generation
         generateAudio: true,
       },
     };
 
-    // Image-to-video support
+    // Image-to-video support (preview for Veo 3)
     if (request.imageUrl) {
       body.image = {
         imageUri: request.imageUrl,
@@ -210,6 +250,19 @@ export class VeoAdapter extends BaseAdapter {
     throw this.createError('TIMEOUT', 'Video generation timed out', true);
   }
 
+  /**
+   * Validate and normalize video duration
+   * Veo 3 supports 4, 6, or 8 seconds
+   */
+  private validateDuration(duration?: number): number {
+    if (!duration) return 8; // Default to 8 seconds
+    
+    // Clamp to valid values
+    if (duration <= 4) return 4;
+    if (duration <= 6) return 6;
+    return 8;
+  }
+
   private mapAspectRatio(ratio?: string): string {
     switch (ratio) {
       case '16:9':
@@ -219,7 +272,7 @@ export class VeoAdapter extends BaseAdapter {
       case '1:1':
         return '1:1';
       default:
-        return '16:9';
+        return '16:9'; // Default for video
     }
   }
 
@@ -230,7 +283,7 @@ export class VeoAdapter extends BaseAdapter {
     }
   ): number {
     if (type === 'video') {
-      // Veo: ~$0.30 per second
+      // Veo 3: ~$0.30 per second
       return (params.videoSeconds ?? 8) * 0.30;
     }
 

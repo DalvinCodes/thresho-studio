@@ -4,7 +4,8 @@
  * Handles URL resolution from storage to displayable blob URLs
  */
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
+import { Image, Video } from 'lucide-react';
 import {
   isStorageUrl,
   parseStorageUrl,
@@ -24,7 +25,17 @@ interface StorageVideoProps extends Omit<React.VideoHTMLAttributes<HTMLVideoElem
 
 /**
  * Hook to resolve storage URLs to displayable blob URLs
- * Handles memory management for blob URLs
+ * 
+ * IMPORTANT: This hook does NOT revoke blob URLs on unmount because:
+ * 1. The storage layer (OPFS/IndexedDB) caches blob URLs by file ID
+ * 2. If we revoke the URL, the storage cache still holds a reference to it
+ * 3. Next time getFileUrl is called, it returns the cached (but now invalid) URL
+ * 4. This causes "net::ERR_FILE_NOT_FOUND" errors when switching tabs
+ * 
+ * The storage layer manages blob URL lifecycle - URLs are only revoked when:
+ * - The file is deleted (storage.deleteFile)
+ * - Storage is cleared (storage.clearAll)
+ * - A new blob is fetched for the same ID (automatic in createFileUrl)
  */
 function useResolvedUrl(url: string | undefined | null): {
   resolvedUrl: string | null;
@@ -34,17 +45,6 @@ function useResolvedUrl(url: string | undefined | null): {
   const [resolvedUrl, setResolvedUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
-  const blobUrlRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    // Cleanup function to revoke blob URLs
-    return () => {
-      if (blobUrlRef.current) {
-        URL.revokeObjectURL(blobUrlRef.current);
-        blobUrlRef.current = null;
-      }
-    };
-  }, []);
 
   useEffect(() => {
     // Reset state
@@ -86,23 +86,15 @@ function useResolvedUrl(url: string | undefined | null): {
 
       try {
         const storage = getStorage();
-        const newBlobUrl = await storage.getFileUrl(parsed.id);
+        const blobUrl = await storage.getFileUrl(parsed.id);
 
         if (cancelled) {
-          // Clean up if component unmounted during fetch
-          if (newBlobUrl) {
-            URL.revokeObjectURL(newBlobUrl);
-          }
+          // Component unmounted during fetch - don't update state
+          // Note: We don't revoke the URL because the storage layer caches it
           return;
         }
 
-        // Revoke old blob URL if any
-        if (blobUrlRef.current) {
-          URL.revokeObjectURL(blobUrlRef.current);
-        }
-
-        blobUrlRef.current = newBlobUrl;
-        setResolvedUrl(newBlobUrl);
+        setResolvedUrl(blobUrl);
         setError(null);
       } catch (err) {
         if (!cancelled) {
@@ -120,6 +112,9 @@ function useResolvedUrl(url: string | undefined | null): {
 
     return () => {
       cancelled = true;
+      // Note: We intentionally don't revoke blob URLs here.
+      // The storage layer caches them and returns the same URL on subsequent calls.
+      // Revoking would invalidate the cached URL, causing errors on remount.
     };
   }, [url]);
 
@@ -158,7 +153,7 @@ export function StorageImage({
   if (!displayUrl) {
     return (
       <div className={`bg-background flex items-center justify-center text-text-secondary ${className || ''}`} style={style}>
-        <span className="text-2xl opacity-50">🖼️</span>
+        <Image className="w-8 h-8 opacity-50" />
       </div>
     );
   }
@@ -206,7 +201,7 @@ export function StorageVideo({
   if (!displayUrl) {
     return (
       <div className={`bg-background flex items-center justify-center text-text-secondary ${className || ''}`} style={style}>
-        <span className="text-2xl opacity-50">🎬</span>
+        <Video className="w-8 h-8 opacity-50" />
       </div>
     );
   }

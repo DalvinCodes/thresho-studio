@@ -4,6 +4,7 @@
  */
 
 import { useState, useMemo, useCallback } from 'react';
+import { FileText, Image, Video } from 'lucide-react';
 import type { UUID, ContentType } from '../../../core/types/common';
 import type { GenerationRecord } from '../../../core/types/generation';
 import { useGenerationStore, useGenerationHistory, useGenerationStats } from '../store';
@@ -136,7 +137,7 @@ export function CostDashboard({ className }: CostDashboardProps) {
           <select
             value={timeRange}
             onChange={(e) => setTimeRange(e.target.value as typeof timeRange)}
-            className="px-3 py-2 bg-background border border-border rounded-lg text-text-primary text-sm"
+            className="px-3 py-2 bg-background border border-border rounded-3xl text-text-primary text-sm"
           >
             <option value="day">Today</option>
             <option value="week">This Week</option>
@@ -145,7 +146,7 @@ export function CostDashboard({ className }: CostDashboardProps) {
           </select>
           <button
             onClick={() => setShowBudgetEdit(true)}
-            className="px-3 py-2 bg-primary text-white rounded-lg text-sm hover:bg-primary/90 transition-colors"
+            className="px-3 py-2 bg-primary text-white rounded-3xl text-sm hover:bg-primary/90 transition-colors"
           >
             Set Budget
           </button>
@@ -181,24 +182,24 @@ export function CostDashboard({ className }: CostDashboardProps) {
           title="Text"
           value={`$${totals.byType.text.cost.toFixed(2)}`}
           subtitle={`${totals.byType.text.count} generations`}
-          icon="📝"
+          icon={<FileText className="w-5 h-5 text-text-primary" />}
         />
         <StatCard
           title="Images"
           value={`$${totals.byType.image.cost.toFixed(2)}`}
           subtitle={`${totals.byType.image.count} generations`}
-          icon="🖼️"
+          icon={<Image className="w-5 h-5 text-text-primary" />}
         />
         <StatCard
           title="Videos"
           value={`$${totals.byType.video.cost.toFixed(2)}`}
           subtitle={`${totals.byType.video.count} generations`}
-          icon="🎬"
+          icon={<Video className="w-5 h-5 text-text-primary" />}
         />
       </div>
 
       {/* Provider Breakdown */}
-      <div className="bg-surface rounded-lg p-4">
+      <div className="bg-surface rounded-3xl p-4">
         <h3 className="font-medium text-text-primary mb-4">Cost by Provider</h3>
         <div className="space-y-3">
           {Object.entries(totals.byProvider)
@@ -236,11 +237,11 @@ export function CostDashboard({ className }: CostDashboardProps) {
       </div>
 
       {/* Pricing Reference */}
-      <div className="bg-surface rounded-lg p-4">
+      <div className="bg-surface rounded-3xl p-4">
         <h3 className="font-medium text-text-primary mb-4">Provider Pricing Reference</h3>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
           {Object.entries(PROVIDER_PRICING).map(([id, pricing]) => (
-            <div key={id} className="p-3 bg-background rounded-lg">
+            <div key={id} className="p-3 bg-background rounded-3xl">
               <p className="font-medium text-text-primary">{pricing.name}</p>
               <div className="text-text-secondary text-xs mt-1">
                 {pricing.input !== undefined && (
@@ -287,7 +288,7 @@ function BudgetCard({ title, spent, budget, percent, alertThreshold }: BudgetCar
   const isNearBudget = percent >= alertThreshold * 100;
 
   return (
-    <div className="bg-surface rounded-lg p-4">
+    <div className="bg-surface rounded-3xl p-4">
       <div className="flex items-center justify-between mb-2">
         <span className="text-sm text-text-secondary">{title}</span>
         {isOverBudget && (
@@ -329,12 +330,12 @@ interface StatCardProps {
   title: string;
   value: string;
   subtitle: string;
-  icon?: string;
+  icon?: React.ReactNode;
 }
 
 function StatCard({ title, value, subtitle, icon }: StatCardProps) {
   return (
-    <div className="bg-surface rounded-lg p-4">
+    <div className="bg-surface rounded-3xl p-4">
       <div className="flex items-center gap-2 mb-2">
         {icon && <span className="text-lg">{icon}</span>}
         <span className="text-sm text-text-secondary">{title}</span>
@@ -367,7 +368,7 @@ function BudgetEditModal({ budget, onSave, onClose }: BudgetEditModalProps) {
 
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-      <div className="bg-surface rounded-lg p-6 w-full max-w-md">
+      <div className="bg-surface rounded-3xl p-6 w-full max-w-md">
         <h3 className="text-lg font-semibold text-text-primary mb-4">Budget Settings</h3>
 
         <div className="space-y-4">
@@ -379,7 +380,7 @@ function BudgetEditModal({ budget, onSave, onClose }: BudgetEditModalProps) {
               onChange={(e) => setDaily(e.target.value)}
               min="0"
               step="0.01"
-              className="w-full px-3 py-2 bg-background border border-border rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full px-3 py-2 bg-background border border-border rounded-3xl text-text-primary focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
 
@@ -391,7 +392,7 @@ function BudgetEditModal({ budget, onSave, onClose }: BudgetEditModalProps) {
               onChange={(e) => setMonthly(e.target.value)}
               min="0"
               step="0.01"
-              className="w-full px-3 py-2 bg-background border border-border rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full px-3 py-2 bg-background border border-border rounded-3xl text-text-primary focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
 
@@ -403,7 +404,7 @@ function BudgetEditModal({ budget, onSave, onClose }: BudgetEditModalProps) {
               onChange={(e) => setThreshold(e.target.value)}
               min="0"
               max="100"
-              className="w-full px-3 py-2 bg-background border border-border rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full px-3 py-2 bg-background border border-border rounded-3xl text-text-primary focus:outline-none focus:ring-2 focus:ring-primary"
             />
             <p className="text-xs text-text-secondary mt-1">
               Show warning when this percentage of budget is used
@@ -420,7 +421,7 @@ function BudgetEditModal({ budget, onSave, onClose }: BudgetEditModalProps) {
           </button>
           <button
             onClick={handleSave}
-            className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+            className="px-4 py-2 bg-primary text-white rounded-3xl hover:bg-primary/90 transition-colors"
           >
             Save
           </button>

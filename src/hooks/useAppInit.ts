@@ -95,13 +95,6 @@ export function useAppInit() {
 
         console.log('Thresho Studio initialized successfully');
         setInitState('ready');
-
-        addToast({
-          type: 'success',
-          title: 'Ready',
-          message: 'Thresho Studio is ready to use',
-          duration: 3000,
-        });
       } catch (error) {
         console.error('Initialization failed:', error);
         const message = error instanceof Error ? error.message : 'Unknown error';

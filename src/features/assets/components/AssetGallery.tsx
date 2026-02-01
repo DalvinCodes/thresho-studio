@@ -5,6 +5,7 @@
 
 import { useRef, useCallback, useMemo, useState } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
+import { FileText, Image, Video, Star, LayoutGrid, List } from 'lucide-react';
 import type { UUID, ContentType } from '../../../core/types/common';
 import type { Asset } from '../../../core/types/asset';
 import {
@@ -16,6 +17,7 @@ import {
 } from '../store';
 import { StorageImage, StorageVideo } from '../../../components/StorageMedia';
 import { ExportDialog } from './ExportDialog';
+import { AssetGallerySkeleton } from '../../../components/Skeleton';
 
 interface AssetGalleryProps {
   onAssetSelect?: (asset: Asset) => void;
@@ -27,6 +29,7 @@ export function AssetGallery({ onAssetSelect, onAssetDoubleClick }: AssetGallery
   const galleryState = useGalleryState();
   const selectedAssets = useSelectedAssets();
   const lightboxState = useLightboxState();
+  const isLoading = galleryState.isLoading;
 
   const {
     setFilters,
@@ -162,14 +165,14 @@ export function AssetGallery({ onAssetSelect, onAssetDoubleClick }: AssetGallery
           value={searchQuery}
           onChange={(e) => handleSearch(e.target.value)}
           placeholder="Search assets..."
-          className="flex-1 max-w-xs px-3 py-2 bg-background border border-border rounded-lg text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+          className="flex-1 max-w-xs h-10 px-4 bg-background border border-border rounded-3xl text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary text-sm"
         />
 
         {/* Type filter */}
         <select
           value={galleryState.filters.types?.[0] || ''}
           onChange={(e) => handleTypeFilter(e.target.value as ContentType | '')}
-          className="px-3 py-2 bg-background border border-border rounded-lg text-text-primary text-sm"
+          className="h-10 px-4 bg-background border border-border rounded-3xl text-text-primary text-sm"
         >
           <option value="">All Types</option>
           <option value="image">Images</option>
@@ -182,19 +185,19 @@ export function AssetGallery({ onAssetSelect, onAssetDoubleClick }: AssetGallery
           onClick={() => setFilters({
             isFavorite: galleryState.filters.isFavorite ? undefined : true
           })}
-          className={`px-3 py-2 rounded-lg text-sm transition-colors ${
+          className={`px-3 py-2 rounded-3xl text-sm transition-colors ${
             galleryState.filters.isFavorite
               ? 'bg-yellow-500/20 text-yellow-400'
               : 'bg-background text-text-secondary hover:text-text-primary'
           }`}
         >
-          ⭐ Favorites
+          <Star className="w-4 h-4" /> Favorites
         </button>
 
         <div className="flex-1" />
 
         {/* View mode toggle */}
-        <div className="flex bg-background rounded-lg p-1">
+        <div className="flex bg-background rounded-3xl p-1">
           <button
             onClick={() => setViewMode('grid')}
             className={`px-3 py-1.5 text-sm rounded transition-colors ${
@@ -203,7 +206,7 @@ export function AssetGallery({ onAssetSelect, onAssetDoubleClick }: AssetGallery
                 : 'text-text-secondary hover:text-text-primary'
             }`}
           >
-            ▦ Grid
+            <LayoutGrid className="w-4 h-4 mr-1" /> Grid
           </button>
           <button
             onClick={() => setViewMode('list')}
@@ -213,7 +216,7 @@ export function AssetGallery({ onAssetSelect, onAssetDoubleClick }: AssetGallery
                 : 'text-text-secondary hover:text-text-primary'
             }`}
           >
-            ≡ List
+            <List className="w-4 h-4 mr-1" /> List
           </button>
         </div>
 
@@ -222,7 +225,7 @@ export function AssetGallery({ onAssetSelect, onAssetDoubleClick }: AssetGallery
           <select
             value={galleryState.gridColumns}
             onChange={(e) => setGridColumns(Number(e.target.value))}
-            className="px-3 py-2 bg-background border border-border rounded-lg text-text-primary text-sm"
+            className="h-10 px-4 bg-background border border-border rounded-3xl text-text-primary text-sm"
           >
             <option value={2}>2 columns</option>
             <option value={3}>3 columns</option>
@@ -263,7 +266,7 @@ export function AssetGallery({ onAssetSelect, onAssetDoubleClick }: AssetGallery
         {selectedAssets.length === 0 && assets.length > 0 && (
           <button
             onClick={() => setShowExportDialog(true)}
-            className="px-3 py-1.5 text-sm bg-background text-text-secondary hover:text-text-primary rounded-lg transition-colors"
+            className="px-3 py-1.5 text-sm bg-background text-text-secondary hover:text-text-primary rounded-3xl transition-colors"
           >
             Export All
           </button>
@@ -281,11 +284,29 @@ export function AssetGallery({ onAssetSelect, onAssetDoubleClick }: AssetGallery
         onDragLeave={() => setIsDragging(false)}
         onDrop={handleDrop}
       >
-        {assets.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center text-text-secondary">
-            <p className="text-4xl mb-4">📁</p>
-            <p className="mb-2">No assets found</p>
-            <p className="text-sm">Drop files here or generate content to get started</p>
+        {isLoading ? (
+          <AssetGallerySkeleton
+            viewMode={galleryState.viewMode}
+            gridColumns={galleryState.gridColumns}
+            count={12}
+          />
+        ) : assets.length === 0 ? (
+          <div className="h-full flex flex-col items-center justify-center p-8">
+            <div className="flex flex-col items-center justify-center p-12 text-center bg-[var(--color-surface)] border border-[var(--color-border)] rounded-3xl max-w-md">
+              <div className="w-16 h-16 rounded-3xl bg-[var(--color-primary)]/10 flex items-center justify-center mb-6">
+                <Image className="w-8 h-8 text-[var(--color-primary)]" />
+              </div>
+              <h3 className="text-xl font-semibold text-[var(--color-text)] mb-2">
+                No assets yet
+              </h3>
+              <p className="text-[var(--color-text-muted)] mb-6">
+                Upload images and videos, or generate content using AI templates. 
+                Your assets will appear here for easy browsing and management.
+              </p>
+              <p className="text-sm text-[var(--color-text-muted)]">
+                Drop files here to upload
+              </p>
+            </div>
           </div>
         ) : (
           <div
@@ -379,10 +400,10 @@ interface AssetGridItemProps {
 }
 
 function AssetGridItem({ asset, isSelected, onClick, onDoubleClick, onFavorite }: AssetGridItemProps) {
-  const typeIcons: Record<ContentType, string> = {
-    text: '📝',
-    image: '🖼️',
-    video: '🎬',
+  const typeIcons: Record<ContentType, React.ReactNode> = {
+    text: <FileText className="w-10 h-10 text-text-secondary" />,
+    image: <Image className="w-10 h-10 text-text-secondary" />,
+    video: <Video className="w-10 h-10 text-text-secondary" />,
   };
 
   return (
@@ -390,7 +411,7 @@ function AssetGridItem({ asset, isSelected, onClick, onDoubleClick, onFavorite }
       onClick={onClick}
       onDoubleClick={onDoubleClick}
       className={`
-        group relative rounded-lg overflow-hidden cursor-pointer transition-all
+        group relative rounded-3xl overflow-hidden cursor-pointer transition-all
         ${isSelected ? 'ring-2 ring-primary' : 'hover:ring-2 hover:ring-primary/50'}
       `}
     >
@@ -412,7 +433,7 @@ function AssetGridItem({ asset, isSelected, onClick, onDoubleClick, onFavorite }
               loading="lazy"
             />
             <div className="absolute inset-0 flex items-center justify-center">
-              <span className="w-12 h-12 bg-black/50 rounded-full flex items-center justify-center text-white text-2xl">
+              <span className="w-12 h-12 bg-black rounded-full flex items-center justify-center text-white text-2xl">
                 ▶
               </span>
             </div>
@@ -439,17 +460,17 @@ function AssetGridItem({ asset, isSelected, onClick, onDoubleClick, onFavorite }
           absolute top-2 right-2 w-8 h-8 rounded-full flex items-center justify-center transition-all
           ${asset.isFavorite
             ? 'bg-yellow-500 text-white'
-            : 'bg-black/50 text-white opacity-0 group-hover:opacity-100'
+            : 'bg-black text-white opacity-0 group-hover:opacity-100'
           }
         `}
       >
-        ⭐
+        <Star className="w-4 h-4" />
       </button>
 
       {/* Info overlay */}
       <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/70 to-transparent">
         <p className="text-white text-sm font-medium truncate">{asset.name}</p>
-        <p className="text-white/70 text-xs">
+        <p className="text-white text-xs">
           {formatFileSize(asset.metadata.fileSize)}
           {asset.metadata.width && ` • ${asset.metadata.width}×${asset.metadata.height}`}
         </p>
@@ -468,10 +489,10 @@ interface AssetListItemProps {
 }
 
 function AssetListItem({ asset, isSelected, onClick, onDoubleClick, onFavorite }: AssetListItemProps) {
-  const typeIcons: Record<ContentType, string> = {
-    text: '📝',
-    image: '🖼️',
-    video: '🎬',
+  const typeIcons: Record<ContentType, React.ReactNode> = {
+    text: <FileText className="w-6 h-6 text-text-secondary" />,
+    image: <Image className="w-6 h-6 text-text-secondary" />,
+    video: <Video className="w-6 h-6 text-text-secondary" />,
   };
 
   return (
@@ -479,8 +500,8 @@ function AssetListItem({ asset, isSelected, onClick, onDoubleClick, onFavorite }
       onClick={onClick}
       onDoubleClick={onDoubleClick}
       className={`
-        flex items-center gap-4 p-3 rounded-lg cursor-pointer transition-all
-        ${isSelected ? 'bg-primary/10 ring-1 ring-primary' : 'hover:bg-surface-hover'}
+        flex items-center gap-4 p-3 rounded-3xl cursor-pointer transition-all
+        ${isSelected ? 'bg-primary-light ring-1 ring-primary' : 'hover:bg-surface-hover'}
       `}
     >
       {/* Thumbnail */}
@@ -513,7 +534,7 @@ function AssetListItem({ asset, isSelected, onClick, onDoubleClick, onFavorite }
           {asset.tags.slice(0, 3).map((tag) => (
             <span
               key={tag}
-              className="px-2 py-0.5 text-xs bg-primary/10 text-primary rounded"
+              className="px-2 py-0.5 text-xs bg-primary-light text-primary rounded"
             >
               {tag}
             </span>
@@ -536,7 +557,7 @@ function AssetListItem({ asset, isSelected, onClick, onDoubleClick, onFavorite }
           asset.isFavorite ? 'text-yellow-500' : 'text-text-secondary hover:text-yellow-500'
         }`}
       >
-        ⭐
+        <Star className="w-4 h-4" />
       </button>
 
       {/* Date */}
@@ -562,13 +583,13 @@ function AssetLightbox({ onClose, onNext, onPrev }: AssetLightboxProps) {
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center"
+        className="fixed inset-0 z-50 bg-black flex items-center justify-center"
       onClick={onClose}
     >
       {/* Close button */}
       <button
         onClick={onClose}
-        className="absolute top-4 right-4 w-10 h-10 bg-white/10 rounded-full flex items-center justify-center text-white hover:bg-white/20 transition-colors"
+        className="absolute top-4 right-4 w-10 h-10 bg-surface rounded-full flex items-center justify-center text-white hover:bg-surface-raised transition-colors"
       >
         ✕
       </button>
@@ -579,7 +600,7 @@ function AssetLightbox({ onClose, onNext, onPrev }: AssetLightboxProps) {
           e.stopPropagation();
           onPrev();
         }}
-        className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-white/10 rounded-full flex items-center justify-center text-white hover:bg-white/20 transition-colors"
+        className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-surface rounded-full flex items-center justify-center text-white hover:bg-surface-raised transition-colors"
       >
         ←
       </button>
@@ -588,7 +609,7 @@ function AssetLightbox({ onClose, onNext, onPrev }: AssetLightboxProps) {
           e.stopPropagation();
           onNext();
         }}
-        className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-white/10 rounded-full flex items-center justify-center text-white hover:bg-white/20 transition-colors"
+        className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-surface rounded-full flex items-center justify-center text-white hover:bg-surface-raised transition-colors"
       >
         →
       </button>
@@ -612,7 +633,7 @@ function AssetLightbox({ onClose, onNext, onPrev }: AssetLightboxProps) {
             className="max-w-full max-h-[90vh]"
           />
         ) : (
-          <div className="p-8 bg-surface rounded-lg max-w-2xl">
+          <div className="p-8 bg-surface rounded-3xl max-w-2xl">
             <p className="text-text-primary whitespace-pre-wrap">
               {/* Text content would go here */}
             </p>
@@ -623,7 +644,7 @@ function AssetLightbox({ onClose, onNext, onPrev }: AssetLightboxProps) {
       {/* Info bar */}
       <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black to-transparent">
         <p className="text-white font-medium">{asset.name}</p>
-        <p className="text-white/70 text-sm">
+        <p className="text-white text-sm">
           {formatFileSize(asset.metadata.fileSize)}
           {asset.metadata.width && ` • ${asset.metadata.width}×${asset.metadata.height}`}
         </p>

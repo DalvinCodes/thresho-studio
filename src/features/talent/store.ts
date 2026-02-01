@@ -92,6 +92,7 @@ interface TalentActions {
   // AI Generation actions
   initGenerationState: (talentId: UUID) => void;
   setGenerationProvider: (talentId: UUID, providerId: string) => void;
+  setGenerationModel: (talentId: UUID, modelId: string) => void;
   setGenerationStep: (talentId: UUID, step: TalentGenerationState['generationStep']) => void;
   setCurrentHeadshot: (talentId: UUID, headshot: TalentGeneratedImage | null) => void;
   setCharacterSheet: (talentId: UUID, images: TalentGeneratedImage[]) => void;
@@ -631,6 +632,7 @@ export const useTalentStore = create<TalentStore>()(
             isGenerating: false,
             generationStep: 'idle',
             selectedProviderId: null,
+            selectedModelId: null,
             error: null,
           });
         }
@@ -642,6 +644,17 @@ export const useTalentStore = create<TalentStore>()(
         const genState = state.generationStates.get(talentId);
         if (genState) {
           genState.selectedProviderId = providerId;
+          // Reset model when provider changes
+          genState.selectedModelId = null;
+        }
+      });
+    },
+
+    setGenerationModel: (talentId, modelId) => {
+      set((state) => {
+        const genState = state.generationStates.get(talentId);
+        if (genState) {
+          genState.selectedModelId = modelId;
         }
       });
     },

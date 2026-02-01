@@ -68,7 +68,7 @@ export class ErrorBoundary extends Component<Props, State> {
       // Default fallback UI
       return (
         <div className="min-h-screen bg-background flex items-center justify-center p-4">
-          <div className="max-w-md w-full bg-surface rounded-lg p-6 text-center shadow-xl">
+          <div className="max-w-md w-full bg-surface rounded-3xl p-6 text-center shadow-xl">
             <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
               <svg
                 className="w-8 h-8 text-red-500"
@@ -91,7 +91,7 @@ export class ErrorBoundary extends Component<Props, State> {
               An unexpected error occurred in the application.
             </p>
             {this.state.error && (
-              <div className="mb-4 p-3 bg-red-500/10 rounded-lg text-left">
+              <div className="mb-4 p-3 bg-red-500/10 rounded-3xl text-left">
                 <p className="text-sm text-red-400 font-mono break-all">
                   {this.state.error.message}
                 </p>
@@ -100,13 +100,13 @@ export class ErrorBoundary extends Component<Props, State> {
             <div className="flex gap-3 justify-center">
               <button
                 onClick={this.handleRetry}
-                className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors font-medium"
+                className="px-4 py-2 bg-primary text-white rounded-3xl hover:bg-primary/90 transition-colors font-medium"
               >
                 Try Again
               </button>
               <button
                 onClick={() => window.location.reload()}
-                className="px-4 py-2 bg-surface-hover text-text-primary rounded-lg hover:bg-surface-hover/80 transition-colors font-medium border border-border"
+                className="px-4 py-2 bg-surface-hover text-text-primary rounded-3xl hover:bg-surface-hover/80 transition-colors font-medium border border-border"
               >
                 Reload Page
               </button>

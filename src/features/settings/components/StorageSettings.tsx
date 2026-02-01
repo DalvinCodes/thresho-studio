@@ -152,7 +152,7 @@ export function StorageSettings() {
         <p className="text-red-400">Error: {error}</p>
         <button 
           onClick={loadStats}
-          className="px-4 py-2 bg-background border border-border rounded-lg text-text-primary hover:bg-surface-hover transition-colors"
+          className="px-4 py-2 bg-background border border-border rounded-3xl text-text-primary hover:bg-surface-hover transition-colors"
         >
           Retry
         </button>
@@ -165,7 +165,7 @@ export function StorageSettings() {
       <h4 className="font-medium text-text-primary">File Storage</h4>
 
       {error && (
-        <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">
+        <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-3xl text-red-400 text-sm">
           {error}
         </div>
       )}
@@ -216,7 +216,7 @@ export function StorageSettings() {
           <div className="space-y-3 pt-2">
             {stats.fileCount > 0 && (
               <button
-                className="w-full py-2 bg-background border border-border rounded-lg text-text-primary hover:bg-surface-hover transition-colors"
+                className="w-full py-2 bg-background border border-border rounded-3xl text-text-primary hover:bg-surface-hover transition-colors"
                 onClick={handleExportAll}
               >
                 Export All Files
@@ -225,27 +225,27 @@ export function StorageSettings() {
 
             {!showConfirm ? (
               <button
-                className="w-full py-2 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 hover:bg-red-500/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full py-2 bg-red-500/10 border border-red-500/20 rounded-3xl text-red-400 hover:bg-red-500/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={() => setShowConfirm(true)}
                 disabled={stats.fileCount === 0}
               >
                 Clear All Files
               </button>
             ) : (
-              <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg space-y-3">
+              <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-3xl space-y-3">
                 <p className="text-red-400 text-sm">
                   Delete all {stats.fileCount} files? This cannot be undone.
                 </p>
                 <div className="flex gap-2">
                   <button
-                    className="flex-1 py-2 bg-red-500 rounded-lg text-white hover:bg-red-600 transition-colors disabled:opacity-50"
+                    className="flex-1 py-2 bg-red-500 rounded-3xl text-white hover:bg-red-600 transition-colors disabled:opacity-50"
                     onClick={handleClearAll}
                     disabled={clearing}
                   >
                     {clearing ? 'Clearing...' : 'Yes, Delete All'}
                   </button>
                   <button
-                    className="flex-1 py-2 bg-background border border-border rounded-lg text-text-primary hover:bg-surface-hover transition-colors"
+                    className="flex-1 py-2 bg-background border border-border rounded-3xl text-text-primary hover:bg-surface-hover transition-colors"
                     onClick={() => setShowConfirm(false)}
                     disabled={clearing}
                   >
@@ -256,7 +256,7 @@ export function StorageSettings() {
             )}
 
             <button
-              className="w-full py-2 bg-background border border-border rounded-lg text-text-secondary hover:bg-surface-hover hover:text-text-primary transition-colors"
+              className="w-full py-2 bg-background border border-border rounded-3xl text-text-secondary hover:bg-surface-hover hover:text-text-primary transition-colors"
               onClick={loadStats}
             >
               Refresh Stats

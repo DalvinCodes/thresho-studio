@@ -141,9 +141,8 @@ export class IndexedDBStorage implements FileStorageService {
 
       request.onsuccess = () => {
         console.log(`[IndexedDBStorage] Saved file: ${id} (${formatBytes(blob.size)})`);
-        // Create and return blob URL
-        const url = this.createFileUrl(id, blob);
-        resolve(url);
+        // Return storage URL - blob URL will be created on-demand when getFileUrl is called
+        resolve(`idb://${id}`);
       };
     });
   }

@@ -4,6 +4,7 @@
  */
 
 import { useState } from 'react';
+import { Zap, Palette, CircleDollarSign, Settings, Database, Info } from 'lucide-react';
 import { ProviderSettings } from '../features/providers/components/ProviderSettings';
 import { StorageSettings as StorageSettingsFeature } from '../features/settings';
 import { CostDashboard } from '../features/generation/components/CostDashboard';
@@ -14,17 +15,17 @@ export function SettingsPage() {
   const [activeTab, setActiveTab] = useState<SettingsTab>('providers');
 
   const tabs = [
-    { id: 'providers' as const, label: 'Providers', icon: '⚡' },
-    { id: 'costs' as const, label: 'Costs', icon: '💰' },
-    { id: 'preferences' as const, label: 'Preferences', icon: '⚙️' },
-    { id: 'storage' as const, label: 'Storage', icon: '💾' },
-    { id: 'about' as const, label: 'About', icon: 'ℹ️' },
+    { id: 'providers' as const, label: 'Providers', icon: <Zap className="w-4 h-4" /> },
+    { id: 'costs' as const, label: 'Costs', icon: <CircleDollarSign className="w-4 h-4" /> },
+    { id: 'preferences' as const, label: 'Preferences', icon: <Settings className="w-4 h-4" /> },
+    { id: 'storage' as const, label: 'Storage', icon: <Database className="w-4 h-4" /> },
+    { id: 'about' as const, label: 'About', icon: <Info className="w-4 h-4" /> },
   ];
 
   return (
     <div className="h-full flex">
-      {/* Settings Sidebar */}
-      <div className="w-56 border-r border-border bg-surface">
+      {/* Settings Sidebar - fixed width with clear separation */}
+      <aside className="w-56 flex-shrink-0 border-r border-border bg-surface">
         <div className="p-4">
           <h2 className="text-lg font-semibold text-text-primary">Settings</h2>
         </div>
@@ -34,28 +35,35 @@ export function SettingsPage() {
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={`
-                w-full px-3 py-2 rounded-lg text-left flex items-center gap-3 transition-colors mb-1
+                w-full px-3 py-2 rounded-3xl text-left flex items-center gap-3
+                transition-all duration-200 mb-1 relative
                 ${activeTab === tab.id
-                  ? 'bg-primary/10 text-primary'
-                  : 'text-text-secondary hover:bg-surface-hover hover:text-text-primary'
+                  ? 'bg-primary-light text-primary'
+                  : 'text-text-muted hover:bg-surface-hover hover:text-text-primary'
                 }
               `}
             >
-              <span>{tab.icon}</span>
+              {/* Left border indicator */}
+              <span className={`
+                absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-6 rounded-full
+                transition-all duration-200
+                ${activeTab === tab.id ? 'bg-primary' : 'bg-primary opacity-0'}
+              `} />
+              <span className="ml-2">{tab.icon}</span>
               <span>{tab.label}</span>
             </button>
           ))}
         </nav>
-      </div>
+      </aside>
 
-      {/* Settings Content */}
-      <div className="flex-1 overflow-y-auto">
+      {/* Settings Content - scrollable with bg-bg background */}
+      <main className="flex-1 overflow-y-auto bg-bg">
         {activeTab === 'providers' && <ProviderSettings />}
         {activeTab === 'costs' && <CostsSettings />}
         {activeTab === 'preferences' && <PreferencesSettings />}
         {activeTab === 'storage' && <StorageSettings />}
         {activeTab === 'about' && <AboutSettings />}
-      </div>
+      </main>
     </div>
   );
 }
@@ -72,19 +80,19 @@ function CostsSettings() {
 // Preferences Settings
 function PreferencesSettings() {
   return (
-    <div className="max-w-2xl mx-auto p-8 space-y-6">
-      <div>
+    <div className="max-w-2xl mx-auto p-8 space-y-8">
+      <div className="border-b border-border pb-6">
         <h3 className="text-xl font-semibold text-text-primary mb-2">Preferences</h3>
         <p className="text-text-secondary">Customize your Thresho Studio experience</p>
       </div>
 
-      <div className="bg-surface rounded-lg border border-border divide-y divide-border">
+      <div className="bg-surface rounded-3xl border border-border divide-y divide-border shadow-sm">
         <div className="p-4 flex items-center justify-between">
           <div>
             <p className="font-medium text-text-primary">Theme</p>
             <p className="text-sm text-text-secondary">Choose your preferred color scheme</p>
           </div>
-          <select className="px-3 py-2 bg-background border border-border rounded-lg text-text-primary">
+          <select className="px-3 py-2 bg-background border border-border rounded-3xl text-text-primary">
             <option value="dark">Dark</option>
             <option value="light">Light</option>
             <option value="system">System</option>
@@ -96,7 +104,7 @@ function PreferencesSettings() {
             <p className="font-medium text-text-primary">Default Content Type</p>
             <p className="text-sm text-text-secondary">Default type when creating new generations</p>
           </div>
-          <select className="px-3 py-2 bg-background border border-border rounded-lg text-text-primary">
+          <select className="px-3 py-2 bg-background border border-border rounded-3xl text-text-primary">
             <option value="text">Text</option>
             <option value="image">Image</option>
             <option value="video">Video</option>
@@ -132,14 +140,14 @@ function PreferencesSettings() {
 // Storage Settings - wrapper to use the feature component with page styling
 function StorageSettings() {
   return (
-    <div className="max-w-2xl mx-auto p-8 space-y-6">
-      <div>
+    <div className="max-w-2xl mx-auto p-8 space-y-8">
+      <div className="border-b border-border pb-6">
         <h3 className="text-xl font-semibold text-text-primary mb-2">Storage</h3>
         <p className="text-text-secondary">Manage your local data and file storage</p>
       </div>
 
       {/* File Storage Section */}
-      <div className="bg-surface rounded-lg border border-border p-6">
+      <div className="bg-surface rounded-3xl border border-border p-6 shadow-sm">
         <StorageSettingsFeature />
       </div>
     </div>
@@ -149,22 +157,22 @@ function StorageSettings() {
 // About Settings
 function AboutSettings() {
   return (
-    <div className="max-w-2xl mx-auto p-8 space-y-6">
-      <div>
+    <div className="max-w-2xl mx-auto p-8 space-y-8">
+      <div className="border-b border-border pb-6">
         <h3 className="text-xl font-semibold text-text-primary mb-2">About</h3>
         <p className="text-text-secondary">Information about Thresho Studio</p>
       </div>
 
-      <div className="bg-surface rounded-lg border border-border p-8 text-center">
-        <div className="w-20 h-20 bg-primary/20 rounded-full flex items-center justify-center mx-auto mb-4">
-          <span className="text-4xl">🎨</span>
+      <div className="bg-surface rounded-3xl border border-border p-8 text-center shadow-sm">
+        <div className="w-20 h-20 bg-primary-light rounded-full flex items-center justify-center mx-auto mb-4">
+          <Palette className="w-10 h-10 text-primary" />
         </div>
         <h2 className="text-2xl font-bold text-primary mb-1">Thresho Studio</h2>
         <p className="text-text-secondary mb-4">AI-Powered Creative Platform</p>
         <p className="text-sm text-text-secondary">Version 0.1.0</p>
       </div>
 
-      <div className="bg-surface rounded-lg border border-border divide-y divide-border">
+      <div className="bg-surface rounded-3xl border border-border divide-y divide-border shadow-sm">
         <div className="p-4">
           <p className="font-medium text-text-primary mb-1">Multi-Provider Support</p>
           <p className="text-sm text-text-secondary">
@@ -194,7 +202,7 @@ function AboutSettings() {
         </div>
       </div>
 
-      <div className="text-center text-sm text-text-secondary">
+      <div className="text-center text-sm text-text-secondary pt-4 border-t border-border">
         <p>Built with React, TypeScript, and Tailwind CSS</p>
         <p className="mt-1">© 2024 Thresho Studio</p>
       </div>

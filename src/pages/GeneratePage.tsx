@@ -4,6 +4,7 @@
  */
 
 import { useState, useCallback, useMemo } from 'react';
+import { FileText, Image, Video, Sparkles } from 'lucide-react';
 import type { UUID, ContentType } from '../core/types/common';
 import type { GenerationParameters } from '../core/types/generation';
 import type { TemplateWithVersion, PromptVariable } from '../core/types/prompt';
@@ -85,28 +86,28 @@ export function GeneratePage() {
           </div>
 
           {/* Content Type Selector */}
-          <div className="bg-surface rounded-lg border border-border p-4">
+          <div className="bg-surface rounded-3xl border border-border p-4">
             <label className="block text-sm font-medium text-text-primary mb-3">
               Content Type
             </label>
             <div className="grid grid-cols-3 gap-3">
               {([
-                { type: 'text', icon: '📝', label: 'Text' },
-                { type: 'image', icon: '🖼️', label: 'Image' },
-                { type: 'video', icon: '🎬', label: 'Video' },
-              ] as const).map(({ type, icon, label }) => (
+                { type: 'text', icon: FileText, label: 'Text' },
+                { type: 'image', icon: Image, label: 'Image' },
+                { type: 'video', icon: Video, label: 'Video' },
+              ] as const).map(({ type, icon: Icon, label }) => (
                 <button
                   key={type}
                   onClick={() => setContentType(type)}
                   className={`
-                    p-4 rounded-lg border-2 transition-all
+                    p-4 rounded-3xl border-2 transition-all flex flex-col items-center
                     ${contentType === type
                       ? 'border-primary bg-primary/10'
                       : 'border-border hover:border-primary/50'
                     }
                   `}
                 >
-                  <span className="text-3xl block mb-2">{icon}</span>
+                  <Icon className="w-8 h-8 mb-2 text-text-primary" />
                   <span className="font-medium text-text-primary">{label}</span>
                 </button>
               ))}
@@ -114,7 +115,7 @@ export function GeneratePage() {
           </div>
 
           {/* Prompt Source */}
-          <div className="bg-surface rounded-lg border border-border p-4">
+          <div className="bg-surface rounded-3xl border border-border p-4">
             <label className="block text-sm font-medium text-text-primary mb-3">
               Prompt
             </label>
@@ -124,7 +125,7 @@ export function GeneratePage() {
               <select
                 value={selectedTemplateId || ''}
                 onChange={(e) => handleTemplateChange(e.target.value as UUID || null)}
-                className="w-full px-3 py-2 bg-background border border-border rounded-lg text-text-primary"
+                className="w-full h-10 px-4 bg-background border border-border rounded-3xl text-text-primary"
               >
                 <option value="">Custom prompt</option>
                 {templates
@@ -151,10 +152,10 @@ export function GeneratePage() {
                     : 'Describe the video scene...'
                 }
                 rows={6}
-                className="w-full px-3 py-2 bg-background border border-border rounded-lg text-text-primary placeholder:text-text-secondary resize-none"
+                className="w-full px-3 py-2 bg-background border border-border rounded-3xl text-text-primary placeholder:text-text-secondary resize-none"
               />
             ) : (
-              <div className="p-4 bg-background rounded-lg border border-border">
+              <div className="p-4 bg-background rounded-3xl border border-border">
                 {templateVariables.length === 0 ? (
                   <p className="text-sm text-text-secondary">
                     This template has no variables. It will be used as-is.
@@ -185,13 +186,13 @@ export function GeneratePage() {
                             type="number"
                             value={String(variables[variable.name] ?? variable.defaultValue ?? '')}
                             onChange={(e) => handleVariableChange(variable.name, Number(e.target.value))}
-                            className="w-full px-3 py-2 bg-surface border border-border rounded-lg text-text-primary"
+                            className="w-full h-10 px-4 bg-surface border border-border rounded-3xl text-text-primary"
                           />
                         ) : variable.type === 'enum' && variable.enumValues ? (
                           <select
                             value={String(variables[variable.name] ?? variable.defaultValue ?? '')}
                             onChange={(e) => handleVariableChange(variable.name, e.target.value)}
-                            className="w-full px-3 py-2 bg-surface border border-border rounded-lg text-text-primary"
+                            className="w-full h-10 px-4 bg-surface border border-border rounded-3xl text-text-primary"
                           >
                             <option value="">Select...</option>
                             {variable.enumValues.map((value) => (
@@ -206,7 +207,7 @@ export function GeneratePage() {
                             value={String(variables[variable.name] ?? variable.defaultValue ?? '')}
                             onChange={(e) => handleVariableChange(variable.name, e.target.value)}
                             placeholder={variable.defaultValue ? `Default: ${variable.defaultValue}` : ''}
-                            className="w-full px-3 py-2 bg-surface border border-border rounded-lg text-text-primary placeholder:text-text-secondary"
+                            className="w-full h-10 px-4 bg-surface border border-border rounded-3xl text-text-primary placeholder:text-text-secondary"
                           />
                         )}
                       </div>
@@ -218,14 +219,14 @@ export function GeneratePage() {
           </div>
 
           {/* Brand Selection */}
-          <div className="bg-surface rounded-lg border border-border p-4">
+          <div className="bg-surface rounded-3xl border border-border p-4">
             <label className="block text-sm font-medium text-text-primary mb-3">
               Brand Profile
             </label>
             <select
               value={selectedBrandId || ''}
               onChange={(e) => setSelectedBrandId(e.target.value as UUID || null)}
-              className="w-full px-3 py-2 bg-background border border-border rounded-lg text-text-primary"
+              className="w-full h-10 px-4 bg-background border border-border rounded-3xl text-text-primary"
             >
               <option value="">No brand</option>
               {brands.map((brand) => (
@@ -243,7 +244,7 @@ export function GeneratePage() {
           </div>
 
           {/* Talent Selection */}
-          <div className="bg-surface rounded-lg border border-border p-4">
+          <div className="bg-surface rounded-3xl border border-border p-4">
             <label className="block text-sm font-medium text-text-primary mb-3">
               Talents
             </label>
@@ -261,7 +262,7 @@ export function GeneratePage() {
           </div>
 
           {/* Advanced Parameters */}
-          <div className="bg-surface rounded-lg border border-border">
+          <div className="bg-surface rounded-3xl border border-border">
             <button
               onClick={() => setShowAdvanced(!showAdvanced)}
               className="w-full p-4 flex items-center justify-between text-left"
@@ -302,7 +303,7 @@ export function GeneratePage() {
                         }
                         min={100}
                         max={4000}
-                        className="w-full px-3 py-2 bg-background border border-border rounded-lg text-text-primary"
+                        className="w-full h-10 px-4 bg-background border border-border rounded-3xl text-text-primary"
                       />
                     </div>
                     <div className="flex items-center gap-2">
@@ -331,7 +332,7 @@ export function GeneratePage() {
                           onChange={(e) =>
                             setParameters({ ...parameters, width: Number(e.target.value) })
                           }
-                          className="w-full px-3 py-2 bg-background border border-border rounded-lg text-text-primary"
+                          className="w-full h-10 px-4 bg-background border border-border rounded-3xl text-text-primary"
                         >
                           <option value={512}>512</option>
                           <option value={768}>768</option>
@@ -346,7 +347,7 @@ export function GeneratePage() {
                           onChange={(e) =>
                             setParameters({ ...parameters, height: Number(e.target.value) })
                           }
-                          className="w-full px-3 py-2 bg-background border border-border rounded-lg text-text-primary"
+                          className="w-full h-10 px-4 bg-background border border-border rounded-3xl text-text-primary"
                         >
                           <option value={512}>512</option>
                           <option value={768}>768</option>
@@ -366,7 +367,7 @@ export function GeneratePage() {
                           setParameters({ ...parameters, negativePrompt: e.target.value })
                         }
                         placeholder="Things to avoid..."
-                        className="w-full px-3 py-2 bg-background border border-border rounded-lg text-text-primary placeholder:text-text-secondary"
+                        className="w-full h-10 px-4 bg-background border border-border rounded-3xl text-text-primary placeholder:text-text-secondary"
                       />
                     </div>
                   </>
@@ -387,7 +388,7 @@ export function GeneratePage() {
                           }
                           min={1}
                           max={60}
-                          className="w-full px-3 py-2 bg-background border border-border rounded-lg text-text-primary"
+                          className="w-full h-10 px-4 bg-background border border-border rounded-3xl text-text-primary"
                         />
                       </div>
                       <div>
@@ -399,7 +400,7 @@ export function GeneratePage() {
                           onChange={(e) =>
                             setParameters({ ...parameters, aspectRatio: e.target.value })
                           }
-                          className="w-full px-3 py-2 bg-background border border-border rounded-lg text-text-primary"
+                          className="w-full h-10 px-4 bg-background border border-border rounded-3xl text-text-primary"
                         >
                           <option value="16:9">16:9</option>
                           <option value="9:16">9:16</option>
@@ -419,9 +420,13 @@ export function GeneratePage() {
             onClick={handleGenerate}
             disabled={!canGenerate}
             data-testid="generate-btn"
-            className="w-full py-4 bg-primary text-white text-lg font-semibold rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            title={!canGenerate ? 'Enter a prompt or select a template to generate' : undefined}
+            className="w-full py-4 text-lg font-semibold rounded-3xl transition-all flex items-center justify-center gap-2
+              disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed disabled:opacity-60
+              bg-primary text-white hover:bg-primary/90 hover:shadow-md"
           >
-            ✨ Generate {contentType.charAt(0).toUpperCase() + contentType.slice(1)}
+            <Sparkles className="w-5 h-5" />
+            Generate {contentType.charAt(0).toUpperCase() + contentType.slice(1)}
           </button>
         </div>
       </div>

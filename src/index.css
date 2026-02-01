@@ -1,28 +1,366 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Inter:wght@300;400;500;600&display=swap');
 @import "tailwindcss";
 
-/* Thresho Brand Colors */
 @theme {
-  --color-primary: #FF714E;
-  --color-secondary: #004466;
-  --color-neutral-dark: #111122;
-  --color-neutral-light: #F0EEEE;
+  /* Typography */
+  --font-serif: "Cormorant Garamond", Georgia, "Times New Roman", serif;
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", "Fira Code", "SF Mono", Consolas, monospace;
 
-  /* Semantic colors */
-  --color-background: #111122;
-  --color-surface: #1a1a2e;
-  --color-surface-hover: #252540;
-  --color-text-primary: #F0EEEE;
-  --color-text-secondary: #9ca3af;
-  --color-border: #374151;
+  /* Text sizes */
+  --text-xs: 11px;
+  --text-xs--line-height: 16px;
+  --text-sm: 13px;
+  --text-sm--line-height: 20px;
+  --text-base: 14px;
+  --text-base--line-height: 22px;
+  --text-md: 15px;
+  --text-md--line-height: 24px;
+  --text-lg: 17px;
+  --text-lg--line-height: 26px;
+  --text-xl: 20px;
+  --text-xl--line-height: 28px;
+  --text-2xl: 24px;
+  --text-2xl--line-height: 32px;
+  --text-3xl: 30px;
+  --text-3xl--line-height: 38px;
+  --text-display: 42px;
+  --text-display--line-height: 48px;
+  --text-h1: 32px;
+  --text-h1--line-height: 38px;
+  --text-h2: 26px;
+  --text-h2--line-height: 32px;
+
+  /* Border Radius - Extra Large for modern feel */
+  --radius-sm: 12px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --radius-xl: 32px;
+  --radius-2xl: 48px;
+  --radius-full: 9999px;
 }
 
-/* Base styles */
+/* Light Mode (Default) */
+:root {
+  /* Backgrounds */
+  --color-bg: #FFFFFF;
+  --color-bg-subtle: #F8F8F8;
+  --color-surface: #FFFFFF;
+  --color-surface-raised: #F5F5F5;
+  --color-surface-hover: #F0F0F0;
+
+  /* Text - High contrast for readability */
+  --color-text: #1A1A1A;
+  --color-text-muted: #4A4A4A;
+  --color-text-subtle: #6B6B6B;
+  --color-text-on-brand: #FFFFFF;
+
+  /* Borders - Visible but not harsh */
+  --color-border: #E0E0E0;
+  --color-divider: #E8E8E8;
+
+  /* Primary - Coral/Orange */
+  --color-primary: #E85D4C;
+  --color-primary-hover: #D14D3D;
+  --color-primary-active: #B83D2D;
+  --color-primary-light: #FDF2F0;
+
+  /* Secondary - Soft Blue */
+  --color-secondary: #4A90A4;
+  --color-secondary-hover: #3A7A8C;
+
+  /* Links */
+  --color-link: #E85D4C;
+  --color-link-hover: #D14D3D;
+  --color-focus-ring: #E85D4C;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07);
+  --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.08);
+  --shadow-xl: 0 16px 32px rgba(0, 0, 0, 0.1);
+  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.06);
+
+  /* Status Colors */
+  --color-status-info: #4A90A4;
+  --color-status-warning: #E8A54C;
+  --color-status-danger: #E85D4C;
+  --color-status-success: #5CA86C;
+}
+
+/* Dark Mode */
+:root[data-theme="dark"] {
+  /* Backgrounds - Dark but not pure black */
+  --color-bg: #1A1A1A;
+  --color-bg-subtle: #242424;
+  --color-surface: #2A2A2A;
+  --color-surface-raised: #323232;
+  --color-surface-hover: #3A3A3A;
+
+  /* Text - High contrast white/off-white */
+  --color-text: #FFFFFF;
+  --color-text-muted: #C0C0C0;
+  --color-text-subtle: #A0A0A0;
+  --color-text-on-brand: #FFFFFF;
+
+  /* Borders */
+  --color-border: #404040;
+  --color-divider: #505050;
+
+  /* Primary - Brighter coral for dark mode */
+  --color-primary: #FF6B5B;
+  --color-primary-hover: #FF8578;
+  --color-primary-active: #FFA99E;
+  --color-primary-light: rgba(255, 107, 91, 0.15);
+
+  /* Secondary */
+  --color-secondary: #5AB4C8;
+  --color-secondary-hover: #7AC8D8;
+
+  /* Links */
+  --color-link: #FF6B5B;
+  --color-link-hover: #FF8578;
+  --color-focus-ring: #FF6B5B;
+
+  /* Shadows - More pronounced in dark mode */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.5);
+  --shadow-xl: 0 16px 32px rgba(0, 0, 0, 0.6);
+  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.4);
+
+  /* Status Colors */
+  --color-status-info: #6AB4C8;
+  --color-status-warning: #F0B85C;
+  --color-status-danger: #FF6B5B;
+  --color-status-success: #7AC88A;
+}
+
+/* Base Reset & Typography */
+html {
+  background-color: var(--color-bg);
+}
+
 body {
-  @apply bg-background text-text-primary antialiased;
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* Focus ring utility */
-.focus-ring {
-  @apply focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background;
+/* Serif Typography for Headings */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-serif);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+
+h1 {
+  font-size: var(--text-h1);
+  line-height: var(--text-h1--line-height);
+}
+
+h2 {
+  font-size: var(--text-h2);
+  line-height: var(--text-h2--line-height);
+}
+
+/* Display/Greeting Text */
+.text-display {
+  font-family: var(--font-serif);
+  font-size: var(--text-display);
+  line-height: var(--text-display--line-height);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+
+/* Selection */
+::selection {
+  background-color: var(--color-primary);
+  color: var(--color-text-on-brand);
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-bg-subtle);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-muted);
+}
+
+/* Smooth transitions for interactive elements */
+button:not([disabled]),
+[role="button"]:not([disabled]),
+a,
+input,
+textarea,
+select {
+  transition: all 0.2s ease;
+}
+
+/* Button Press Animation */
+button:not([disabled]):active,
+[role="button"]:not([disabled]):active {
+  transform: scale(0.97);
+}
+
+/* Utility Classes */
+@layer utilities {
+  /* Font utilities */
+  .font-serif {
+    font-family: var(--font-serif);
+  }
+
+  .font-sans {
+    font-family: var(--font-sans);
+  }
+
+  /* Background colors */
+  .bg-bg {
+    background-color: var(--color-bg);
+  }
+
+  .bg-bg-subtle {
+    background-color: var(--color-bg-subtle);
+  }
+
+  .bg-surface {
+    background-color: var(--color-surface);
+  }
+
+  .bg-surface-raised {
+    background-color: var(--color-surface-raised);
+  }
+
+  .bg-surface-hover {
+    background-color: var(--color-surface-hover);
+  }
+
+  .bg-primary {
+    background-color: var(--color-primary);
+  }
+
+  .bg-primary-hover {
+    background-color: var(--color-primary-hover);
+  }
+
+  .bg-primary-light {
+    background-color: var(--color-primary-light);
+  }
+
+  /* Text colors */
+  .text-text {
+    color: var(--color-text);
+  }
+
+  .text-text-primary {
+    color: var(--color-text);
+  }
+
+  .text-text-muted {
+    color: var(--color-text-muted);
+  }
+
+  .text-text-secondary {
+    color: var(--color-text-muted);
+  }
+
+  .text-text-subtle {
+    color: var(--color-text-subtle);
+  }
+
+  .text-primary {
+    color: var(--color-primary);
+  }
+
+  /* Border colors */
+  .border-border {
+    border-color: var(--color-border);
+  }
+
+  .border-divider {
+    border-color: var(--color-divider);
+  }
+
+  .border-primary {
+    border-color: var(--color-primary);
+  }
+
+  /* Ring colors */
+  .ring-primary {
+    --tw-ring-color: var(--color-primary);
+  }
+
+  /* Shadow utilities */
+  .shadow-card {
+    box-shadow: var(--shadow-card);
+  }
+}
+
+/* Card Hover Effect - Lift on hover */
+.card-hover {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+/* Toast Animations */
+@keyframes shrink {
+  from {
+    width: 100%;
+  }
+  to {
+    width: 0%;
+  }
+}
+
+/* Focus styles */
+*:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+/* Table Styles */
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th, td {
+  padding: 12px 16px;
+  text-align: left;
+  border-bottom: 1px solid var(--color-border);
+}
+
+th {
+  font-weight: 600;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+tr:hover td {
+  background-color: var(--color-surface-hover);
+}
+
+/* Row highlighting */
+tr.selected td {
+  background-color: var(--color-primary-light);
 }

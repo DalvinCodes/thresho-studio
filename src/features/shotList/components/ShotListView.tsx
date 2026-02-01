@@ -4,6 +4,7 @@
  */
 
 import { useState, useCallback } from 'react';
+import { Film, ClipboardList, Play, Copy, Pencil, Trash2 } from 'lucide-react';
 import type { UUID } from '../../../core/types/common';
 import type { Shot, ShotStatus, ShotType } from '../../../core/types/shotList';
 import {
@@ -28,18 +29,19 @@ export function ShotListView({ shotListId, onEditShot, onGenerateShot }: ShotLis
   const filterOptions = useFilterOptions();
   const stats = useListStats(shotListId);
 
-  const {
-    setViewMode,
-    setFilterOptions,
-    clearFilters,
-    createShot,
-    deleteShot,
-    updateShotStatus,
-    duplicateShot,
-    selectShot,
-  } = useShotListStore();
+  const store = useShotListStore();
+  const setViewMode = store.setViewMode;
+  const setFilterOptions = store.setFilterOptions;
+  const clearFilters = store.clearFilters;
+  const createShot = store.createShot;
+  const deleteShot = store.deleteShot;
+  const updateShotStatus = store.updateShotStatus;
+  const duplicateShot = store.duplicateShot;
+  const selectShot = store.selectShot;
+  const openCreateShotModal = store.openCreateShotModal;
+  const closeCreateShotModal = store.closeCreateShotModal;
+  const isCreateShotModalOpen = store.isCreateShotModalOpen;
 
-  const [showCreateModal, setShowCreateModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   // Handle search
@@ -69,8 +71,8 @@ export function ShotListView({ shotListId, onEditShot, onGenerateShot }: ShotLis
       name,
       description,
     });
-    setShowCreateModal(false);
-  }, [shotListId, createShot]);
+    closeCreateShotModal();
+  }, [shotListId, createShot, closeCreateShotModal]);
 
   if (!shotList) {
     return (
@@ -94,8 +96,8 @@ export function ShotListView({ shotListId, onEditShot, onGenerateShot }: ShotLis
             )}
           </div>
           <button
-            onClick={() => setShowCreateModal(true)}
-            className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+            onClick={() => openCreateShotModal()}
+            className="px-4 py-2 bg-primary text-white rounded-3xl hover:bg-primary/90 transition-colors"
           >
             + Add Shot
           </button>
@@ -104,20 +106,20 @@ export function ShotListView({ shotListId, onEditShot, onGenerateShot }: ShotLis
         {/* Toolbar */}
         <div className="flex items-center gap-4">
           {/* View Mode Toggle */}
-          <div className="flex bg-background rounded-lg p-1">
+          <div className="flex bg-background rounded-3xl p-1">
             {(['table', 'storyboard'] as const).map((mode) => (
               <button
                 key={mode}
                 onClick={() => setViewMode(mode)}
                 className={`
-                  px-3 py-1.5 text-sm font-medium rounded capitalize transition-colors
+                  px-3 py-1.5 text-sm font-medium rounded capitalize transition-colors flex items-center gap-1.5
                   ${viewMode === mode
                     ? 'bg-primary text-white'
                     : 'text-text-secondary hover:text-text-primary'
                   }
                 `}
               >
-                {mode === 'table' ? '📋' : '🎬'} {mode}
+                {mode === 'table' ? <ClipboardList className="w-4 h-4" /> : <Film className="w-4 h-4" />} {mode}
               </button>
             ))}
           </div>
@@ -128,14 +130,14 @@ export function ShotListView({ shotListId, onEditShot, onGenerateShot }: ShotLis
             value={searchQuery}
             onChange={(e) => handleSearch(e.target.value)}
             placeholder="Search shots..."
-            className="flex-1 max-w-xs px-3 py-2 bg-background border border-border rounded-lg text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+            className="flex-1 max-w-xs px-3 py-2 bg-background border border-border rounded-3xl text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary text-sm"
           />
 
           {/* Status Filter */}
           <select
             value={filterOptions.status?.[0] || ''}
             onChange={(e) => handleStatusFilter(e.target.value as ShotStatus | '')}
-            className="px-3 py-2 bg-background border border-border rounded-lg text-text-primary text-sm"
+            className="px-3 py-2 bg-background border border-border rounded-3xl text-text-primary text-sm"
           >
             <option value="">All Status</option>
             <option value="planned">Planned</option>
@@ -151,7 +153,7 @@ export function ShotListView({ shotListId, onEditShot, onGenerateShot }: ShotLis
           <select
             value={filterOptions.shotType?.[0] || ''}
             onChange={(e) => handleShotTypeFilter(e.target.value as ShotType | '')}
-            className="px-3 py-2 bg-background border border-border rounded-lg text-text-primary text-sm"
+            className="px-3 py-2 bg-background border border-border rounded-3xl text-text-primary text-sm"
           >
             <option value="">All Types</option>
             <option value="wide">Wide</option>
@@ -180,7 +182,7 @@ export function ShotListView({ shotListId, onEditShot, onGenerateShot }: ShotLis
           <div className="h-full flex flex-col items-center justify-center text-text-secondary">
             <p className="mb-4">No shots found</p>
             <button
-              onClick={() => setShowCreateModal(true)}
+              onClick={() => openCreateShotModal()}
               className="text-primary hover:underline"
             >
               Add your first shot
@@ -207,9 +209,9 @@ export function ShotListView({ shotListId, onEditShot, onGenerateShot }: ShotLis
       </div>
 
       {/* Create Modal */}
-      {showCreateModal && (
+      {isCreateShotModalOpen && (
         <CreateShotModal
-          onClose={() => setShowCreateModal(false)}
+          onClose={() => closeCreateShotModal()}
           onCreate={handleCreateShot}
         />
       )}
@@ -253,11 +255,15 @@ function ShotTable({
         </tr>
       </thead>
       <tbody>
-        {shots.map((shot) => (
+        {shots.map((shot, index) => (
           <tr
             key={shot.id}
             onClick={() => onSelect(shot.id)}
-            className="border-t border-border hover:bg-surface-hover cursor-pointer"
+            className={`
+              border-t border-border cursor-pointer transition-colors
+              ${index % 2 === 0 ? 'bg-surface' : 'bg-bg-subtle'}
+              hover:bg-surface-raised
+            `}
           >
             <td className="px-4 py-3 text-sm font-mono text-text-secondary">
               {shot.shotNumber}
@@ -317,7 +323,7 @@ function ShotTable({
                   className="p-1.5 text-text-secondary hover:text-primary transition-colors"
                   title="Edit"
                 >
-                  ✏️
+                  <Pencil className="w-4 h-4" />
                 </button>
                 <button
                   onClick={(e) => {
@@ -327,7 +333,7 @@ function ShotTable({
                   className="p-1.5 text-text-secondary hover:text-primary transition-colors"
                   title="Generate"
                 >
-                  🎬
+                  <Play className="w-4 h-4" />
                 </button>
                 <button
                   onClick={(e) => {
@@ -337,7 +343,7 @@ function ShotTable({
                   className="p-1.5 text-text-secondary hover:text-primary transition-colors"
                   title="Duplicate"
                 >
-                  📋
+                  <Copy className="w-4 h-4" />
                 </button>
                 <button
                   onClick={(e) => {
@@ -349,7 +355,7 @@ function ShotTable({
                   className="p-1.5 text-text-secondary hover:text-red-500 transition-colors"
                   title="Delete"
                 >
-                  🗑️
+                  <Trash2 className="w-4 h-4" />
                 </button>
               </div>
             </td>
@@ -375,7 +381,7 @@ function ShotStoryboard({ shots, onSelect, onEdit, onGenerate }: ShotStoryboardP
         <div
           key={shot.id}
           onClick={() => onSelect(shot.id)}
-          className="bg-surface rounded-lg border border-border overflow-hidden cursor-pointer hover:border-primary/50 transition-colors"
+          className="bg-surface rounded-3xl border border-border overflow-hidden cursor-pointer hover:border-primary/50 transition-colors"
         >
           {/* Thumbnail */}
           <div className="aspect-video bg-background flex items-center justify-center relative">
@@ -392,7 +398,7 @@ function ShotStoryboard({ shots, onSelect, onEdit, onGenerate }: ShotStoryboardP
                 className="w-full h-full object-cover"
               />
             ) : (
-              <div className="text-4xl opacity-30">🎬</div>
+              <Film className="w-12 h-12 text-text-secondary opacity-30" />
             )}
 
             {/* Shot number badge */}
@@ -477,7 +483,7 @@ function CreateShotModal({ onClose, onCreate }: CreateShotModalProps) {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-surface rounded-lg p-6 max-w-md w-full mx-4">
+      <div className="bg-surface rounded-3xl p-6 max-w-md w-full mx-4">
         <h3 className="text-lg font-semibold text-text-primary mb-4">
           Add New Shot
         </h3>
@@ -493,7 +499,7 @@ function CreateShotModal({ onClose, onCreate }: CreateShotModalProps) {
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g., Opening Wide Shot"
               autoFocus
-              className="w-full px-3 py-2 bg-background border border-border rounded-lg text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full px-3 py-2 bg-background border border-border rounded-3xl text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
 
@@ -506,7 +512,7 @@ function CreateShotModal({ onClose, onCreate }: CreateShotModalProps) {
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Describe what happens in this shot..."
               rows={3}
-              className="w-full px-3 py-2 bg-background border border-border rounded-lg text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+              className="w-full px-3 py-2 bg-background border border-border rounded-3xl text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary resize-none"
             />
           </div>
 
@@ -521,7 +527,7 @@ function CreateShotModal({ onClose, onCreate }: CreateShotModalProps) {
             <button
               type="submit"
               disabled={!name.trim() || !description.trim()}
-              className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="px-4 py-2 bg-primary text-white rounded-3xl hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               Add Shot
             </button>

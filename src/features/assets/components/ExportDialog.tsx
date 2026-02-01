@@ -58,7 +58,7 @@ export function ExportDialog({ assets, onClose }: ExportDialogProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-surface rounded-xl shadow-xl w-full max-w-md mx-4">
+      <div className="bg-surface rounded-3xl shadow-xl w-full max-w-md mx-4">
         {/* Header */}
         <div className="px-6 py-4 border-b border-border">
           <h2 className="text-lg font-semibold text-text-primary">Export Assets</h2>
@@ -80,7 +80,7 @@ export function ExportDialog({ assets, onClose }: ExportDialogProps) {
                   key={f}
                   onClick={() => setFormat(f)}
                   className={`
-                    flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors
+                    flex-1 px-4 py-2 rounded-3xl text-sm font-medium transition-colors
                     ${format === f
                       ? 'bg-primary text-white'
                       : 'bg-background text-text-secondary hover:text-text-primary'
@@ -146,7 +146,7 @@ export function ExportDialog({ assets, onClose }: ExportDialogProps) {
 
           {/* Error */}
           {error && (
-            <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+            <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-3xl">
               <p className="text-sm text-red-400">{error}</p>
             </div>
           )}
@@ -164,7 +164,7 @@ export function ExportDialog({ assets, onClose }: ExportDialogProps) {
           <button
             onClick={handleExport}
             disabled={isExporting || assets.length === 0}
-            className="px-4 py-2 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
+            className="px-4 py-2 text-sm font-medium bg-primary text-white rounded-3xl hover:bg-primary/90 transition-colors disabled:opacity-50"
           >
             {isExporting ? 'Exporting...' : 'Export'}
           </button>

@@ -18,21 +18,6 @@ export interface Toast {
   createdAt: Timestamp;
 }
 
-// Navigation pages
-export type AppPage =
-  | 'dashboard'
-  | 'generate'
-  | 'templates'
-  | 'assets'
-  | 'brands'
-  | 'talent'
-  | 'shotlist'
-  | 'projects'
-  | 'settings';
-
-// Alias for backwards compatibility
-export type PageId = AppPage;
-
 // App initialization state
 export type InitState = 'idle' | 'initializing' | 'ready' | 'error';
 
@@ -43,7 +28,6 @@ interface AppState {
   initError?: string;
 
   // Navigation
-  currentPage: AppPage;
   sidebarOpen: boolean;
 
   // Theme
@@ -71,7 +55,6 @@ interface AppActions {
   setInitState: (state: InitState, error?: string) => void;
 
   // Navigation
-  setCurrentPage: (page: AppPage) => void;
   toggleSidebar: () => void;
   setSidebarOpen: (open: boolean) => void;
 
@@ -105,7 +88,6 @@ type AppStore = AppState & AppActions;
 // Initial state
 const initialState: AppState = {
   initState: 'idle',
-  currentPage: 'dashboard',
   sidebarOpen: true,
   isDarkMode: true, // Default to dark mode for Thresho brand
   currentProjectId: null,
@@ -136,11 +118,6 @@ export const useAppStore = create<AppStore>()(
             }),
 
           // Navigation
-          setCurrentPage: (page) =>
-            set((draft) => {
-              draft.currentPage = page;
-            }),
-
           toggleSidebar: () =>
             set((draft) => {
               draft.sidebarOpen = !draft.sidebarOpen;
@@ -237,7 +214,6 @@ export const useAppStore = create<AppStore>()(
 );
 
 // Selector hooks for common patterns
-export const useCurrentPage = () => useAppStore((state) => state.currentPage);
 export const useIsDarkMode = () => useAppStore((state) => state.isDarkMode);
 export const useCurrentProjectId = () => useAppStore((state) => state.currentProjectId);
 export const useCurrentBrandId = () => useAppStore((state) => state.currentBrandId);

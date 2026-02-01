@@ -4,6 +4,7 @@
  */
 
 import { useState, useCallback } from 'react';
+import { FileText, Image, Video, Search, ClipboardList, Zap, Check, X } from 'lucide-react';
 import type { UUID, ContentType } from '../../../core/types/common';
 import type {
   ActiveGeneration,
@@ -188,14 +189,31 @@ interface ActiveGenerationCardProps {
   onViewResult: () => void;
 }
 
+function TypeIcon({ type }: { type: ContentType }) {
+  const iconClass = "w-5 h-5 text-text-primary";
+  switch (type) {
+    case 'text': return <FileText className={iconClass} />;
+    case 'image': return <Image className={iconClass} />;
+    case 'video': return <Video className={iconClass} />;
+  }
+}
+
+function StatusIcon({ status }: { status: GenerationStatus }) {
+  const iconClass = "w-4 h-4";
+  switch (status) {
+    case 'pending': return <span className="text-text-secondary">⏳</span>;
+    case 'validating': return <Search className={`${iconClass} text-blue-500`} />;
+    case 'preparing': return <ClipboardList className={`${iconClass} text-purple-500`} />;
+    case 'executing': return <Zap className={`${iconClass} text-yellow-500`} />;
+    case 'streaming': return <span className="text-green-500">📡</span>;
+    case 'completed': return <Check className={`${iconClass} text-emerald-500`} />;
+    case 'failed': return <X className={`${iconClass} text-red-500`} />;
+    case 'cancelled': return <span className="text-gray-500">🚫</span>;
+  }
+}
+
 function ActiveGenerationCard({ generation, onCancel, onViewResult }: ActiveGenerationCardProps) {
   const streamedContent = useStreamedContent(generation.id);
-
-  const typeIcons: Record<ContentType, string> = {
-    text: '📝',
-    image: '🖼️',
-    video: '🎬',
-  };
 
   const statusColors: Record<GenerationStatus, string> = {
     pending: 'bg-gray-500',
@@ -209,10 +227,10 @@ function ActiveGenerationCard({ generation, onCancel, onViewResult }: ActiveGene
   };
 
   return (
-    <div className="p-4 bg-surface rounded-lg border border-border">
+    <div className="p-4 bg-surface rounded-3xl border border-border">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <span className="text-xl">{typeIcons[generation.type]}</span>
+          <TypeIcon type={generation.type} />
           <div>
             <p className="font-medium text-text-primary capitalize">{generation.type} Generation</p>
             <p className="text-xs text-text-secondary">
@@ -267,7 +285,7 @@ function ActiveGenerationCard({ generation, onCancel, onViewResult }: ActiveGene
       {generation.status === 'completed' && (
         <button
           onClick={onViewResult}
-          className="mt-3 w-full py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors text-sm"
+          className="mt-3 w-full py-2 bg-primary text-white rounded-3xl hover:bg-primary/90 transition-colors text-sm"
         >
           View Result
         </button>
@@ -291,24 +309,18 @@ function QueueList({ queue, onRemove }: QueueListProps) {
     );
   }
 
-  const typeIcons: Record<ContentType, string> = {
-    text: '📝',
-    image: '🖼️',
-    video: '🎬',
-  };
-
   return (
     <div className="p-4 space-y-2">
       {queue.map((item, index) => (
         <div
           key={item.id}
-          className="flex items-center justify-between p-3 bg-surface rounded-lg border border-border"
+          className="flex items-center justify-between p-3 bg-surface rounded-3xl border border-border"
         >
           <div className="flex items-center gap-3">
             <span className="w-6 h-6 flex items-center justify-center bg-primary/20 text-primary text-xs rounded-full font-medium">
               {index + 1}
             </span>
-            <span className="text-lg">{typeIcons[item.type]}</span>
+            <TypeIcon type={item.type} />
             <div>
               <p className="text-sm font-medium text-text-primary capitalize">{item.type}</p>
               <p className="text-xs text-text-secondary">
@@ -346,23 +358,6 @@ function HistoryList({ history, onRetry, onViewResult, onClear }: HistoryListPro
     );
   }
 
-  const typeIcons: Record<ContentType, string> = {
-    text: '📝',
-    image: '🖼️',
-    video: '🎬',
-  };
-
-  const statusIcons: Record<GenerationStatus, string> = {
-    pending: '⏳',
-    validating: '🔍',
-    preparing: '📋',
-    executing: '⚡',
-    streaming: '📡',
-    completed: '✅',
-    failed: '❌',
-    cancelled: '🚫',
-  };
-
   return (
     <div className="p-4">
       <div className="flex justify-end mb-3">
@@ -378,13 +373,13 @@ function HistoryList({ history, onRetry, onViewResult, onClear }: HistoryListPro
         {history.map((record) => (
           <div
             key={record.id}
-            className="flex items-center justify-between p-3 bg-surface rounded-lg border border-border hover:border-primary/30 transition-colors"
+            className="flex items-center justify-between p-3 bg-surface rounded-3xl border border-border hover:border-primary/30 transition-colors"
           >
             <div className="flex items-center gap-3">
-              <span className="text-lg">{typeIcons[record.type]}</span>
+              <TypeIcon type={record.type} />
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="text-sm">{statusIcons[record.status]}</span>
+                  <StatusIcon status={record.status} />
                   <p className="text-sm font-medium text-text-primary capitalize">
                     {record.type} • {record.model || record.providerType}
                   </p>

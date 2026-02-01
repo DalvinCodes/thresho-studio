@@ -3,18 +3,20 @@
  * Manage prompt templates
  */
 
-import { useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import type { UUID } from '../core/types/common';
 import { TemplateLibrary, TemplateEditor } from '../features/templates';
 
 export function TemplatesPage() {
-  const [editingTemplateId, setEditingTemplateId] = useState<UUID | null>(null);
+  const { id } = useParams<{ id?: string }>();
+  const navigate = useNavigate();
 
-  if (editingTemplateId) {
+  if (id) {
+    const isNew = id === 'new';
     return (
       <TemplateEditor
-        templateId={editingTemplateId}
-        onClose={() => setEditingTemplateId(null)}
+        templateId={isNew ? undefined : (id as UUID)}
+        onClose={() => navigate('/templates')}
       />
     );
   }
@@ -22,7 +24,7 @@ export function TemplatesPage() {
   return (
     <div className="h-full">
       <TemplateLibrary
-        onEditTemplate={(id) => setEditingTemplateId(id as UUID)}
+        onEditTemplate={(templateId) => navigate(`/templates/${templateId}/edit`)}
       />
     </div>
   );

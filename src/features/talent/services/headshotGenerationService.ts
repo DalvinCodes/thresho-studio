@@ -25,27 +25,28 @@ export interface CharacterSheetPrompt {
 
 /**
  * Configuration for each character sheet angle
+ * Note: Prompts emphasize photorealistic human photography to avoid cartoon/animated styles
  */
 export const CHARACTER_SHEET_ANGLES: Record<CharacterSheetAngle, { label: string; promptSuffix: string }> = {
   'front': {
     label: 'Front',
-    promptSuffix: 'standing front view, T-pose or neutral stance, full body visible, looking at camera',
+    promptSuffix: 'standing front view, neutral stance, full body visible, looking at camera, fashion photography',
   },
   'back': {
     label: 'Back',
-    promptSuffix: 'standing back view, full figure from behind, full body visible',
+    promptSuffix: 'standing back view, full figure from behind, full body visible, fashion photography',
   },
   'left-profile': {
     label: 'Left Profile',
-    promptSuffix: 'left side profile view, standing, full body visible',
+    promptSuffix: 'left side profile view, standing, full body visible, fashion photography',
   },
   'right-profile': {
     label: 'Right Profile',
-    promptSuffix: 'right side profile view, standing, full body visible',
+    promptSuffix: 'right side profile view, standing, full body visible, fashion photography',
   },
   'three-quarter': {
     label: '3/4 View',
-    promptSuffix: 'three-quarter view, slight angle, relaxed natural stance, full body visible',
+    promptSuffix: 'three-quarter view, slight angle, relaxed natural stance, full body visible, fashion photography',
   },
 };
 
@@ -242,24 +243,31 @@ export function buildHeadshotPrompt(talent: TalentProfile): HeadshotPromptResult
 
 /**
  * Build character sheet prompts for all angles
+ * Maintains photorealistic style consistent with headshot generation
  */
 export function buildCharacterSheetPrompts(talent: TalentProfile, headshotPrompt: string): CharacterSheetPrompt[] {
-  // Convert headshot prompt to full body character sheet base
+  // Convert headshot prompt to full body - keep photorealistic emphasis
   let characterSheetBase = headshotPrompt.replace(
     /headshot portrait/i,
-    'Character reference sheet, full body shot'
+    'full body photograph'
   );
 
   // Remove headshot-specific terms
   characterSheetBase = characterSheetBase.replace(/neutral gray background,?\s*/i, '');
+
+  // Reinforce photorealistic style to prevent cartoon/animated generation
+  characterSheetBase = characterSheetBase.replace(
+    /photorealistic/i,
+    'photorealistic, real human, not animated, not cartoon, not illustration'
+  );
 
   // Add clothing if specified and not already in the prompt
   if (talent.appearance.clothing && !characterSheetBase.toLowerCase().includes('wearing')) {
     characterSheetBase = `${characterSheetBase}, wearing ${talent.appearance.clothing}`;
   }
 
-  // Add white/neutral background for character sheet
-  characterSheetBase = `${characterSheetBase}, clean white background, reference sheet style`;
+  // Add neutral background for consistency (avoid "reference sheet" terminology which triggers cartoon styles)
+  characterSheetBase = `${characterSheetBase}, plain white studio background, professional studio lighting`;
 
   // Generate prompts for each angle
   const angles: CharacterSheetAngle[] = ['front', 'back', 'left-profile', 'right-profile', 'three-quarter'];

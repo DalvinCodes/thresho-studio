@@ -4,7 +4,8 @@
  * OpenRouter shows model selection per content type
  */
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { MessageSquare, Palette, Video, Eye, EyeOff, Key, Search, ChevronDown, X } from 'lucide-react';
 import type { ContentType, UUID } from '../../../core/types/common';
 import type { ProviderState } from '../../../core/types/provider';
 import {
@@ -89,6 +90,190 @@ function groupModelsByProvider(models: OpenRouterAPIModel[]): Map<string, OpenRo
   return sortedGroups;
 }
 
+// Searchable Dropdown Component
+interface SearchableDropdownProps<T> {
+  options: T[];
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  searchPlaceholder?: string;
+  getOptionValue: (option: T) => string;
+  getOptionLabel: (option: T) => string;
+  disabled?: boolean;
+  disabledMessage?: string;
+  emptyMessage?: string;
+  className?: string;
+}
+
+function SearchableDropdown<T>({
+  options,
+  value,
+  onChange,
+  placeholder = 'Select...',
+  searchPlaceholder = 'Search...',
+  getOptionValue,
+  getOptionLabel,
+  disabled = false,
+  disabledMessage = 'Select an option first',
+  emptyMessage = 'No options available',
+  className = '',
+}: SearchableDropdownProps<T>) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  const filteredOptions = useMemo(() => {
+    if (!searchTerm.trim()) return options;
+    const term = searchTerm.toLowerCase();
+    return options.filter(option => 
+      getOptionLabel(option).toLowerCase().includes(term)
+    );
+  }, [options, searchTerm, getOptionLabel]);
+
+  const selectedLabel = useMemo(() => {
+    const selected = options.find(opt => getOptionValue(opt) === value);
+    return selected ? getOptionLabel(selected) : '';
+  }, [options, value, getOptionValue, getOptionLabel]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+        setSearchTerm('');
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Focus search input when dropdown opens
+  useEffect(() => {
+    if (isOpen && searchInputRef.current) {
+      setTimeout(() => searchInputRef.current?.focus(), 10);
+    }
+  }, [isOpen]);
+
+  const handleSelect = useCallback((optionValue: string) => {
+    onChange(optionValue);
+    setIsOpen(false);
+    setSearchTerm('');
+  }, [onChange]);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      setIsOpen(false);
+      setSearchTerm('');
+    }
+  }, []);
+
+  return (
+    <div ref={dropdownRef} className={`relative ${className}`} onKeyDown={handleKeyDown}>
+      {/* Trigger Button */}
+      <button
+        type="button"
+        onClick={() => !disabled && setIsOpen(!isOpen)}
+        disabled={disabled}
+        className={`
+          w-full px-4 py-3 bg-surface border border-border rounded-2xl text-text-primary text-sm
+          flex items-center justify-between gap-2
+          focus:outline-none focus:ring-2 focus:ring-primary
+          transition-colors
+          ${disabled 
+            ? 'opacity-50 cursor-not-allowed bg-surface' 
+            : 'hover:border-primary cursor-pointer'
+          }
+        `}
+      >
+        <span className={selectedLabel ? 'text-text-primary font-medium' : 'text-text-secondary'}>
+          {disabled ? disabledMessage : (selectedLabel || placeholder)}
+        </span>
+        <ChevronDown className={`w-4 h-4 text-text-secondary transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+
+      {/* Dropdown Menu */}
+      {isOpen && !disabled && (
+        <div className="
+          absolute z-50 w-full mt-2 
+          bg-surface rounded-xl shadow-xl border border-border
+          overflow-hidden
+        ">
+          {/* Search Input */}
+          <div className="p-3 border-b border-border bg-surface">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-secondary" />
+              <input
+                ref={searchInputRef}
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder={searchPlaceholder}
+                className="
+                  w-full pl-10 pr-8 py-2.5 
+                  bg-bg-subtle border border-border rounded-xl
+                  text-sm text-text-primary placeholder:text-text-secondary
+                  focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary
+                "
+              />
+              {searchTerm && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchTerm('');
+                    searchInputRef.current?.focus();
+                  }}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-secondary hover:text-text-primary"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Options List */}
+          <div className="max-h-60 overflow-y-auto">
+            {filteredOptions.length === 0 ? (
+              <div className="px-4 py-4 text-sm text-text-secondary text-center">
+                {searchTerm ? `No results for "${searchTerm}"` : emptyMessage}
+              </div>
+            ) : (
+              filteredOptions.map((option) => {
+                const optionValue = getOptionValue(option);
+                const isSelected = optionValue === value;
+                return (
+                  <button
+                    key={optionValue}
+                    type="button"
+                    onClick={() => handleSelect(optionValue)}
+                    className={`
+                      w-full px-4 py-2.5 text-left text-sm
+                      transition-colors
+                      ${isSelected 
+                        ? 'bg-primary-light text-primary font-medium' 
+                        : 'text-text-primary hover:bg-bg-subtle'
+                      }
+                    `}
+                  >
+                    {getOptionLabel(option)}
+                  </button>
+                );
+              })
+            )}
+          </div>
+
+          {/* Results count */}
+          {searchTerm && filteredOptions.length > 0 && (
+            <div className="px-4 py-2 text-xs text-text-secondary border-t border-border bg-bg-subtle">
+              {filteredOptions.length} result{filteredOptions.length !== 1 ? 's' : ''}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function ProviderSettings() {
   const providers: ProviderState[] = useProviders();
   const isValidating = useIsValidating();
@@ -129,79 +314,89 @@ export function ProviderSettings() {
   }, [providers, fetchOpenRouterModels, getOpenRouterModels, isLoadingModels]);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-10 p-8">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-semibold text-text-primary">AI Providers</h2>
-          <p className="text-sm text-text-secondary mt-1">
+          <h2 className="text-2xl font-semibold text-text-primary">AI Providers</h2>
+          <p className="text-sm text-text-secondary mt-2">
             Configure default providers for each content type
           </p>
         </div>
       </div>
 
-      {/* Text Generation */}
-      <ContentTypeSection
-        title="Text Generation"
-        icon="💬"
-        type="text"
-        providers={providers}
-        availableProviders={getProvidersForType('text')}
-        openRouterModels={openRouterModels}
-        isLoadingModels={isLoadingModels}
-      />
+      {/* Content Type Sections */}
+      <div className="space-y-8">
+        {/* Text Generation */}
+        <ContentTypeSection
+          title="Text Generation"
+          icon={<MessageSquare className="w-5 h-5 text-text-secondary" />}
+          type="text"
+          providers={providers}
+          availableProviders={getProvidersForType('text')}
+          openRouterModels={openRouterModels}
+          isLoadingModels={isLoadingModels}
+        />
 
-      {/* Image Generation */}
-      <ContentTypeSection
-        title="Image Generation"
-        icon="🎨"
-        type="image"
-        providers={providers}
-        availableProviders={getProvidersForType('image')}
-        openRouterModels={openRouterModels}
-        isLoadingModels={isLoadingModels}
-      />
+        <hr className="border-border" />
 
-      {/* Video Generation */}
-      <ContentTypeSection
-        title="Video Generation"
-        icon="🎬"
-        type="video"
-        providers={providers}
-        availableProviders={getProvidersForType('video')}
-        openRouterModels={openRouterModels}
-        isLoadingModels={isLoadingModels}
-      />
+        {/* Image Generation */}
+        <ContentTypeSection
+          title="Image Generation"
+          icon={<Palette className="w-5 h-5 text-text-secondary" />}
+          type="image"
+          providers={providers}
+          availableProviders={getProvidersForType('image')}
+          openRouterModels={openRouterModels}
+          isLoadingModels={isLoadingModels}
+        />
 
-      {/* Provider Credentials Section */}
-      <div className="bg-surface rounded-lg p-6 border border-border">
-        <div className="flex items-center gap-2 mb-4">
-          <span className="text-xl">🔑</span>
-          <h3 className="font-medium text-text-primary">Provider Credentials</h3>
-        </div>
-        <p className="text-sm text-text-secondary mb-4">
-          Add API keys for providers you want to use
-        </p>
-        
-        <div className="space-y-3">
-          {getSupportedProviderTypes().map((type) => {
-            const existingProvider = providers.find(p => p.config.type === type);
-            const meta = providerMeta.find(m => m.type === type);
-            if (!meta) return null;
-            
-            return (
-              <ProviderCredentialCard
-                key={type}
-                providerType={type}
-                meta={meta}
-                existingProvider={existingProvider}
-                isValidating={isValidating}
-                onAdd={async () => {
-                  await registerProvider(type);
-                }}
-              />
-            );
-          })}
+        <hr className="border-border" />
+
+        {/* Video Generation */}
+        <ContentTypeSection
+          title="Video Generation"
+          icon={<Video className="w-5 h-5 text-text-secondary" />}
+          type="video"
+          providers={providers}
+          availableProviders={getProvidersForType('video')}
+          openRouterModels={openRouterModels}
+          isLoadingModels={isLoadingModels}
+        />
+      </div>
+
+      {/* Separator */}
+      <div className="border-t border-border pt-10 mt-10">
+        {/* Provider Credentials Section */}
+        <div className="bg-surface rounded-2xl shadow-md border border-border p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <Key className="w-5 h-5 text-text-secondary" />
+            <h3 className="font-semibold text-text-primary text-lg">Provider Credentials</h3>
+          </div>
+          <p className="text-sm text-text-secondary mb-6">
+            Add API keys for providers you want to use
+          </p>
+
+          <div className="space-y-4">
+            {getSupportedProviderTypes().map((type) => {
+              const existingProvider = providers.find(p => p.config.type === type);
+              const meta = providerMeta.find(m => m.type === type);
+              if (!meta) return null;
+              
+              return (
+                <ProviderCredentialCard
+                  key={type}
+                  providerType={type}
+                  meta={meta}
+                  existingProvider={existingProvider}
+                  isValidating={isValidating}
+                  onAdd={async () => {
+                    await registerProvider(type);
+                  }}
+                />
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>
@@ -210,7 +405,7 @@ export function ProviderSettings() {
 
 interface ContentTypeSectionProps {
   title: string;
-  icon: string;
+  icon: React.ReactNode;
   type: ContentType;
   providers: ProviderState[];
   availableProviders: ProviderState[];
@@ -230,22 +425,29 @@ function ContentTypeSection({
   const defaultProviderId = useDefaultProvider(type);
   const setDefaultProvider = useProviderStore((s) => s.setDefaultProvider);
   const updateProvider = useProviderStore((s) => s.updateProvider);
+  const getAdapter = useProviderStore((s) => s.getAdapter);
   
   const selectedProvider = providers.find(p => p.config.id === defaultProviderId);
   const isOpenRouter = selectedProvider?.config.type === 'openrouter';
   
   // Get model selection for this content type from metadata
-  const selectedModel = isOpenRouter 
-    ? (selectedProvider?.config.metadata?.models as Record<ContentType, string>)?.[type]
-    : null;
+  const selectedModel = (selectedProvider?.config.metadata?.models as Record<ContentType, string>)?.[type] || '';
 
   // Selected OpenRouter model provider (e.g., "openai", "anthropic")
   const [selectedModelProvider, setSelectedModelProvider] = useState<string>(() => {
-    if (selectedModel) {
+    if (selectedModel && isOpenRouter) {
       return getModelProvider(selectedModel);
     }
     return '';
   });
+
+  // Get native provider models from adapter
+  const nativeModels = useMemo(() => {
+    if (!selectedProvider || isOpenRouter) return [];
+    const adapter = getAdapter(selectedProvider.config.id);
+    if (!adapter) return [];
+    return adapter.getModelsForType(type);
+  }, [selectedProvider, isOpenRouter, getAdapter, type]);
 
   // Filter models by content type using OpenRouter's output_modalities field
   const filteredModels = useMemo(() => {
@@ -285,13 +487,13 @@ function ContentTypeSection({
 
   // Update selected model provider when selected model changes
   useEffect(() => {
-    if (selectedModel) {
+    if (selectedModel && isOpenRouter) {
       const provider = getModelProvider(selectedModel);
       if (provider !== selectedModelProvider) {
         setSelectedModelProvider(provider);
       }
     }
-  }, [selectedModel]);
+  }, [selectedModel, isOpenRouter]);
 
   const handleModelProviderChange = (provider: string) => {
     setSelectedModelProvider(provider);
@@ -326,32 +528,92 @@ function ContentTypeSection({
   };
 
   // Get selected model details for badge display
-  const selectedModelDetails = selectedModel ? filteredModels.find(m => m.id === selectedModel) : null;
+  const selectedModelDetails = selectedModel && isOpenRouter ? filteredModels.find(m => m.id === selectedModel) : null;
+
+  // Get display name for native models
+  const getModelDisplayName = (modelId: string): string => {
+    const displayNames: Record<string, string> = {
+      // Imagen
+      'imagen-4.0-generate-001': 'Imagen 4 Standard',
+      'imagen-4.0-fast-generate-001': 'Imagen 4 Fast',
+      'imagen-4.0-ultra-generate-001': 'Imagen 4 Ultra',
+      'imagen-3.0-generate-002': 'Imagen 3 v2',
+      'imagen-3.0-generate-001': 'Imagen 3 v1',
+      'imagen-3.0-fast-generate-001': 'Imagen 3 Fast',
+      // Gemini image (correct model names per API docs)
+      'gemini-2.5-flash-image': 'Gemini 2.5 Flash (Image)',
+      'gemini-3-pro-image-preview': 'Gemini 3 Pro (Image)',
+      // Gemini text
+      'gemini-3.0-pro-preview': 'Gemini 3.0 Pro',
+      'gemini-3.0-flash-preview': 'Gemini 3.0 Flash',
+      'gemini-2.5-pro-preview-06-05': 'Gemini 2.5 Pro',
+      'gemini-2.5-flash-preview-05-20': 'Gemini 2.5 Flash',
+      'gemini-2.5-flash-lite-preview-06-17': 'Gemini 2.5 Flash Lite',
+      'gemini-2.0-flash': 'Gemini 2.0 Flash',
+      'gemini-2.0-flash-lite': 'Gemini 2.0 Flash Lite',
+      // Veo
+      'veo-3.1-generate-001': 'Veo 3.1',
+      'veo-3.0-generate-001': 'Veo 3.0',
+      'veo-3.0-fast-generate-001': 'Veo 3.0 Fast',
+      'veo-2.0-generate-001': 'Veo 2.0',
+      // Flux Pro
+      'flux-pro-1.1': 'Flux Pro 1.1',
+      'flux-pro-1.1-ultra': 'Flux Pro 1.1 Ultra',
+      'flux-pro': 'Flux Pro',
+      'flux-dev': 'Flux Dev',
+      // Runway
+      'gen-4': 'Gen-4',
+      'gen-3-alpha': 'Gen-3 Alpha',
+      'gen-3-alpha-turbo': 'Gen-3 Alpha Turbo',
+      // OpenAI
+      'gpt-4o': 'GPT-4o',
+      'gpt-4o-mini': 'GPT-4o Mini',
+      'gpt-4-turbo': 'GPT-4 Turbo',
+      'dall-e-3': 'DALL-E 3',
+      'dall-e-2': 'DALL-E 2',
+      // Anthropic
+      'claude-sonnet-4-20250514': 'Claude Sonnet 4',
+      'claude-3-5-sonnet-20241022': 'Claude 3.5 Sonnet',
+      'claude-3-opus-20240229': 'Claude 3 Opus',
+      'claude-3-haiku-20240307': 'Claude 3 Haiku',
+      // Kimi
+      'moonshot-v1-256k': 'Kimi K2 256K',
+      'moonshot-v1-128k': 'Kimi K2 128K',
+      'moonshot-v1-32k': 'Kimi K2 32K',
+      'moonshot-v1-8k': 'Kimi K2 8K',
+    };
+    return displayNames[modelId] || modelId;
+  };
+
+  // Get display name for selected model in badge
+  const selectedModelDisplayName = selectedModel 
+    ? (selectedModelDetails?.name || getModelDisplayName(selectedModel))
+    : null;
 
   return (
-    <div className="bg-surface rounded-lg p-6 border border-border">
+    <div className="bg-surface rounded-2xl shadow-md p-6 mb-8">
       {/* Header with Selected Provider Info */}
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <span className="text-xl">{icon}</span>
-          <h3 className="font-medium text-text-primary">{title}</h3>
+      <div className="flex items-start justify-between mb-6">
+        <div className="flex items-center gap-3">
+          {icon}
+          <h3 className="font-semibold text-text-primary text-lg">{title}</h3>
         </div>
         
         {/* Show selected provider badge */}
         {selectedProvider && (
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 border border-primary/20 rounded-lg">
+          <div className="flex items-center gap-2 px-4 py-2 bg-primary-light border border-primary rounded-2xl">
             {(() => {
               const meta = providerMeta.find(m => m.type === selectedProvider.config.type);
               return (
                 <>
                   <span className="text-lg">{meta?.icon}</span>
                   <div className="text-right">
-                    <p className="text-sm font-medium text-text-primary">
+                    <p className="text-sm font-semibold text-text-primary">
                       {meta?.displayName || selectedProvider.config.displayName}
                     </p>
-                    {isOpenRouter && selectedModelDetails && (
+                    {selectedModelDisplayName && (
                       <p className="text-xs text-text-secondary">
-                        {selectedModelDetails.name}
+                        {selectedModelDisplayName}
                       </p>
                     )}
                   </div>
@@ -373,10 +635,10 @@ function ContentTypeSection({
           No providers configured. Add provider credentials below.
         </p>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-6">
           {/* Default Provider Selector */}
           <div>
-            <label className="block text-sm font-medium text-text-secondary mb-2">
+            <label className="block text-sm font-semibold text-text-primary mb-3">
               Default Provider
             </label>
             <select
@@ -387,7 +649,7 @@ function ContentTypeSection({
                   setDefaultProvider(type, providerId);
                 }
               }}
-              className="w-full px-3 py-2 bg-background border border-border rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full h-12 px-4 bg-bg-subtle border border-border rounded-xl text-text-primary focus:outline-none focus:ring-2 focus:ring-primary"
             >
               <option value="" disabled>Select a provider...</option>
               {availableProviders.map((provider) => {
@@ -402,10 +664,29 @@ function ContentTypeSection({
             </select>
           </div>
 
+          {/* Native Provider Model Selector - for providers with multiple models */}
+          {selectedProvider && !isOpenRouter && nativeModels.length > 1 && (
+            <div className="p-5 bg-bg-subtle rounded-2xl space-y-4 border border-border">
+              <p className="text-sm font-semibold text-text-primary">
+                Select Model
+              </p>
+              <SearchableDropdown
+                options={nativeModels.map(id => ({ id, name: getModelDisplayName(id) }))}
+                value={selectedModel || ''}
+                onChange={handleModelChange}
+                placeholder="Select a model..."
+                searchPlaceholder="Search models..."
+                getOptionValue={(opt) => opt.id}
+                getOptionLabel={(opt) => opt.name}
+                emptyMessage="No models available"
+              />
+            </div>
+          )}
+
           {/* OpenRouter Model Selector - Two-step: Provider then Model */}
           {isOpenRouter && (
-            <div className="p-4 bg-background rounded-lg space-y-4">
-              <p className="text-sm font-medium text-text-primary">
+            <div className="p-5 bg-bg-subtle rounded-2xl space-y-5 border border-border">
+              <p className="text-sm font-semibold text-text-primary">
                 Select Model via OpenRouter
               </p>
               
@@ -421,43 +702,44 @@ function ContentTypeSection({
                 <div className="grid grid-cols-2 gap-4">
                   {/* Model Provider Selector */}
                   <div>
-                    <label className="block text-xs font-medium text-text-secondary mb-1.5">
+                    <label className="block text-sm font-semibold text-text-primary mb-2">
                       Model Provider
                     </label>
-                    <select
+                    <SearchableDropdown
+                      options={Array.from(groupedModels.entries()).map(([provider, models]) => ({ 
+                        id: provider, 
+                        name: `${getProviderDisplayName(provider)} (${models.length})` 
+                      }))}
                       value={selectedModelProvider}
-                      onChange={(e) => handleModelProviderChange(e.target.value)}
-                      className="w-full px-3 py-2 bg-surface border border-border rounded-lg text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                    >
-                      <option value="">Select provider...</option>
-                      {Array.from(groupedModels.entries()).map(([provider, models]) => (
-                        <option key={provider} value={provider}>
-                          {getProviderDisplayName(provider)} ({models.length})
-                        </option>
-                      ))}
-                    </select>
+                      onChange={handleModelProviderChange}
+                      placeholder="Select provider..."
+                      searchPlaceholder="Search providers..."
+                      getOptionValue={(opt) => opt.id}
+                      getOptionLabel={(opt) => opt.name}
+                      emptyMessage="No providers available"
+                    />
                   </div>
 
                   {/* Model Selector */}
                   <div>
-                    <label className="block text-xs font-medium text-text-secondary mb-1.5">
+                    <label className="block text-sm font-semibold text-text-primary mb-2">
                       Model
                     </label>
-                    <select
+                    <SearchableDropdown
+                      options={modelsForSelectedProvider.map(model => ({
+                        id: model.id,
+                        name: model.name.replace(getProviderDisplayName(selectedModelProvider), '').trim() || model.name
+                      }))}
                       value={selectedModel || ''}
-                      onChange={(e) => handleModelChange(e.target.value)}
+                      onChange={handleModelChange}
+                      placeholder="Select model..."
+                      searchPlaceholder="Search models..."
                       disabled={!selectedModelProvider}
-                      className="w-full px-3 py-2 bg-surface border border-border rounded-lg text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <option value="">
-                        {selectedModelProvider ? 'Select model...' : 'Select provider first'}
-                      </option>
-                      {modelsForSelectedProvider.map((model) => (
-                        <option key={model.id} value={model.id}>
-                          {model.name.replace(getProviderDisplayName(selectedModelProvider), '').trim() || model.name}
-                        </option>
-                      ))}
-                    </select>
+                      disabledMessage="Select provider first"
+                      getOptionValue={(opt) => opt.id}
+                      getOptionLabel={(opt) => opt.name}
+                      emptyMessage="No models available"
+                    />
                   </div>
                 </div>
               ) : (
@@ -511,17 +793,17 @@ function ProviderCredentialCard({
 
   if (!existingProvider) {
     return (
-      <div className="p-3 bg-background rounded-lg flex items-center justify-between">
+      <div className="p-4 bg-bg-subtle rounded-2xl flex items-center justify-between border border-border">
         <div className="flex items-center gap-3">
           <span className="text-2xl">{meta.icon}</span>
           <div>
-            <p className="font-medium text-text-primary">{meta.displayName}</p>
+            <p className="font-semibold text-text-primary">{meta.displayName}</p>
             <p className="text-sm text-text-secondary">{meta.description}</p>
           </div>
         </div>
         <button
           onClick={onAdd}
-          className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+          className="px-4 py-2 bg-primary text-white rounded-xl hover:bg-primary-hover transition-colors font-medium"
         >
           Add
         </button>
@@ -530,12 +812,12 @@ function ProviderCredentialCard({
   }
 
   return (
-    <div className="p-3 bg-background rounded-lg">
+    <div className="p-4 bg-bg-subtle rounded-2xl border border-border">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <span className="text-2xl">{meta.icon}</span>
           <div>
-            <p className="font-medium text-text-primary">{meta.displayName}</p>
+            <p className="font-semibold text-text-primary">{meta.displayName}</p>
             <div className="flex items-center gap-2 text-sm">
               <span
                 className={`w-2 h-2 rounded-full ${
@@ -561,11 +843,11 @@ function ProviderCredentialCard({
 
         <div className="flex items-center gap-2">
           {!meta.requiresApiKey && (
-            <span className="text-xs text-green-500">No API key needed</span>
+            <span className="text-sm text-green-600 font-medium">No API key needed</span>
           )}
           <button
             onClick={() => removeProvider(existingProvider.config.id)}
-            className="p-1 text-text-secondary hover:text-red-500 transition-colors"
+            className="p-2 text-text-secondary hover:text-red-500 transition-colors"
             title="Remove provider"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -582,27 +864,27 @@ function ProviderCredentialCard({
 
       {/* API Key Input */}
       {meta.requiresApiKey && (
-        <div className="mt-3 flex gap-2">
+        <div className="mt-4 flex gap-3">
           <div className="flex-1 relative">
             <input
               type={showKey ? 'text' : 'password'}
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
               placeholder={hasCredential ? 'Change API key...' : 'Enter API key...'}
-              className="w-full px-3 py-2 bg-surface border border-border rounded-lg text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full h-12 px-4 bg-surface border border-border rounded-xl text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary"
             />
             <button
               onClick={() => setShowKey(!showKey)}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-text-secondary hover:text-text-primary"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary hover:text-text-primary"
             >
-              {showKey ? '👁️' : '👁️‍🗨️'}
+              {showKey ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
             </button>
           </div>
           
           {hasCredential && (
             <button
               onClick={() => clearCredential(existingProvider.config.id)}
-              className="px-3 py-2 text-sm text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
+              className="px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-xl transition-colors font-medium"
             >
               Clear
             </button>
@@ -611,7 +893,7 @@ function ProviderCredentialCard({
           <button
             onClick={handleSaveKey}
             disabled={!apiKey.trim() || isValidatingThis}
-            className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="px-5 py-2 bg-primary text-white rounded-xl hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
           >
             {isValidatingThis ? 'Validating...' : hasCredential ? 'Update' : 'Save'}
           </button>
@@ -623,7 +905,7 @@ function ProviderCredentialCard({
           href={meta.docsUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-block mt-2 text-xs text-primary hover:underline"
+          className="inline-block mt-3 text-sm text-primary hover:underline font-medium"
         >
           View Documentation →
         </a>
@@ -640,22 +922,22 @@ function ModelInfo({ model }: { model: OpenRouterAPIModel | undefined }) {
   const completionPrice = parseFloat(model.pricing.completion) * 1000000;
   
   return (
-    <div className="mt-2 p-2 bg-surface/50 rounded text-xs space-y-1">
-      <div className="flex flex-wrap gap-1">
-        <span className="px-1.5 py-0.5 bg-primary/10 text-primary rounded">
+    <div className="mt-3 p-3 bg-surface rounded-xl text-xs space-y-2 border border-border">
+      <div className="flex flex-wrap gap-2">
+        <span className="px-2 py-1 bg-primary-light text-primary rounded-lg font-medium">
           {(model.context_length / 1000).toFixed(0)}K ctx
         </span>
         {promptPrice > 0 ? (
           <>
-            <span className="px-1.5 py-0.5 bg-green-500/10 text-green-500 rounded">
+            <span className="px-2 py-1 bg-green-100 text-green-700 rounded-lg font-medium">
               ${promptPrice.toFixed(2)}/M in
             </span>
-            <span className="px-1.5 py-0.5 bg-green-500/10 text-green-500 rounded">
+            <span className="px-2 py-1 bg-green-100 text-green-700 rounded-lg font-medium">
               ${completionPrice.toFixed(2)}/M out
             </span>
           </>
         ) : (
-          <span className="px-1.5 py-0.5 bg-green-500/10 text-green-500 rounded">
+          <span className="px-2 py-1 bg-green-100 text-green-700 rounded-lg font-medium">
             Free
           </span>
         )}

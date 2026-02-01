@@ -117,8 +117,9 @@ export class OPFSStorage implements FileStorageService {
 
       console.log(`[OPFSStorage] Saved file: ${id} (${formatBytes(blob.size)})`);
 
-      // Return a URL for the file
-      return this.createFileUrl(id, blob);
+      // Return the storage URL - don't cache blob URL here as the blob may be GC'd
+      // The blob URL will be created on-demand when getFileUrl is called
+      return `opfs://${id}`;
     } catch (error) {
       if (this.isQuotaError(error)) {
         throw new StorageError(

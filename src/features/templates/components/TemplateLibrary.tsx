@@ -4,6 +4,7 @@
  */
 
 import { useState, useRef } from 'react';
+import { FileText, Image, Video, Layout } from 'lucide-react';
 import type { ContentType } from '../../../core/types/common';
 import type { TemplateWithVersion } from '../../../core/types/prompt';
 import {
@@ -99,7 +100,7 @@ export function TemplateLibrary({
           <div className="flex gap-2">
             <button
               onClick={handleImportClick}
-              className="px-3 py-1.5 border border-border text-text-primary text-sm rounded-lg hover:bg-surface-hover transition-colors"
+              className="px-3 py-1.5 border border-border text-text-primary text-sm rounded-3xl hover:bg-surface-hover transition-colors"
             >
               Import
             </button>
@@ -112,7 +113,7 @@ export function TemplateLibrary({
             />
             <button
               onClick={() => setShowCreateModal(true)}
-              className="px-3 py-1.5 bg-primary text-white text-sm rounded-lg hover:bg-primary/90 transition-colors"
+              className="px-3 py-1.5 bg-primary text-white text-sm rounded-3xl hover:bg-primary/90 transition-colors"
             >
               + New Template
             </button>
@@ -126,12 +127,12 @@ export function TemplateLibrary({
             value={searchQuery}
             onChange={(e) => handleSearch(e.target.value)}
             placeholder="Search templates..."
-            className="flex-1 px-3 py-2 bg-background border border-border rounded-lg text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary"
+            className="flex-1 h-10 px-4 bg-background border border-border rounded-3xl text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary"
           />
           <select
             value={filterType}
             onChange={(e) => handleFilterType(e.target.value as ContentType | '')}
-            className="px-3 py-2 bg-background border border-border rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-primary"
+            className="h-10 px-4 bg-background border border-border rounded-3xl text-text-primary focus:outline-none focus:ring-2 focus:ring-primary"
           >
             <option value="">All Types</option>
             <option value="text">Text</option>
@@ -142,7 +143,7 @@ export function TemplateLibrary({
 
         {/* Import error message */}
         {importError && (
-          <div className="mt-3 p-2 bg-red-500/10 border border-red-500/30 rounded-lg text-sm text-red-400">
+          <div className="mt-3 p-2 bg-red-500/10 border border-red-500/30 rounded-3xl text-sm text-red-400">
             {importError}
           </div>
         )}
@@ -151,14 +152,25 @@ export function TemplateLibrary({
       {/* Template list */}
       <div className="flex-1 overflow-y-auto p-4" data-testid="template-list">
         {templates.length === 0 ? (
-          <div className="text-center py-8">
-            <p className="text-text-secondary mb-4">No templates found</p>
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="text-primary hover:underline"
-            >
-              Create your first template
-            </button>
+          <div className="flex flex-col items-center justify-center h-full p-8">
+            <div className="flex flex-col items-center justify-center p-12 text-center bg-[var(--color-surface)] border border-[var(--color-border)] rounded-3xl max-w-md">
+              <div className="w-16 h-16 rounded-3xl bg-[var(--color-primary)]/10 flex items-center justify-center mb-6">
+                <Layout className="w-8 h-8 text-[var(--color-primary)]" />
+              </div>
+              <h3 className="text-xl font-semibold text-[var(--color-text)] mb-2">
+                No templates yet
+              </h3>
+              <p className="text-[var(--color-text-muted)] mb-6">
+                Templates help you create consistent, high-quality content with reusable prompts.
+                Build your library to streamline your creative workflow.
+              </p>
+              <button
+                onClick={() => setShowCreateModal(true)}
+                className="px-6 py-3 bg-[var(--color-primary)] text-white rounded-3xl font-medium hover:bg-[var(--color-primary-hover)] transition-colors"
+              >
+                Create First Template
+              </button>
+            </div>
           </div>
         ) : (
           <div className="space-y-2">
@@ -210,9 +222,9 @@ function TemplateCard({ item, isSelected, onSelect, onEdit, onExport }: Template
   const { template, currentVersion, labels, versionCount } = item;
 
   const typeIcons = {
-    text: '📝',
-    image: '🖼️',
-    video: '🎬',
+    text: <FileText className="w-6 h-6 text-text-secondary" />,
+    image: <Image className="w-6 h-6 text-text-secondary" />,
+    video: <Video className="w-6 h-6 text-text-secondary" />,
   };
 
   const productionLabel = labels.find((l) => l.label === 'production');
@@ -221,7 +233,7 @@ function TemplateCard({ item, isSelected, onSelect, onEdit, onExport }: Template
     <div
       onClick={onSelect}
       className={`
-        p-4 rounded-lg border cursor-pointer transition-colors
+        p-4 rounded-3xl border cursor-pointer transition-colors
         ${isSelected
           ? 'border-primary bg-primary/10'
           : 'border-border bg-surface hover:bg-surface-hover'
@@ -230,7 +242,7 @@ function TemplateCard({ item, isSelected, onSelect, onEdit, onExport }: Template
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-start gap-3">
-          <span className="text-2xl">{typeIcons[template.outputType]}</span>
+          <span className="flex items-center justify-center w-8 h-8">{typeIcons[template.outputType]}</span>
           <div>
             <h3 className="font-medium text-text-primary">{template.name}</h3>
             {template.description && (
@@ -317,7 +329,7 @@ function CreateTemplateModal({ onClose, onCreate }: CreateTemplateModalProps) {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-surface rounded-lg p-6 max-w-md w-full mx-4">
+      <div className="bg-surface rounded-3xl p-6 max-w-md w-full mx-4">
         <h3 className="text-lg font-semibold text-text-primary mb-4">
           Create New Template
         </h3>
@@ -333,7 +345,7 @@ function CreateTemplateModal({ onClose, onCreate }: CreateTemplateModalProps) {
               onChange={(e) => setName(e.target.value)}
               placeholder="My Prompt Template"
               autoFocus
-              className="w-full px-3 py-2 bg-background border border-border rounded-lg text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full h-10 px-4 bg-background border border-border rounded-3xl text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
 
@@ -344,8 +356,8 @@ function CreateTemplateModal({ onClose, onCreate }: CreateTemplateModalProps) {
             <select
               value={type}
               onChange={(e) => setType(e.target.value as ContentType)}
-              className="w-full px-3 py-2 bg-background border border-border rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-primary"
-            >
+              className="w-full h-10 px-4 bg-background border border-border rounded-3xl text-text-primary focus:outline-none focus:ring-2 focus:ring-primary"
+          >
               <option value="text">Text Generation</option>
               <option value="image">Image Generation</option>
               <option value="video">Video Generation</option>
@@ -361,7 +373,7 @@ function CreateTemplateModal({ onClose, onCreate }: CreateTemplateModalProps) {
               onChange={(e) => setDescription(e.target.value)}
               placeholder="What is this template for?"
               rows={3}
-              className="w-full px-3 py-2 bg-background border border-border rounded-lg text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+              className="w-full px-3 py-2 bg-background border border-border rounded-3xl text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary resize-none"
             />
           </div>
 
@@ -376,7 +388,7 @@ function CreateTemplateModal({ onClose, onCreate }: CreateTemplateModalProps) {
             <button
               type="submit"
               disabled={!name.trim()}
-              className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="px-4 py-2 bg-primary text-white rounded-3xl hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               Create
             </button>

@@ -118,6 +118,7 @@ export interface TalentGenerationState {
   isGenerating: boolean;
   generationStep: 'idle' | 'headshot' | 'analyzing' | 'character-sheet';
   selectedProviderId: string | null;
+  selectedModelId: string | null;
   error: string | null;
 }
 

@@ -4,6 +4,8 @@
  */
 
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Palette } from 'lucide-react';
 import type { UUID } from '../../../core/types/common';
 import type { BrandProfile } from '../../../core/types/brand';
 import {
@@ -12,12 +14,8 @@ import {
   useBrandStore,
 } from '../store';
 
-interface BrandLibraryProps {
-  onSelectBrand?: (brandId: UUID) => void;
-  onEditBrand?: (brandId: UUID) => void;
-}
-
-export function BrandLibrary({ onSelectBrand, onEditBrand }: BrandLibraryProps) {
+export function BrandLibrary() {
+  const navigate = useNavigate();
   const brands = useBrands();
   const defaultBrand = useDefaultBrand();
   const { createBrand, selectBrand, setDefaultBrand, deleteBrand, duplicateBrand } = useBrandStore();
@@ -33,22 +31,21 @@ export function BrandLibrary({ onSelectBrand, onEditBrand }: BrandLibraryProps) 
 
   const handleSelect = (brand: BrandProfile) => {
     selectBrand(brand.id);
-    onSelectBrand?.(brand.id);
   };
 
   const handleEdit = (brand: BrandProfile) => {
-    onEditBrand?.(brand.id);
+    navigate(`/brands/${brand.id}`);
   };
 
   const handleCreate = (name: string) => {
     const id = createBrand(name);
     setShowCreateModal(false);
-    onEditBrand?.(id);
+    navigate(`/brands/${id}`);
   };
 
   const handleDuplicate = (brand: BrandProfile) => {
     const newId = duplicateBrand(brand.id, `${brand.name} (Copy)`);
-    onEditBrand?.(newId);
+    navigate(`/brands/${newId}`);
   };
 
   const handleDelete = (brand: BrandProfile) => {
@@ -65,7 +62,7 @@ export function BrandLibrary({ onSelectBrand, onEditBrand }: BrandLibraryProps) 
           <h2 className="text-lg font-semibold text-text-primary">Brand Profiles</h2>
           <button
             onClick={() => setShowCreateModal(true)}
-            className="px-3 py-1.5 bg-primary text-white text-sm rounded-lg hover:bg-primary/90 transition-colors"
+            className="px-3 py-1.5 bg-primary text-white text-sm rounded-3xl hover:bg-primary/90 transition-colors"
           >
             + New Brand
           </button>
@@ -77,26 +74,35 @@ export function BrandLibrary({ onSelectBrand, onEditBrand }: BrandLibraryProps) 
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Search brands..."
-          className="w-full px-3 py-2 bg-background border border-border rounded-lg text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary"
+          className="w-full px-3 py-2 bg-background border border-border rounded-3xl text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary"
         />
       </div>
 
       {/* Brand List */}
       <div className="flex-1 overflow-y-auto p-4">
         {filteredBrands.length === 0 ? (
-          <div className="text-center py-8">
+          <div className="flex flex-col items-center justify-center h-full p-8">
             {brands.length === 0 ? (
-              <>
-                <p className="text-text-secondary mb-4">No brand profiles yet</p>
+              <div className="flex flex-col items-center justify-center p-12 text-center bg-[var(--color-surface)] border border-[var(--color-border)] rounded-3xl">
+                <div className="w-16 h-16 rounded-3xl bg-[var(--color-primary)]/10 flex items-center justify-center mb-6">
+                  <Palette className="w-8 h-8 text-[var(--color-primary)]" />
+                </div>
+                <h3 className="text-xl font-semibold text-[var(--color-text)] mb-2">
+                  No brand profiles yet
+                </h3>
+                <p className="text-[var(--color-text-muted)] max-w-md mb-6">
+                  Create a brand profile to define your visual identity, voice, and style guidelines. 
+                  This helps maintain consistency across all your generated content.
+                </p>
                 <button
                   onClick={() => setShowCreateModal(true)}
-                  className="text-primary hover:underline"
+                  className="px-6 py-3 bg-[var(--color-primary)] text-white rounded-3xl font-medium hover:bg-[var(--color-primary-hover)] transition-colors"
                 >
-                  Create your first brand profile
+                  Create First Brand Profile
                 </button>
-              </>
+              </div>
             ) : (
-              <p className="text-text-secondary">No brands match your search</p>
+              <p className="text-[var(--color-text-muted)]">No brands match your search</p>
             )}
           </div>
         ) : (
@@ -153,7 +159,7 @@ function BrandCard({
   return (
     <div
       onClick={onSelect}
-      className="p-4 bg-surface rounded-lg border border-border hover:border-primary/50 cursor-pointer transition-colors"
+      className="p-4 bg-surface rounded-3xl border border-border hover:border-primary/50 cursor-pointer transition-colors"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
@@ -184,8 +190,14 @@ function BrandCard({
               </p>
             )}
             <div className="flex items-center gap-3 mt-2 text-xs text-text-secondary">
-              <span>🔤 {brand.tokens.typography.primaryFont}</span>
-              <span>✨ {brand.tokens.visualStyle.aesthetic || 'No aesthetic'}</span>
+              <span className="flex items-center gap-1">
+                <span className="text-text-primary font-medium">Font:</span>
+                {brand.tokens.typography.primaryFont}
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="text-text-primary font-medium">Style:</span>
+                {brand.tokens.visualStyle.aesthetic || 'No aesthetic'}
+              </span>
             </div>
           </div>
         </div>
@@ -211,7 +223,7 @@ function BrandCard({
                   setShowMenu(false);
                 }}
               />
-              <div className="absolute right-0 top-8 z-20 bg-surface border border-border rounded-lg shadow-lg py-1 min-w-[140px]">
+              <div className="absolute right-0 top-8 z-20 bg-surface border border-border rounded-3xl shadow-lg py-1 min-w-[140px]">
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -299,7 +311,7 @@ function CreateBrandModal({ onClose, onCreate }: CreateBrandModalProps) {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-surface rounded-lg p-6 max-w-md w-full mx-4">
+      <div className="bg-surface rounded-3xl p-6 max-w-md w-full mx-4">
         <h3 className="text-lg font-semibold text-text-primary mb-4">
           Create New Brand Profile
         </h3>
@@ -315,7 +327,7 @@ function CreateBrandModal({ onClose, onCreate }: CreateBrandModalProps) {
               onChange={(e) => setName(e.target.value)}
               placeholder="My Brand"
               autoFocus
-              className="w-full px-3 py-2 bg-background border border-border rounded-lg text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full px-3 py-2 bg-background border border-border rounded-3xl text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
 
@@ -330,7 +342,7 @@ function CreateBrandModal({ onClose, onCreate }: CreateBrandModalProps) {
             <button
               type="submit"
               disabled={!name.trim()}
-              className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="px-4 py-2 bg-primary text-white rounded-3xl hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               Create
             </button>

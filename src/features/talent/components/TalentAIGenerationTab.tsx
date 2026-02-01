@@ -7,8 +7,9 @@
 import { useEffect, useCallback, useState } from 'react';
 
 import type { TalentProfile, TalentGeneratedImage, TalentAppearance } from '../../../core/types/talent';
+import type { UUID } from '../../../core/types/common';
 import { useTalentStore, useTalentGenerationState } from '../store';
-import { useProvidersForType } from '../../providers/store';
+import { ProviderModelSelector } from '../../providers/components/ProviderModelSelector';
 import { HeadshotGenerator } from './HeadshotGenerator';
 import { CharacterSheetGenerator } from './CharacterSheetGenerator';
 import { analyzeHeadshotImage, mergeAnalyzedAttributes } from '../services/talentVisionService';
@@ -18,15 +19,12 @@ interface TalentAIGenerationTabProps {
 }
 
 export function TalentAIGenerationTab({ talent }: TalentAIGenerationTabProps) {
-  // Get image providers filtered to active ones
-  const imageProviders = useProvidersForType('image');
-  const activeProviders = imageProviders.filter((p) => p.status === 'active');
-
   // Generation state from store
   const generationState = useTalentGenerationState(talent.id);
   const {
     initGenerationState,
     setGenerationProvider,
+    setGenerationModel,
     addReferenceImage,
     updateTalent,
   } = useTalentStore();
@@ -36,30 +34,34 @@ export function TalentAIGenerationTab({ talent }: TalentAIGenerationTabProps) {
   const [detectedAttributes, setDetectedAttributes] = useState<Partial<TalentAppearance> | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
-  // Get current headshot and selected provider from generation state
+  // Get current headshot and selected provider/model from generation state
   const headshot = generationState?.currentHeadshot ?? null;
   const selectedProviderId = generationState?.selectedProviderId ?? null;
+  const selectedModelId = generationState?.selectedModelId ?? null;
 
   // Initialize generation state on mount
   useEffect(() => {
     initGenerationState(talent.id);
   }, [talent.id, initGenerationState]);
 
-  // Auto-select first provider if none selected
-  useEffect(() => {
-    if (!selectedProviderId && activeProviders.length > 0) {
-      setGenerationProvider(talent.id, activeProviders[0].config.id);
-    }
-  }, [selectedProviderId, activeProviders, talent.id, setGenerationProvider]);
-
   /**
    * Handle provider selection change
    */
   const handleProviderChange = useCallback(
-    (e: React.ChangeEvent<HTMLSelectElement>) => {
-      setGenerationProvider(talent.id, e.target.value);
+    (providerId: UUID) => {
+      setGenerationProvider(talent.id, providerId);
     },
     [talent.id, setGenerationProvider]
+  );
+
+  /**
+   * Handle model selection change
+   */
+  const handleModelChange = useCallback(
+    (modelId: string) => {
+      setGenerationModel(talent.id, modelId);
+    },
+    [talent.id, setGenerationModel]
   );
 
   /**
@@ -129,78 +131,45 @@ export function TalentAIGenerationTab({ talent }: TalentAIGenerationTabProps) {
   );
 
   /**
-   * Handle saving character sheet - add headshot + all character sheet images as reference images
+   * Handle saving character sheet - add all character sheet images as reference images
+   * Note: The headshot is already saved as a reference image when approved in HeadshotGenerator
    */
   const handleSaveCharacterSheet = useCallback(
     (characterSheetImages: TalentGeneratedImage[]) => {
-      // Add headshot as reference image first (if approved)
-      if (headshot?.isApproved && headshot.url) {
-        addReferenceImage(talent.id, headshot.url, 'AI Generated Headshot');
-      }
-
       // Add all character sheet images as reference images
       for (const image of characterSheetImages) {
         const angleLabel = image.angle || 'Unknown';
         addReferenceImage(talent.id, image.url, `AI Generated - ${angleLabel}`);
       }
     },
-    [headshot, talent.id, addReferenceImage]
+    [talent.id, addReferenceImage]
   );
-
-  // No providers configured case
-  if (activeProviders.length === 0) {
-    return (
-      <div className="p-6 bg-surface rounded-lg text-center">
-        <div className="text-4xl mb-4">🔌</div>
-        <h3 className="text-lg font-medium text-text-primary mb-2">
-          No Image Providers Configured
-        </h3>
-        <p className="text-text-secondary mb-4">
-          To generate AI headshots, configure an image provider with valid credentials.
-        </p>
-        <a
-          href="/providers"
-          className="inline-block px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
-        >
-          Configure Providers
-        </a>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6 max-w-3xl">
-      <p className="text-text-secondary">
+      <p className="text-[var(--color-text-muted)] leading-relaxed">
         Generate AI headshots and character sheets for this talent. Start by generating a
         headshot, approve it, then generate a full character sheet with multiple angles.
       </p>
 
-      {/* Provider dropdown */}
-      <div>
-        <label
-          htmlFor="provider-select"
-          className="block text-sm font-medium text-text-primary mb-2"
-        >
-          Image Provider
-        </label>
-        <select
-          id="provider-select"
-          value={selectedProviderId || ''}
-          onChange={handleProviderChange}
-          className="w-full max-w-xs px-3 py-2 bg-background border border-border rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-primary/50"
-        >
-          {activeProviders.map((p) => (
-            <option key={p.config.id} value={p.config.id}>
-              {p.config.displayName}
-            </option>
-          ))}
-        </select>
+      {/* Provider + Model Selection */}
+      <div className="bg-[var(--color-surface)] rounded-3xl p-5 border border-[var(--color-border)]">
+        <h3 className="text-sm font-semibold text-[var(--color-text)] mb-4">Image Provider & Model</h3>
+        <ProviderModelSelector
+          contentType="image"
+          selectedProviderId={selectedProviderId as UUID | null}
+          selectedModelId={selectedModelId}
+          onProviderChange={handleProviderChange}
+          onModelChange={handleModelChange}
+          activeOnly={true}
+        />
       </div>
 
       {/* HeadshotGenerator */}
       <HeadshotGenerator
         talent={talent}
         providerId={selectedProviderId}
+        modelId={selectedModelId}
         onApprove={handleHeadshotApprove}
       />
 
@@ -208,45 +177,46 @@ export function TalentAIGenerationTab({ talent }: TalentAIGenerationTabProps) {
       <CharacterSheetGenerator
         talent={talent}
         providerId={selectedProviderId}
+        modelId={selectedModelId}
         headshotPrompt={headshot?.generationPrompt || ''}
         onSaveAll={handleSaveCharacterSheet}
       />
 
       {/* Attribute Confirmation Modal */}
       {showAttributeConfirm && detectedAttributes && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-surface rounded-lg p-6 max-w-lg w-full mx-4 shadow-xl">
-            <h3 className="text-lg font-medium text-text-primary mb-2">
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 backdrop-blur-sm">
+          <div className="bg-[var(--color-surface)] rounded-3xl p-6 max-w-lg w-full mx-4 shadow-2xl border border-[var(--color-border)]">
+            <h3 className="text-lg font-semibold text-[var(--color-text)] mb-2">
               Detected Appearance Attributes
             </h3>
-            <p className="text-sm text-text-secondary mb-4">
+            <p className="text-sm text-[var(--color-text-muted)] mb-4">
               We analyzed the headshot and detected these attributes. Would you like to apply
               them to this talent's profile?
             </p>
 
-            <div className="space-y-2 p-4 bg-background rounded-lg max-h-64 overflow-y-auto">
+            <div className="space-y-2 p-4 bg-[var(--color-bg)] rounded-3xl max-h-64 overflow-y-auto border border-[var(--color-border)]">
               {detectedAttributes.gender && (
                 <p className="text-sm">
-                  <span className="font-medium text-text-primary">Gender:</span>{' '}
-                  <span className="text-text-secondary">{detectedAttributes.gender}</span>
+                  <span className="font-medium text-[var(--color-text)]">Gender:</span>{' '}
+                  <span className="text-[var(--color-text-muted)]">{detectedAttributes.gender}</span>
                 </p>
               )}
               {detectedAttributes.age && (
                 <p className="text-sm">
-                  <span className="font-medium text-text-primary">Age:</span>{' '}
-                  <span className="text-text-secondary">{detectedAttributes.age}</span>
+                  <span className="font-medium text-[var(--color-text)]">Age:</span>{' '}
+                  <span className="text-[var(--color-text-muted)]">{detectedAttributes.age}</span>
                 </p>
               )}
               {detectedAttributes.ethnicity && (
                 <p className="text-sm">
-                  <span className="font-medium text-text-primary">Ethnicity:</span>{' '}
-                  <span className="text-text-secondary">{detectedAttributes.ethnicity}</span>
+                  <span className="font-medium text-[var(--color-text)]">Ethnicity:</span>{' '}
+                  <span className="text-[var(--color-text-muted)]">{detectedAttributes.ethnicity}</span>
                 </p>
               )}
               {detectedAttributes.hair && (
                 <div className="text-sm">
-                  <span className="font-medium text-text-primary">Hair:</span>{' '}
-                  <span className="text-text-secondary">
+                  <span className="font-medium text-[var(--color-text)]">Hair:</span>{' '}
+                  <span className="text-[var(--color-text-muted)]">
                     {[
                       detectedAttributes.hair.color,
                       detectedAttributes.hair.length,
@@ -259,8 +229,8 @@ export function TalentAIGenerationTab({ talent }: TalentAIGenerationTabProps) {
               )}
               {detectedAttributes.eyes && (
                 <div className="text-sm">
-                  <span className="font-medium text-text-primary">Eyes:</span>{' '}
-                  <span className="text-text-secondary">
+                  <span className="font-medium text-[var(--color-text)]">Eyes:</span>{' '}
+                  <span className="text-[var(--color-text-muted)]">
                     {[detectedAttributes.eyes.color, detectedAttributes.eyes.shape]
                       .filter(Boolean)
                       .join(', ')}
@@ -269,8 +239,8 @@ export function TalentAIGenerationTab({ talent }: TalentAIGenerationTabProps) {
               )}
               {detectedAttributes.skin && (
                 <div className="text-sm">
-                  <span className="font-medium text-text-primary">Skin:</span>{' '}
-                  <span className="text-text-secondary">
+                  <span className="font-medium text-[var(--color-text)]">Skin:</span>{' '}
+                  <span className="text-[var(--color-text-muted)]">
                     {[detectedAttributes.skin.tone, detectedAttributes.skin.texture]
                       .filter(Boolean)
                       .join(', ')}
@@ -280,8 +250,8 @@ export function TalentAIGenerationTab({ talent }: TalentAIGenerationTabProps) {
               {detectedAttributes.distinguishingFeatures &&
                 detectedAttributes.distinguishingFeatures.length > 0 && (
                   <div className="text-sm">
-                    <span className="font-medium text-text-primary">Features:</span>{' '}
-                    <span className="text-text-secondary">
+                    <span className="font-medium text-[var(--color-text)]">Features:</span>{' '}
+                    <span className="text-[var(--color-text-muted)]">
                       {detectedAttributes.distinguishingFeatures.join(', ')}
                     </span>
                   </div>
@@ -291,13 +261,13 @@ export function TalentAIGenerationTab({ talent }: TalentAIGenerationTabProps) {
             <div className="flex gap-3 mt-6 justify-end">
               <button
                 onClick={() => handleConfirmAttributes(false)}
-                className="px-4 py-2 bg-surface border border-border text-text-primary rounded-lg hover:bg-surface-hover transition-colors"
+                className="px-4 py-2 bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text)] rounded-3xl hover:bg-[var(--color-surface-raised)] transition-colors font-medium"
               >
                 Skip
               </button>
               <button
                 onClick={() => handleConfirmAttributes(true)}
-                className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+                className="px-4 py-2 bg-[var(--color-primary)] text-white rounded-3xl hover:bg-[var(--color-primary)]/90 transition-colors font-medium"
               >
                 Apply Attributes
               </button>
@@ -308,10 +278,10 @@ export function TalentAIGenerationTab({ talent }: TalentAIGenerationTabProps) {
 
       {/* Analyzing overlay */}
       {isAnalyzing && (
-        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
-          <div className="bg-surface rounded-lg p-6 flex items-center gap-3 shadow-xl">
-            <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-            <span className="text-text-primary">Analyzing headshot...</span>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
+          <div className="bg-[var(--color-surface)] rounded-3xl p-6 flex items-center gap-3 shadow-2xl border border-[var(--color-border)]">
+            <div className="w-6 h-6 border-2 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin" />
+            <span className="text-[var(--color-text)] font-medium">Analyzing headshot...</span>
           </div>
         </div>
       )}

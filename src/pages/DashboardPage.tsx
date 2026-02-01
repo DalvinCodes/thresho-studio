@@ -1,294 +1,382 @@
-/**
- * Dashboard Page
- * Overview of studio activity and quick actions
- */
-
-import { useMemo, useCallback } from 'react';
-import { useAppStore } from '../core/store';
-import { useAssetStore } from '../features/assets/store';
-import { useTemplateStore } from '../features/templates/store';
-import { useBrandStore } from '../features/brands/store';
-import { useShotListStore } from '../features/shotList/store';
-import { useGenerationStore } from '../features/generation/store';
+import { Card } from "../components/common/Card";
+import { useToastHelpers } from "../components/Toast";
+import { Wand2, Film, UserPlus, LayoutTemplate, Image, Video, FileText, Clock, TrendingUp, CheckCircle2, Sparkles } from "lucide-react";
 
 export function DashboardPage() {
-  const setCurrentPage = useAppStore((state) => state.setCurrentPage);
+  const { success, error, warning, info } = useToastHelpers();
 
-  // Use primitive counts to avoid re-render loops
-  const assetCount = useAssetStore((s) => s.assets.size);
-  const templateCount = useTemplateStore((s) => s.templates.size);
-  const brandCount = useBrandStore((s) => s.brands.size);
-  const shotListCount = useShotListStore((s) => s.shotLists.size);
-  const activeGenCount = useGenerationStore((s) => s.activeGenerations.size);
-  const _historySize = useGenerationStore((s) => s.history.size);
+  const showTestToasts = () => {
+    success("Success!", "Your changes have been saved successfully.");
+    setTimeout(() => {
+      error("Error!", "Something went wrong. Please try again.");
+    }, 500);
+    setTimeout(() => {
+      warning("Warning!", "Your session will expire in 5 minutes.");
+    }, 1000);
+    setTimeout(() => {
+      info("Info", "New updates are available for your templates.");
+    }, 1500);
+  };
 
-  // Compute completed count - this is a primitive so won't cause re-renders
-  const completedCount = useGenerationStore(useCallback((s) => {
-    let count = 0;
-    for (const r of s.history.values()) {
-      if (r.status === 'completed') count++;
-    }
-    return count;
-  }, []));
-
-  // Get arrays only for display, not for dependencies
-  const activeGenerations = useMemo(() => {
-    return Array.from(useGenerationStore.getState().activeGenerations.values());
-  }, [activeGenCount]);
-
-  const recentAssets = useMemo(() => {
-    const assets = Array.from(useAssetStore.getState().assets.values())
-      .filter(a => !a.isArchived)
-      .sort((a, b) => b.createdAt - a.createdAt)
-      .slice(0, 6);
-    return assets;
-  }, [assetCount]);
-
-  // Stats object
-  const stats = useMemo(() => ({
-    totalAssets: assetCount,
-    totalTemplates: templateCount,
-    totalBrands: brandCount,
-    totalShotLists: shotListCount,
-    activeGenerations: activeGenCount,
-    completedGenerations: completedCount,
-  }), [assetCount, templateCount, brandCount, shotListCount, activeGenCount, completedCount]);
+  // Get greeting based on time of day
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Good morning";
+    if (hour < 18) return "Good afternoon";
+    return "Good evening";
+  };
 
   return (
     <div className="space-y-8">
-      {/* Welcome Header */}
-      <div>
-        <h2 className="text-3xl font-bold text-text-primary">Welcome to Thresho Studio</h2>
-        <p className="text-text-secondary mt-1">Your AI-powered creative platform</p>
-      </div>
-
-      {/* Quick Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        <StatCard
-          icon="🖼️"
-          label="Assets"
-          value={stats.totalAssets}
-          color="primary"
-          onClick={() => setCurrentPage('assets')}
-        />
-        <StatCard
-          icon="📝"
-          label="Templates"
-          value={stats.totalTemplates}
-          color="secondary"
-          onClick={() => setCurrentPage('templates')}
-        />
-        <StatCard
-          icon="🎨"
-          label="Brands"
-          value={stats.totalBrands}
-          color="purple"
-          onClick={() => setCurrentPage('brands')}
-        />
-        <StatCard
-          icon="🎬"
-          label="Shot Lists"
-          value={stats.totalShotLists}
-          color="blue"
-          onClick={() => setCurrentPage('shotlist')}
-        />
-        <StatCard
-          icon="⚡"
-          label="Active"
-          value={stats.activeGenerations}
-          color="yellow"
-          onClick={() => setCurrentPage('generate')}
-        />
-        <StatCard
-          icon="✅"
-          label="Completed"
-          value={stats.completedGenerations}
-          color="green"
-        />
+      {/* Greeting Section - Large serif heading */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="font-serif text-4xl text-text mb-2">
+            {getGreeting()}, DJ
+          </h1>
+          <p className="text-text-muted text-base">
+            Here's what's happening with your creative production today.
+          </p>
+        </div>
+        <button
+          onClick={showTestToasts}
+          className="px-5 py-2.5 bg-primary text-white rounded-full hover:bg-primary-hover transition-all duration-200 text-sm font-medium shadow-md hover:shadow-lg"
+        >
+          Test Toasts
+        </button>
       </div>
 
       {/* Quick Actions */}
-      <div className="bg-surface rounded-lg border border-border p-6">
-        <h3 className="text-lg font-semibold text-text-primary mb-4">Quick Actions</h3>
+      <section className="border-b border-border pb-8">
+        <h2 className="font-serif text-xl text-text mb-4">Quick Actions</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <QuickAction
-            icon="✨"
-            label="Generate Content"
-            description="Create text, images, or videos"
-            onClick={() => setCurrentPage('generate')}
+          <QuickActionCard
+            icon={<Wand2 className="w-6 h-6" />}
+            label="Generate Image"
+            onClick={() => {}}
           />
-          <QuickAction
-            icon="📋"
-            label="New Template"
-            description="Create a prompt template"
-            onClick={() => setCurrentPage('templates')}
-          />
-          <QuickAction
-            icon="🎬"
+          <QuickActionCard
+            icon={<Film className="w-6 h-6" />}
             label="New Shot List"
-            description="Plan your production"
-            onClick={() => setCurrentPage('shotlist')}
+            onClick={() => {}}
           />
-          <QuickAction
-            icon="⚙️"
-            label="Configure Providers"
-            description="Set up AI providers"
-            onClick={() => setCurrentPage('settings')}
+          <QuickActionCard
+            icon={<UserPlus className="w-6 h-6" />}
+            label="Create Talent"
+            onClick={() => {}}
           />
+          <QuickActionCard
+            icon={<LayoutTemplate className="w-6 h-6" />}
+            label="New Template"
+            onClick={() => {}}
+          />
+        </div>
+      </section>
+
+      {/* Stats Grid - Today at a glance */}
+      <section className="border-b border-border pb-8">
+        <h2 className="font-serif text-xl text-text mb-4">Today at a glance</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard
+            label="Generations"
+            value="24"
+            change="+12%"
+            trend="up"
+            icon={<Image className="w-5 h-5" />}
+          />
+          <StatCard
+            label="Active Shot Lists"
+            value="3"
+            change="+1"
+            trend="up"
+            icon={<Film className="w-5 h-5" />}
+          />
+          <StatCard
+            label="Assets Created"
+            value="147"
+            change="+8"
+            trend="up"
+            icon={<CheckCircle2 className="w-5 h-5" />}
+          />
+          <StatCard
+            label="Time Saved"
+            value="4.2h"
+            change="+15%"
+            trend="up"
+            icon={<Clock className="w-5 h-5" />}
+          />
+        </div>
+      </section>
+
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 border-b border-border pb-8">
+        {/* Schedule / Timeline */}
+        <div className="lg:col-span-2">
+          <Card className="h-full">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="font-serif text-lg text-text">Today's Schedule</h3>
+              <button className="text-sm text-text-muted hover:text-text transition-colors">
+                View all
+              </button>
+            </div>
+            <div className="space-y-4">
+              <TimelineItem
+                time="9:00 AM"
+                title="Q1 Campaign Review"
+                status="completed"
+                description="Review generated assets with marketing team"
+              />
+              <TimelineItem
+                time="11:30 AM"
+                title="Product Shoot Generation"
+                status="in-progress"
+                description="Generate 12 product images for catalog"
+              />
+              <TimelineItem
+                time="2:00 PM"
+                title="Talent Upload Session"
+                status="upcoming"
+                description="Upload and process new talent headshots"
+              />
+              <TimelineItem
+                time="4:30 PM"
+                title="Social Media Batch"
+                status="upcoming"
+                description="Create 20 social media variations"
+              />
+            </div>
+          </Card>
+        </div>
+
+        {/* Recent Activity */}
+        <div>
+          <Card className="h-full">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="font-serif text-lg text-text">Recent Activity</h3>
+              <button className="text-sm text-text-muted hover:text-text transition-colors">
+                View all
+              </button>
+            </div>
+            <div className="space-y-4">
+              <ActivityItem
+                icon={<Image className="w-4 h-4" />}
+                action="Generated"
+                item="Q1 Campaign Hero"
+                time="2m ago"
+              />
+              <ActivityItem
+                icon={<Video className="w-4 h-4" />}
+                action="Created"
+                item="Product Video Batch"
+                time="15m ago"
+              />
+              <ActivityItem
+                icon={<FileText className="w-4 h-4" />}
+                action="Updated"
+                item="Brand Guidelines"
+                time="1h ago"
+              />
+              <ActivityItem
+                icon={<UserPlus className="w-4 h-4" />}
+                action="Added"
+                item="New Talent: Marcus"
+                time="2h ago"
+              />
+              <ActivityItem
+                icon={<LayoutTemplate className="w-4 h-4" />}
+                action="Created"
+                item="Social Template v3"
+                time="3h ago"
+              />
+            </div>
+          </Card>
         </div>
       </div>
 
-      {/* Active Generations */}
-      {activeGenerations.length > 0 && (
-        <div className="bg-surface rounded-lg border border-border p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-text-primary">Active Generations</h3>
-            <button
-              onClick={() => setCurrentPage('generate')}
-              className="text-sm text-primary hover:underline"
-            >
-              View All
-            </button>
-          </div>
-          <div className="space-y-3">
-            {activeGenerations.slice(0, 3).map((gen) => (
-              <div
-                key={gen.id}
-                className="flex items-center gap-4 p-3 bg-background rounded-lg"
-              >
-                <span className="text-2xl">
-                  {gen.type === 'text' ? '📝' : gen.type === 'image' ? '🖼️' : '🎬'}
-                </span>
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-text-primary capitalize">
-                    {gen.type} Generation
-                  </p>
-                  <div className="mt-1 h-2 bg-border rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-primary transition-all"
-                      style={{ width: `${gen.progress}%` }}
-                    />
-                  </div>
-                </div>
-                <span className="text-sm text-text-secondary">{gen.progress}%</span>
-              </div>
-            ))}
-          </div>
+      {/* Recent Generations Grid */}
+      <section>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-serif text-xl text-text">Recent Generations</h2>
+          <button className="text-sm text-text-muted hover:text-text transition-colors">
+            View all →
+          </button>
         </div>
-      )}
-
-      {/* Recent Assets */}
-      {recentAssets.length > 0 && (
-        <div className="bg-surface rounded-lg border border-border p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-text-primary">Recent Assets</h3>
-            <button
-              onClick={() => setCurrentPage('assets')}
-              className="text-sm text-primary hover:underline"
-            >
-              View All
-            </button>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            {recentAssets.map((asset) => (
-              <div
-                key={asset.id}
-                className="aspect-square bg-background rounded-lg overflow-hidden"
-              >
-                {asset.type === 'image' && asset.url ? (
-                  <img
-                    src={asset.thumbnailUrl || asset.url}
-                    alt={asset.name}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-4xl opacity-30">
-                    {asset.type === 'video' ? '🎬' : '📝'}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+          <GenerationThumbnail type="image" time="2m ago" />
+          <GenerationThumbnail type="image" time="15m ago" />
+          <GenerationThumbnail type="video" time="1h ago" />
+          <GenerationThumbnail type="image" time="2h ago" />
+          <GenerationThumbnail type="text" time="3h ago" />
+          <GenerationThumbnail type="image" time="5h ago" />
         </div>
-      )}
-
-      {/* Getting Started */}
-      {stats.totalAssets === 0 && stats.totalTemplates === 0 && (
-        <div className="bg-gradient-to-br from-primary/10 to-secondary/10 rounded-lg border border-primary/20 p-8 text-center">
-          <h3 className="text-xl font-semibold text-text-primary mb-2">Get Started</h3>
-          <p className="text-text-secondary mb-6 max-w-md mx-auto">
-            Welcome to Thresho Studio! Start by configuring your AI providers, then create
-            templates and generate your first content.
-          </p>
-          <div className="flex justify-center gap-4">
-            <button
-              onClick={() => setCurrentPage('settings')}
-              className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
-            >
-              Configure Providers
-            </button>
-            <button
-              onClick={() => setCurrentPage('templates')}
-              className="px-4 py-2 bg-surface border border-border text-text-primary rounded-lg hover:bg-surface-hover transition-colors"
-            >
-              Create Template
-            </button>
-          </div>
-        </div>
-      )}
+      </section>
     </div>
   );
 }
 
-// Stat Card Component
-interface StatCardProps {
-  icon: string;
+// Quick Action Card Component
+function QuickActionCard({
+  icon,
+  label,
+  onClick,
+}: {
+  icon: React.ReactNode;
   label: string;
-  value: number;
-  color: 'primary' | 'secondary' | 'purple' | 'blue' | 'yellow' | 'green';
-  onClick?: () => void;
-}
-
-function StatCard({ icon, label, value, color, onClick }: StatCardProps) {
-  const colorClasses = {
-    primary: 'bg-primary/10 text-primary',
-    secondary: 'bg-secondary/10 text-secondary',
-    purple: 'bg-purple-500/10 text-purple-500',
-    blue: 'bg-blue-500/10 text-blue-500',
-    yellow: 'bg-yellow-500/10 text-yellow-500',
-    green: 'bg-green-500/10 text-green-500',
-  };
-
+  onClick: () => void;
+}) {
   return (
     <button
       onClick={onClick}
-      className={`p-4 rounded-lg ${colorClasses[color]} transition-transform hover:scale-105`}
+      className="group flex flex-col items-center justify-center p-6 bg-surface rounded-2xl shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300"
     >
-      <p className="text-3xl mb-1">{icon}</p>
-      <p className="text-2xl font-bold">{value}</p>
-      <p className="text-sm opacity-80">{label}</p>
+      <div className="w-12 h-12 rounded-3xl bg-primary-light flex items-center justify-center text-primary mb-3 group-hover:scale-105 transition-transform">
+        {icon}
+      </div>
+      <span className="text-sm font-medium text-text">{label}</span>
     </button>
   );
 }
 
-// Quick Action Component
-interface QuickActionProps {
-  icon: string;
+// Stat Card Component
+function StatCard({
+  label,
+  value,
+  change,
+  trend,
+  icon,
+}: {
   label: string;
-  description: string;
-  onClick: () => void;
+  value: string;
+  change: string;
+  trend: "up" | "down";
+  icon: React.ReactNode;
+}) {
+  return (
+    <Card padding="md">
+      <div className="flex items-start justify-between">
+        <div>
+          <p className="text-sm text-text-muted mb-1">{label}</p>
+          <p className="text-2xl font-semibold text-text">{value}</p>
+        </div>
+        <div className="w-10 h-10 rounded-3xl bg-primary-light flex items-center justify-center text-primary">
+          {icon}
+        </div>
+      </div>
+      <div className="flex items-center gap-1 mt-3">
+        <TrendingUp className={`w-3 h-3 ${trend === "up" ? "text-status-success" : "text-status-danger"}`} />
+        <span className={`text-xs ${trend === "up" ? "text-status-success" : "text-status-danger"}`}>
+          {change}
+        </span>
+        <span className="text-xs text-text-subtle">vs yesterday</span>
+      </div>
+    </Card>
+  );
 }
 
-function QuickAction({ icon, label, description, onClick }: QuickActionProps) {
+// Timeline Item Component
+function TimelineItem({
+  time,
+  title,
+  status,
+  description,
+}: {
+  time: string;
+  title: string;
+  status: "completed" | "in-progress" | "upcoming";
+  description: string;
+}) {
+  const statusColors = {
+    completed: "bg-status-success",
+    "in-progress": "bg-primary",
+    upcoming: "bg-border",
+  };
+
+  const statusLabels = {
+    completed: "Done",
+    "in-progress": "In Progress",
+    upcoming: "Upcoming",
+  };
+
+  const statusBadgeStyles = {
+    completed: "bg-green-100 text-green-700",
+    "in-progress": "bg-primary-light text-primary",
+    upcoming: "bg-bg-subtle text-text-muted",
+  };
+
   return (
-    <button
-      onClick={onClick}
-      className="p-4 bg-background rounded-lg border border-border hover:border-primary/50 transition-colors text-left"
-    >
-      <p className="text-2xl mb-2">{icon}</p>
-      <p className="font-medium text-text-primary">{label}</p>
-      <p className="text-sm text-text-secondary">{description}</p>
-    </button>
+    <div className="flex gap-4">
+      <div className="flex flex-col items-center">
+        <div className={`w-3 h-3 rounded-full ${statusColors[status]}`} />
+        <div className="w-px flex-1 bg-border mt-2" />
+      </div>
+      <div className="flex-1 pb-6">
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-xs text-text-subtle">{time}</span>
+          <span className={`text-xs px-2 py-0.5 rounded-full ${statusBadgeStyles[status]}`}>
+            {statusLabels[status]}
+          </span>
+        </div>
+        <h4 className="text-sm font-medium text-text mb-0.5">{title}</h4>
+        <p className="text-xs text-text-muted">{description}</p>
+      </div>
+    </div>
+  );
+}
+
+// Activity Item Component
+function ActivityItem({
+  icon,
+  action,
+  item,
+  time,
+}: {
+  icon: React.ReactNode;
+  action: string;
+  item: string;
+  time: string;
+}) {
+  return (
+    <div className="flex items-center gap-3">
+      <div className="w-8 h-8 rounded-3xl bg-bg-subtle flex items-center justify-center text-text-muted">
+        {icon}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm text-text truncate">
+          <span className="text-text-muted">{action}</span> {item}
+        </p>
+        <p className="text-xs text-text-subtle">{time}</p>
+      </div>
+    </div>
+  );
+}
+
+// Generation Thumbnail Component
+function GenerationThumbnail({
+  type,
+  time,
+}: {
+  type: "image" | "video" | "text";
+  time: string;
+}) {
+  const icons = {
+    image: <Image className="w-6 h-6" />,
+    video: <Video className="w-6 h-6" />,
+    text: <FileText className="w-6 h-6" />,
+  };
+
+  return (
+    <div className="group aspect-square bg-surface rounded-2xl shadow-sm overflow-hidden cursor-pointer hover:shadow-lg transition-all duration-300">
+      <div className="h-full flex flex-col">
+        <div className="flex-1 flex items-center justify-center bg-bg-subtle">
+          <div className="text-border group-hover:text-text-muted transition-colors">
+            {icons[type]}
+          </div>
+        </div>
+        <div className="px-3 py-2 bg-surface">
+          <span className="text-xs text-text-muted">{time}</span>
+        </div>
+      </div>
+    </div>
   );
 }
 

@@ -3,11 +3,16 @@
  * Manage shot lists and storyboards
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { Film, Image, Video } from 'lucide-react';
 import type { UUID, ContentType } from '../core/types/common';
 import { ShotListView, ShotEditor, useShotListStore, useShotLists } from '../features/shotList';
 
 export function ShotListPage() {
+  const { id, shotId } = useParams<{ id?: string; shotId?: string }>();
+  const navigate = useNavigate();
+  const location = useLocation();
   const shotLists = useShotLists();
   const {
     selectShotList,
@@ -15,15 +20,28 @@ export function ShotListPage() {
   } = useShotListStore();
 
   const selectedListId = useShotListStore((state) => state.selectedShotListId);
-  const [editingShotId, setEditingShotId] = useState<UUID | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
 
+  // Sync modal state with URL path
+  useEffect(() => {
+    setShowCreateModal(location.pathname === '/shotlist/new');
+  }, [location.pathname]);
+
+  // Sync selected list with URL param
+  useEffect(() => {
+    if (id && id !== 'new') {
+      selectShotList(id as UUID);
+    } else if (!id) {
+      selectShotList(null);
+    }
+  }, [id, selectShotList]);
+
   // If editing a shot
-  if (editingShotId && selectedListId) {
+  if (shotId && id && id !== 'new') {
     return (
       <ShotEditor
-        shotId={editingShotId}
-        onClose={() => setEditingShotId(null)}
+        shotId={shotId as UUID}
+        onClose={() => navigate(`/shotlist/${id}`)}
       />
     );
   }
@@ -35,8 +53,8 @@ export function ShotListPage() {
         <div className="p-4 border-b border-border">
           <h3 className="font-semibold text-text-primary mb-3">Shot Lists</h3>
           <button
-            onClick={() => setShowCreateModal(true)}
-            className="w-full py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors text-sm"
+            onClick={() => navigate('/shotlist/new')}
+            className="w-full py-2 bg-primary text-white rounded-3xl hover:bg-primary/90 transition-colors text-sm"
           >
             + New Shot List
           </button>
@@ -52,9 +70,9 @@ export function ShotListPage() {
               {shotLists.map((list) => (
                 <button
                   key={list.id}
-                  onClick={() => selectShotList(list.id)}
+                  onClick={() => navigate(`/shotlist/${list.id}`)}
                   className={`
-                    w-full p-3 rounded-lg text-left transition-colors
+                    w-full p-3 rounded-3xl text-left transition-colors
                     ${selectedListId === list.id
                       ? 'bg-primary/10 text-primary'
                       : 'hover:bg-surface-hover text-text-primary'
@@ -77,12 +95,12 @@ export function ShotListPage() {
         {selectedListId ? (
           <ShotListView
             shotListId={selectedListId}
-            onEditShot={(id) => setEditingShotId(id)}
+            onEditShot={(shotId) => navigate(`/shotlist/${selectedListId}/shots/${shotId}/edit`)}
           />
         ) : (
           <div className="h-full flex items-center justify-center">
             <div className="text-center">
-              <p className="text-4xl mb-4">🎬</p>
+              <Film className="w-16 h-16 mx-auto mb-4 text-text-secondary" />
               <h3 className="text-xl font-semibold text-text-primary mb-2">
                 No Shot List Selected
               </h3>
@@ -90,8 +108,8 @@ export function ShotListPage() {
                 Select a shot list from the sidebar or create a new one
               </p>
               <button
-                onClick={() => setShowCreateModal(true)}
-                className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+                onClick={() => navigate('/shotlist/new')}
+                className="px-4 py-2 bg-primary text-white rounded-3xl hover:bg-primary/90 transition-colors"
               >
                 Create Shot List
               </button>
@@ -103,11 +121,14 @@ export function ShotListPage() {
       {/* Create Modal */}
       {showCreateModal && (
         <CreateShotListModal
-          onClose={() => setShowCreateModal(false)}
-          onCreate={(name, type) => {
-            const id = createShotList(name, type);
-            selectShotList(id);
+          onClose={() => {
             setShowCreateModal(false);
+            navigate('/shotlist');
+          }}
+          onCreate={(name, type) => {
+            const newId = createShotList(name, type);
+            setShowCreateModal(false);
+            navigate(`/shotlist/${newId}`);
           }}
         />
       )}
@@ -134,7 +155,7 @@ function CreateShotListModal({ onClose, onCreate }: CreateShotListModalProps) {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-surface rounded-lg p-6 max-w-md w-full mx-4">
+      <div className="bg-surface rounded-3xl p-6 max-w-md w-full mx-4">
         <h3 className="text-lg font-semibold text-text-primary mb-4">
           Create New Shot List
         </h3>
@@ -150,7 +171,7 @@ function CreateShotListModal({ onClose, onCreate }: CreateShotListModalProps) {
               onChange={(e) => setName(e.target.value)}
               placeholder="My Shot List"
               autoFocus
-              className="w-full px-3 py-2 bg-background border border-border rounded-lg text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full px-3 py-2 bg-background border border-border rounded-3xl text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
 
@@ -163,28 +184,28 @@ function CreateShotListModal({ onClose, onCreate }: CreateShotListModalProps) {
                 type="button"
                 onClick={() => setContentType('image')}
                 className={`
-                  p-3 rounded-lg border-2 transition-all text-center
+                  p-3 rounded-3xl border-2 transition-all text-center
                   ${contentType === 'image'
                     ? 'border-primary bg-primary/10'
                     : 'border-border hover:border-primary/50'
                   }
                 `}
               >
-                <span className="text-2xl block mb-1">🖼️</span>
+                <Image className={`w-6 h-6 mx-auto mb-1 ${contentType === 'image' ? 'text-primary' : 'text-text-secondary'}`} />
                 <span className="text-sm text-text-primary">Images</span>
               </button>
               <button
                 type="button"
                 onClick={() => setContentType('video')}
                 className={`
-                  p-3 rounded-lg border-2 transition-all text-center
+                  p-3 rounded-3xl border-2 transition-all text-center
                   ${contentType === 'video'
                     ? 'border-primary bg-primary/10'
                     : 'border-border hover:border-primary/50'
                   }
                 `}
               >
-                <span className="text-2xl block mb-1">🎬</span>
+                <Video className={`w-6 h-6 mx-auto mb-1 ${contentType === 'video' ? 'text-primary' : 'text-text-secondary'}`} />
                 <span className="text-sm text-text-primary">Videos</span>
               </button>
             </div>
@@ -201,7 +222,7 @@ function CreateShotListModal({ onClose, onCreate }: CreateShotListModalProps) {
             <button
               type="submit"
               disabled={!name.trim()}
-              className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="px-4 py-2 bg-primary text-white rounded-3xl hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               Create
             </button>

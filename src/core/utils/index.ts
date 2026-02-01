@@ -2,6 +2,8 @@
  * Utilities barrel export
  */
 
+export { cn } from './cn';
+
 export {
   encodeCredential,
   decodeCredential,

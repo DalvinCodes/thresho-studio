@@ -4,6 +4,7 @@
  */
 
 import { useState, useCallback, useMemo } from 'react';
+import { FileText, Image, Video } from 'lucide-react';
 import type { UUID, ContentType } from '../../../core/types/common';
 import type { QueuedGeneration, QueueConfig } from '../types/queue';
 import {
@@ -159,7 +160,7 @@ export function GenerationQueue({ onViewResult }: GenerationQueueProps) {
           {isPaused ? (
             <button
               onClick={resumeQueue}
-              className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+              className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-3xl hover:bg-primary/90 transition-colors"
             >
               <PlayIcon />
               Resume Queue
@@ -167,7 +168,7 @@ export function GenerationQueue({ onViewResult }: GenerationQueueProps) {
           ) : (
             <button
               onClick={pauseQueue}
-              className="flex items-center gap-2 px-4 py-2 bg-surface border border-border text-text-primary rounded-lg hover:bg-background transition-colors"
+              className="flex items-center gap-2 px-4 py-2 bg-surface border border-border text-text-primary rounded-3xl hover:bg-background transition-colors"
             >
               <PauseIcon />
               Pause Queue
@@ -340,6 +341,15 @@ interface QueueItemCardProps {
   compact?: boolean;
 }
 
+function TypeIcon({ type }: { type: ContentType }) {
+  const iconClass = "w-5 h-5 text-text-primary";
+  switch (type) {
+    case 'text': return <FileText className={iconClass} />;
+    case 'image': return <Image className={iconClass} />;
+    case 'video': return <Video className={iconClass} />;
+  }
+}
+
 function QueueItemCard({
   item,
   position,
@@ -354,11 +364,6 @@ function QueueItemCard({
   isDragging,
   compact,
 }: QueueItemCardProps) {
-  const typeIcons: Record<ContentType, string> = {
-    text: '📝',
-    image: '🖼️',
-    video: '🎬',
-  };
 
   const statusColors: Record<string, string> = {
     queued: 'bg-blue-500',
@@ -391,7 +396,7 @@ function QueueItemCard({
     return (
       <div className="flex items-center justify-between p-2 bg-surface rounded border border-border">
         <div className="flex items-center gap-2">
-          <span className="text-sm">{typeIcons[item.request.type]}</span>
+            <TypeIcon type={item.request.type} />
           <span className={`w-2 h-2 rounded-full ${statusColors[item.status]}`} />
           <span className="text-sm text-text-primary capitalize">
             {item.request.type}
@@ -416,7 +421,7 @@ function QueueItemCard({
 
   return (
     <div
-      className={`p-3 bg-surface rounded-lg border transition-all ${
+      className={`p-3 bg-surface rounded-3xl border transition-all ${
         isDragging ? 'border-primary opacity-50' : 'border-border'
       } ${draggable ? 'cursor-grab active:cursor-grabbing' : ''}`}
       draggable={draggable}
@@ -431,7 +436,7 @@ function QueueItemCard({
               {position}
             </span>
           )}
-          <span className="text-xl">{typeIcons[item.request.type]}</span>
+          <TypeIcon type={item.request.type} />
           <div>
             <div className="flex items-center gap-2">
               <span className="font-medium text-text-primary capitalize">
@@ -518,7 +523,7 @@ interface QueueSettingsProps {
 
 function QueueSettings({ config, onConfigChange, onClose }: QueueSettingsProps) {
   return (
-    <div className="p-4 border-b border-border bg-surface/50">
+    <div className="p-4 border-b border-border bg-surface">
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-medium text-text-primary">Queue Settings</h3>
         <button

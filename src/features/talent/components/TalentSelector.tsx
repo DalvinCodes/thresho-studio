@@ -7,6 +7,7 @@ import { useState, useCallback, useMemo } from 'react';
 import type { UUID } from '../../../core/types/common';
 import type { TalentProfile, TalentType } from '../../../core/types/talent';
 import { useTalentStore } from '../../talent/store';
+import { User, Palette } from 'lucide-react';
 
 interface TalentSelectorProps {
   selectedIds: UUID[];
@@ -89,13 +90,13 @@ export function TalentSelector({
     onChange([]);
   }, [onChange]);
   
-  const typeEmoji: Record<TalentType, string> = {
-    character: '👤',
-    person: '🧑',
-    creature: '🐉',
-    object: '📦',
-    environment: '🏞️',
-    style: '🎨',
+  const typeIcon: Record<TalentType, React.ReactNode> = {
+    character: <User className="w-4 h-4" />,
+    person: <User className="w-4 h-4" />,
+    creature: <span>🐉</span>,
+    object: <span>📦</span>,
+    environment: <span>🏞️</span>,
+    style: <Palette className="w-4 h-4" />,
   };
   
   return (
@@ -108,7 +109,7 @@ export function TalentSelector({
               key={talent.id}
               className="inline-flex items-center gap-1 px-2 py-1 bg-primary/20 text-primary text-xs rounded-full"
             >
-              <span>{typeEmoji[talent.type]}</span>
+              {typeIcon[talent.type]}
               <span>{talent.name}</span>
               {!disabled && (
                 <button
@@ -139,7 +140,7 @@ export function TalentSelector({
         onClick={() => !disabled && setIsOpen(!isOpen)}
         disabled={disabled}
         className={`
-          w-full px-3 py-2 text-left text-sm border rounded-lg
+          w-full px-3 py-2 text-left text-sm border rounded-3xl
           ${disabled ? 'bg-gray-100 cursor-not-allowed' : 'bg-surface hover:border-primary cursor-pointer'}
           ${isOpen ? 'border-primary ring-1 ring-primary' : 'border-border'}
         `}
@@ -155,7 +156,7 @@ export function TalentSelector({
       
       {/* Dropdown panel */}
       {isOpen && !disabled && (
-        <div className="absolute z-50 w-full mt-1 bg-surface border border-border rounded-lg shadow-lg max-h-64 overflow-hidden">
+        <div className="absolute z-50 w-full mt-1 bg-surface border border-border rounded-3xl shadow-lg max-h-64 overflow-hidden">
           {/* Search input */}
           <div className="p-2 border-b border-border">
             <input
@@ -201,8 +202,8 @@ export function TalentSelector({
                       {isSelected && '✓'}
                     </span>
                     
-                    {/* Type emoji */}
-                    <span>{typeEmoji[talent.type]}</span>
+                    {/* Type icon */}
+                    {typeIcon[talent.type]}
                     
                     {/* Name and description */}
                     <div className="flex-1 min-w-0">

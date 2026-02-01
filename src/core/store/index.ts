@@ -4,7 +4,6 @@
 
 export {
   useAppStore,
-  useCurrentPage,
   useIsDarkMode,
   useCurrentProjectId,
   useCurrentBrandId,
@@ -13,6 +12,6 @@ export {
   useInitState,
 } from './appStore';
 
-export type { Toast, AppPage, PageId, InitState } from './appStore';
+export type { Toast, InitState } from './appStore';
 
 export { queryClient, queryKeys, invalidateEntity, clearQueryCache } from './queryClient';

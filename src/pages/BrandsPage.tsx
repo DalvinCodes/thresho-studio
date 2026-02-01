@@ -3,28 +3,38 @@
  * Manage brand profiles and tokens
  */
 
-import { useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import type { UUID } from '../core/types/common';
 import { BrandLibrary, BrandEditor } from '../features/brands';
 
 export function BrandsPage() {
-  const [editingBrandId, setEditingBrandId] = useState<UUID | null>(null);
+  const { id } = useParams<{ id?: string }>();
+  const navigate = useNavigate();
 
-  if (editingBrandId) {
+  // If no id param, show BrandLibrary (list view)
+  if (!id) {
+    return (
+      <div className="h-full">
+        <BrandLibrary />
+      </div>
+    );
+  }
+
+  // If id === 'new', show BrandEditor for creating
+  if (id === 'new') {
     return (
       <BrandEditor
-        brandId={editingBrandId}
-        onClose={() => setEditingBrandId(null)}
+        onClose={() => navigate('/brands')}
       />
     );
   }
 
+  // If id exists and is not 'new', show BrandEditor for editing
   return (
-    <div className="h-full">
-      <BrandLibrary
-        onEditBrand={(id) => setEditingBrandId(id)}
-      />
-    </div>
+    <BrandEditor
+      brandId={id as UUID}
+      onClose={() => navigate('/brands')}
+    />
   );
 }
 

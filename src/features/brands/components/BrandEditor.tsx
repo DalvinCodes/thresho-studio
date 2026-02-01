@@ -4,6 +4,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
+import { FileText, Palette, Sparkles } from 'lucide-react';
 import type { UUID } from '../../../core/types/common';
 import type {
   BrandProfile,
@@ -22,7 +23,7 @@ import {
 import { getAvailableTokenNames } from '../../../core/utils/tokenInjection';
 
 interface BrandEditorProps {
-  brandId: UUID;
+  brandId?: UUID;
   onClose?: () => void;
 }
 
@@ -115,7 +116,7 @@ export function BrandEditor({ brandId, onClose }: BrandEditorProps) {
           <button
             onClick={handleSave}
             disabled={!isDirty || (validationResult && !validationResult.isValid)}
-            className="px-4 py-1.5 bg-primary text-white text-sm rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="px-4 py-1.5 bg-primary text-white text-sm rounded-3xl hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             Save Changes
           </button>
@@ -125,25 +126,25 @@ export function BrandEditor({ brandId, onClose }: BrandEditorProps) {
       {/* Tabs */}
       <div className="flex border-b border-border bg-surface overflow-x-auto">
         {[
-          { key: 'general', label: 'General', icon: '📋' },
-          { key: 'colors', label: 'Colors', icon: '🎨' },
-          { key: 'typography', label: 'Typography', icon: '🔤' },
-          { key: 'visual', label: 'Visual Style', icon: '✨' },
-          { key: 'voice', label: 'Voice', icon: '🗣️' },
-          { key: 'custom', label: 'Custom Tokens', icon: '⚙️' },
+          { key: 'general', label: 'General', icon: FileText },
+          { key: 'colors', label: 'Colors', icon: Palette },
+          { key: 'typography', label: 'Typography', icon: null },
+          { key: 'visual', label: 'Visual Style', icon: Sparkles },
+          { key: 'voice', label: 'Voice', icon: null },
+          { key: 'custom', label: 'Custom Tokens', icon: null },
         ].map((tab) => (
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key as typeof activeTab)}
             className={`
-              px-4 py-2 text-sm font-medium whitespace-nowrap transition-colors
+              px-4 py-2 text-sm font-medium whitespace-nowrap transition-colors flex items-center gap-1.5
               ${activeTab === tab.key
                 ? 'text-primary border-b-2 border-primary'
                 : 'text-text-secondary hover:text-text-primary'
               }
             `}
           >
-            <span className="mr-1">{tab.icon}</span>
+            {tab.icon && <tab.icon className="w-4 h-4" />}
             {tab.label}
           </button>
         ))}
@@ -204,7 +205,7 @@ export function BrandEditor({ brandId, onClose }: BrandEditorProps) {
         {validationResult && (validationResult.errors.length > 0 || validationResult.warnings.length > 0) && (
           <div className="mt-6 space-y-3">
             {validationResult.errors.length > 0 && (
-              <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
+              <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-3xl">
                 <p className="text-sm font-medium text-red-400 mb-2">Errors</p>
                 <ul className="text-sm text-red-400 space-y-1">
                   {validationResult.errors.map((error, i) => (
@@ -215,7 +216,7 @@ export function BrandEditor({ brandId, onClose }: BrandEditorProps) {
             )}
 
             {validationResult.warnings.length > 0 && (
-              <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+              <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-3xl">
                 <p className="text-sm font-medium text-yellow-400 mb-2">Suggestions</p>
                 <ul className="text-sm text-yellow-400 space-y-1">
                   {validationResult.warnings.map((warning, i) => (
@@ -264,7 +265,7 @@ function GeneralTab({ draft, onUpdate }: GeneralTabProps) {
           type="text"
           value={draft.name}
           onChange={(e) => onUpdate({ name: e.target.value })}
-          className="w-full px-3 py-2 bg-surface border border-border rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-primary"
+          className="w-full px-3 py-2 bg-surface border border-border rounded-3xl text-text-primary focus:outline-none focus:ring-2 focus:ring-primary"
         />
       </div>
 
@@ -277,7 +278,7 @@ function GeneralTab({ draft, onUpdate }: GeneralTabProps) {
           onChange={(e) => onUpdate({ description: e.target.value })}
           placeholder="Describe your brand..."
           rows={3}
-          className="w-full px-3 py-2 bg-surface border border-border rounded-lg text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+          className="w-full px-3 py-2 bg-surface border border-border rounded-3xl text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary resize-none"
         />
       </div>
 
@@ -290,10 +291,10 @@ function GeneralTab({ draft, onUpdate }: GeneralTabProps) {
           value={draft.logoUrl || ''}
           onChange={(e) => onUpdate({ logoUrl: e.target.value })}
           placeholder="https://..."
-          className="w-full px-3 py-2 bg-surface border border-border rounded-lg text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary"
+          className="w-full px-3 py-2 bg-surface border border-border rounded-3xl text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary"
         />
         {draft.logoUrl && (
-          <div className="mt-2 p-4 bg-surface rounded-lg border border-border">
+          <div className="mt-2 p-4 bg-surface rounded-3xl border border-border">
             <img
               src={draft.logoUrl}
               alt="Brand logo preview"
@@ -360,7 +361,7 @@ function ColorsTab({ colors, onUpdate }: ColorsTabProps) {
           onChange={(e) => onUpdate({ paletteDescription: e.target.value })}
           placeholder="Describe your color palette in words..."
           rows={2}
-          className="w-full px-3 py-2 bg-surface border border-border rounded-lg text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+          className="w-full px-3 py-2 bg-surface border border-border rounded-3xl text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary resize-none"
         />
         <p className="mt-1 text-xs text-text-secondary">
           This description is used when generating AI content with your brand colors.
@@ -368,7 +369,7 @@ function ColorsTab({ colors, onUpdate }: ColorsTabProps) {
       </div>
 
       {/* Color Preview */}
-      <div className="p-4 bg-surface rounded-lg border border-border">
+      <div className="p-4 bg-surface rounded-3xl border border-border">
         <p className="text-sm font-medium text-text-primary mb-3">Preview</p>
         <div className="flex gap-2">
           {[colors.primary, colors.secondary, colors.accent, colors.neutralDark, colors.neutralLight]
@@ -376,7 +377,7 @@ function ColorsTab({ colors, onUpdate }: ColorsTabProps) {
             .map((color, i) => (
               <div
                 key={i}
-                className="w-12 h-12 rounded-lg border border-border"
+                className="w-12 h-12 rounded-3xl border border-border"
                 style={{ backgroundColor: color }}
                 title={color}
               />
@@ -414,7 +415,7 @@ function ColorInput({ label, value, onChange, required }: ColorInputProps) {
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder="#000000"
-          className="flex-1 px-3 py-2 bg-surface border border-border rounded-lg text-text-primary font-mono text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+          className="flex-1 px-3 py-2 bg-surface border border-border rounded-3xl text-text-primary font-mono text-sm focus:outline-none focus:ring-2 focus:ring-primary"
         />
       </div>
     </div>
@@ -444,7 +445,7 @@ function TypographyTab({ typography, onUpdate }: TypographyTabProps) {
         <select
           value={typography.primaryFont}
           onChange={(e) => onUpdate({ primaryFont: e.target.value })}
-          className="w-full px-3 py-2 bg-surface border border-border rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-primary"
+          className="w-full px-3 py-2 bg-surface border border-border rounded-3xl text-text-primary focus:outline-none focus:ring-2 focus:ring-primary"
         >
           {fontOptions.map((font) => (
             <option key={font} value={font}>{font}</option>
@@ -459,7 +460,7 @@ function TypographyTab({ typography, onUpdate }: TypographyTabProps) {
         <select
           value={typography.secondaryFont || ''}
           onChange={(e) => onUpdate({ secondaryFont: e.target.value || undefined })}
-          className="w-full px-3 py-2 bg-surface border border-border rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-primary"
+          className="w-full px-3 py-2 bg-surface border border-border rounded-3xl text-text-primary focus:outline-none focus:ring-2 focus:ring-primary"
         >
           <option value="">None</option>
           {fontOptions.map((font) => (
@@ -477,12 +478,12 @@ function TypographyTab({ typography, onUpdate }: TypographyTabProps) {
           onChange={(e) => onUpdate({ styleDescriptor: e.target.value })}
           placeholder="Describe your typography style..."
           rows={2}
-          className="w-full px-3 py-2 bg-surface border border-border rounded-lg text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+          className="w-full px-3 py-2 bg-surface border border-border rounded-3xl text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary resize-none"
         />
       </div>
 
       {/* Typography Preview */}
-      <div className="p-4 bg-surface rounded-lg border border-border">
+      <div className="p-4 bg-surface rounded-3xl border border-border">
         <p className="text-sm font-medium text-text-primary mb-3">Preview</p>
         <div style={{ fontFamily: typography.primaryFont }}>
           <p className="text-2xl mb-2">The quick brown fox jumps over the lazy dog</p>
@@ -512,7 +513,7 @@ function VisualStyleTab({ visualStyle, onUpdate }: VisualStyleTabProps) {
           value={visualStyle.aesthetic}
           onChange={(e) => onUpdate({ aesthetic: e.target.value })}
           placeholder="e.g., Premium editorial, modern minimalist"
-          className="w-full px-3 py-2 bg-surface border border-border rounded-lg text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary"
+          className="w-full px-3 py-2 bg-surface border border-border rounded-3xl text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary"
         />
       </div>
 
@@ -525,7 +526,7 @@ function VisualStyleTab({ visualStyle, onUpdate }: VisualStyleTabProps) {
           onChange={(e) => onUpdate({ photographyStyle: e.target.value })}
           placeholder="Describe the photography style for your brand..."
           rows={2}
-          className="w-full px-3 py-2 bg-surface border border-border rounded-lg text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+          className="w-full px-3 py-2 bg-surface border border-border rounded-3xl text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary resize-none"
         />
       </div>
 
@@ -538,7 +539,7 @@ function VisualStyleTab({ visualStyle, onUpdate }: VisualStyleTabProps) {
           value={visualStyle.mood}
           onChange={(e) => onUpdate({ mood: e.target.value })}
           placeholder="e.g., Professional yet approachable, energetic"
-          className="w-full px-3 py-2 bg-surface border border-border rounded-lg text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary"
+          className="w-full px-3 py-2 bg-surface border border-border rounded-3xl text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary"
         />
       </div>
 
@@ -551,7 +552,7 @@ function VisualStyleTab({ visualStyle, onUpdate }: VisualStyleTabProps) {
           onChange={(e) => onUpdate({ artDirection: e.target.value || undefined })}
           placeholder="Additional art direction guidelines..."
           rows={3}
-          className="w-full px-3 py-2 bg-surface border border-border rounded-lg text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+          className="w-full px-3 py-2 bg-surface border border-border rounded-3xl text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary resize-none"
         />
       </div>
     </div>
@@ -633,11 +634,11 @@ function VoiceTab({ voice, onUpdate }: VoiceTabProps) {
             onChange={(e) => setNewTone(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && addTone()}
             placeholder="Add tone descriptor..."
-            className="flex-1 px-3 py-2 bg-surface border border-border rounded-lg text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary"
+            className="flex-1 px-3 py-2 bg-surface border border-border rounded-3xl text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary"
           />
           <button
             onClick={addTone}
-            className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90"
+            className="px-4 py-2 bg-primary text-white rounded-3xl hover:bg-primary/90"
           >
             Add
           </button>
@@ -654,7 +655,7 @@ function VoiceTab({ voice, onUpdate }: VoiceTabProps) {
           onChange={(e) => onUpdate({ writingStyle: e.target.value || undefined })}
           placeholder="Describe your writing style..."
           rows={2}
-          className="w-full px-3 py-2 bg-surface border border-border rounded-lg text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+          className="w-full px-3 py-2 bg-surface border border-border rounded-3xl text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary resize-none"
         />
       </div>
 
@@ -689,11 +690,11 @@ function VoiceTab({ voice, onUpdate }: VoiceTabProps) {
             onChange={(e) => setNewForbiddenTerm(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && addForbiddenTerm()}
             placeholder="Add forbidden term..."
-            className="flex-1 px-3 py-2 bg-surface border border-border rounded-lg text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary"
+            className="flex-1 px-3 py-2 bg-surface border border-border rounded-3xl text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary"
           />
           <button
             onClick={addForbiddenTerm}
-            className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
+            className="px-4 py-2 bg-red-500 text-white rounded-3xl hover:bg-red-600"
           >
             Add
           </button>
@@ -731,11 +732,11 @@ function VoiceTab({ voice, onUpdate }: VoiceTabProps) {
             onChange={(e) => setNewForbiddenElement(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && addForbiddenElement()}
             placeholder="Add forbidden element..."
-            className="flex-1 px-3 py-2 bg-surface border border-border rounded-lg text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary"
+            className="flex-1 px-3 py-2 bg-surface border border-border rounded-3xl text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary"
           />
           <button
             onClick={addForbiddenElement}
-            className="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600"
+            className="px-4 py-2 bg-yellow-500 text-white rounded-3xl hover:bg-yellow-600"
           >
             Add
           </button>
@@ -785,7 +786,7 @@ function CustomTokensTab({ tokens, onAdd, onRemove, onUpdate }: CustomTokensTabP
           {tokens.map((token) => (
             <div
               key={token.key}
-              className="flex items-center gap-3 p-3 bg-surface rounded-lg border border-border"
+              className="flex items-center gap-3 p-3 bg-surface rounded-3xl border border-border"
             >
               <div className="flex-1 grid grid-cols-2 gap-3">
                 <div>
@@ -814,7 +815,7 @@ function CustomTokensTab({ tokens, onAdd, onRemove, onUpdate }: CustomTokensTabP
       )}
 
       {/* Add New Token */}
-      <div className="p-4 bg-surface rounded-lg border-2 border-dashed border-border">
+      <div className="p-4 bg-surface rounded-3xl border-2 border-dashed border-border">
         <p className="text-sm font-medium text-text-primary mb-3">Add Custom Token</p>
         <div className="grid grid-cols-2 gap-3 mb-3">
           <div>
@@ -824,7 +825,7 @@ function CustomTokensTab({ tokens, onAdd, onRemove, onUpdate }: CustomTokensTabP
               value={newKey}
               onChange={(e) => setNewKey(e.target.value.toUpperCase().replace(/\s+/g, '_'))}
               placeholder="CUSTOM_TOKEN_NAME"
-              className="w-full px-3 py-2 bg-background border border-border rounded-lg text-text-primary font-mono text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full px-3 py-2 bg-background border border-border rounded-3xl text-text-primary font-mono text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
           <div>
@@ -834,14 +835,14 @@ function CustomTokensTab({ tokens, onAdd, onRemove, onUpdate }: CustomTokensTabP
               value={newValue}
               onChange={(e) => setNewValue(e.target.value)}
               placeholder="Token value..."
-              className="w-full px-3 py-2 bg-background border border-border rounded-lg text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full px-3 py-2 bg-background border border-border rounded-3xl text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
         </div>
         <button
           onClick={handleAdd}
           disabled={!newKey.trim() || !newValue.trim()}
-          className="w-full py-2 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="w-full py-2 bg-primary text-white rounded-3xl hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           Add Token
         </button>

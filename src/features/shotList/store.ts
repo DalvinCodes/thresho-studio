@@ -13,6 +13,14 @@ import { useProviderStore } from '../providers/store';
 import { useBrandStore } from '../brands/store';
 import { useTalentStore } from '../talent/store';
 import { composeShotPrompt } from './services/shotPromptService';
+import {
+  saveShotListToDb,
+  saveShotToDb,
+  deleteShotListFromDb,
+  deleteShotFromDb,
+  saveEquipmentPresetToDb,
+  deleteEquipmentPresetFromDb,
+} from './services/shotListDbService';
 import type {
   Shot,
   ShotList,
@@ -42,6 +50,9 @@ interface ShotListState {
   // Editor State
   isEditing: boolean;
   editingShotId: UUID | null;
+
+  // Create Shot Modal State
+  isCreateShotModalOpen: boolean;
 }
 
 interface ShotListActions {
@@ -85,6 +96,10 @@ interface ShotListActions {
   // Editor
   startEditingShot: (id: UUID) => void;
   stopEditing: () => void;
+
+  // Create Shot Modal
+  openCreateShotModal: () => void;
+  closeCreateShotModal: () => void;
 
   // Queries
   getShotsForList: (listId: UUID) => Shot[];
@@ -137,6 +152,7 @@ export const useShotListStore = create<ShotListStore>()(
     sortOptions: defaultSortOptions,
     isEditing: false,
     editingShotId: null,
+    isCreateShotModalOpen: false,
 
     // Shot List CRUD
     createShotList: (name, contentType) => {
@@ -161,16 +177,31 @@ export const useShotListStore = create<ShotListStore>()(
         state.shotLists.set(id, shotList);
       });
 
+      // Persist to database
+      saveShotListToDb(shotList).catch((err) =>
+        console.error('Failed to save shot list:', err)
+      );
+
       return id;
     },
 
     updateShotList: (id, updates) => {
+      let updatedList: ShotList | undefined;
+
       set((state) => {
         const list = state.shotLists.get(id);
         if (list) {
           Object.assign(list, updates, { updatedAt: createTimestamp() });
+          updatedList = list;
         }
       });
+
+      // Persist to database
+      if (updatedList) {
+        saveShotListToDb(updatedList).catch((err) =>
+          console.error('Failed to update shot list:', err)
+        );
+      }
     },
 
     deleteShotList: (id) => {
@@ -188,6 +219,11 @@ export const useShotListStore = create<ShotListStore>()(
           state.selectedShotId = null;
         }
       });
+
+      // Persist deletion to database
+      deleteShotListFromDb(id).catch((err) =>
+        console.error('Failed to delete shot list:', err)
+      );
     },
 
     duplicateShotList: (id, newName) => {
@@ -209,6 +245,8 @@ export const useShotListStore = create<ShotListStore>()(
         completedShots: 0,
       };
 
+      const shotsToDuplicate: Shot[] = [];
+
       set((state) => {
         state.shotLists.set(newId, duplicate);
 
@@ -227,9 +265,20 @@ export const useShotListStore = create<ShotListStore>()(
             };
             state.shots.set(newShotId, newShot);
             duplicate.totalShots++;
+            shotsToDuplicate.push(newShot);
           }
         }
       });
+
+      // Persist duplicated shot list and shots to database
+      saveShotListToDb(duplicate).catch((err) =>
+        console.error('Failed to save duplicated shot list:', err)
+      );
+      for (const shot of shotsToDuplicate) {
+        saveShotToDb(shot).catch((err) =>
+          console.error('Failed to save duplicated shot:', err)
+        );
+      }
 
       return newId;
     },
@@ -280,22 +329,49 @@ export const useShotListStore = create<ShotListStore>()(
         }
       });
 
+      // Persist shot to database
+      saveShotToDb(shot).catch((err) =>
+        console.error('Failed to save shot:', err)
+      );
+
+      // Persist updated shot list count
+      const updatedList = get().shotLists.get(input.shotListId);
+      if (updatedList) {
+        saveShotListToDb(updatedList).catch((err) =>
+          console.error('Failed to update shot list count:', err)
+        );
+      }
+
       return id;
     },
 
     updateShot: (id, updates) => {
+      let updatedShot: Shot | undefined;
+
       set((state) => {
         const shot = state.shots.get(id);
         if (shot) {
           Object.assign(shot, updates, { updatedAt: createTimestamp() });
+          updatedShot = shot;
         }
       });
+
+      // Persist to database
+      if (updatedShot) {
+        saveShotToDb(updatedShot).catch((err) =>
+          console.error('Failed to update shot:', err)
+        );
+      }
     },
 
     deleteShot: (id) => {
+      let shotListId: UUID | undefined;
+
       set((state) => {
         const shot = state.shots.get(id);
         if (shot) {
+          shotListId = shot.shotListId;
+
           // Update shot list count
           const list = state.shotLists.get(shot.shotListId);
           if (list) {
@@ -313,6 +389,21 @@ export const useShotListStore = create<ShotListStore>()(
           }
         }
       });
+
+      // Persist deletion to database
+      deleteShotFromDb(id).catch((err) =>
+        console.error('Failed to delete shot:', err)
+      );
+
+      // Persist updated shot list count
+      if (shotListId) {
+        const updatedList = get().shotLists.get(shotListId);
+        if (updatedList) {
+          saveShotListToDb(updatedList).catch((err) =>
+            console.error('Failed to update shot list count:', err)
+          );
+        }
+      }
     },
 
     duplicateShot: (id) => {
@@ -347,23 +438,48 @@ export const useShotListStore = create<ShotListStore>()(
         }
       });
 
+      // Persist duplicated shot to database
+      saveShotToDb(duplicate).catch((err) =>
+        console.error('Failed to save duplicated shot:', err)
+      );
+
+      // Persist updated shot list count
+      const updatedList = get().shotLists.get(original.shotListId);
+      if (updatedList) {
+        saveShotListToDb(updatedList).catch((err) =>
+          console.error('Failed to update shot list count:', err)
+        );
+      }
+
       return newId;
     },
 
     batchUpdateShots: (update) => {
+      const updatedShots: Shot[] = [];
+
       set((state) => {
         const now = createTimestamp();
         for (const shotId of update.shotIds) {
           const shot = state.shots.get(shotId);
           if (shot) {
             Object.assign(shot, update.updates, { updatedAt: now });
+            updatedShots.push(shot);
           }
         }
       });
+
+      // Persist all updated shots to database
+      for (const shot of updatedShots) {
+        saveShotToDb(shot).catch((err) =>
+          console.error('Failed to update shot in batch:', err)
+        );
+      }
     },
 
     // Shot Ordering
     reorderShot: (shotId, newIndex) => {
+      const reorderedShots: Shot[] = [];
+
       set((state) => {
         const shot = state.shots.get(shotId);
         if (!shot) return;
@@ -384,17 +500,28 @@ export const useShotListStore = create<ShotListStore>()(
           const stateShot = state.shots.get(s.id);
           if (stateShot) {
             stateShot.orderIndex = i;
+            reorderedShots.push(stateShot);
           }
         });
       });
+
+      // Persist reordered shots to database
+      for (const shot of reorderedShots) {
+        saveShotToDb(shot).catch((err) =>
+          console.error('Failed to save reordered shot:', err)
+        );
+      }
     },
 
     moveShot: (shotId, targetShotListId) => {
+      let movedShot: Shot | undefined;
+      let oldListId: UUID | undefined;
+
       set((state) => {
         const shot = state.shots.get(shotId);
         if (!shot) return;
 
-        const oldListId = shot.shotListId;
+        oldListId = shot.shotListId;
 
         // Update counts on old list
         const oldList = state.shotLists.get(oldListId);
@@ -414,6 +541,7 @@ export const useShotListStore = create<ShotListStore>()(
         shot.shotListId = targetShotListId;
         shot.orderIndex = maxIndex + 1;
         shot.updatedAt = createTimestamp();
+        movedShot = shot;
 
         // Update counts on new list
         const newList = state.shotLists.get(targetShotListId);
@@ -424,10 +552,36 @@ export const useShotListStore = create<ShotListStore>()(
           }
         }
       });
+
+      // Persist moved shot and updated lists to database
+      if (movedShot) {
+        saveShotToDb(movedShot).catch((err) =>
+          console.error('Failed to save moved shot:', err)
+        );
+      }
+
+      if (oldListId) {
+        const oldList = get().shotLists.get(oldListId);
+        if (oldList) {
+          saveShotListToDb(oldList).catch((err) =>
+            console.error('Failed to update old shot list:', err)
+          );
+        }
+      }
+
+      const newList = get().shotLists.get(targetShotListId);
+      if (newList) {
+        saveShotListToDb(newList).catch((err) =>
+          console.error('Failed to update new shot list:', err)
+        );
+      }
     },
 
     // Shot Status
     updateShotStatus: (shotId, status) => {
+      let updatedShot: Shot | undefined;
+      let updatedList: ShotList | undefined;
+
       set((state) => {
         const shot = state.shots.get(shotId);
         if (!shot) return;
@@ -437,6 +591,7 @@ export const useShotListStore = create<ShotListStore>()(
 
         shot.status = status;
         shot.updatedAt = createTimestamp();
+        updatedShot = shot;
 
         // Update list counts
         const list = state.shotLists.get(shot.shotListId);
@@ -446,8 +601,21 @@ export const useShotListStore = create<ShotListStore>()(
           } else if (wasCompleted && !isNowCompleted) {
             list.completedShots--;
           }
+          updatedList = list;
         }
       });
+
+      // Persist to database
+      if (updatedShot) {
+        saveShotToDb(updatedShot).catch((err) =>
+          console.error('Failed to update shot status:', err)
+        );
+      }
+      if (updatedList) {
+        saveShotListToDb(updatedList).catch((err) =>
+          console.error('Failed to update shot list counts:', err)
+        );
+      }
     },
 
     markShotsCompleted: (shotIds) => {
@@ -472,22 +640,42 @@ export const useShotListStore = create<ShotListStore>()(
         state.equipmentPresets.set(id, newPreset);
       });
 
+      // Persist to database
+      saveEquipmentPresetToDb(newPreset).catch((err) =>
+        console.error('Failed to save equipment preset:', err)
+      );
+
       return id;
     },
 
     updateEquipmentPreset: (id, updates) => {
+      let updatedPreset: EquipmentPreset | undefined;
+
       set((state) => {
         const preset = state.equipmentPresets.get(id);
         if (preset) {
           Object.assign(preset, updates, { updatedAt: createTimestamp() });
+          updatedPreset = preset;
         }
       });
+
+      // Persist to database
+      if (updatedPreset) {
+        saveEquipmentPresetToDb(updatedPreset).catch((err) =>
+          console.error('Failed to update equipment preset:', err)
+        );
+      }
     },
 
     deleteEquipmentPreset: (id) => {
       set((state) => {
         state.equipmentPresets.delete(id);
       });
+
+      // Persist deletion to database
+      deleteEquipmentPresetFromDb(id).catch((err) =>
+        console.error('Failed to delete equipment preset:', err)
+      );
     },
 
     applyPresetToShot: (shotId, presetId) => {
@@ -555,6 +743,19 @@ export const useShotListStore = create<ShotListStore>()(
       set((state) => {
         state.isEditing = false;
         state.editingShotId = null;
+      });
+    },
+
+    // Create Shot Modal
+    openCreateShotModal: () => {
+      set((state) => {
+        state.isCreateShotModalOpen = true;
+      });
+    },
+
+    closeCreateShotModal: () => {
+      set((state) => {
+        state.isCreateShotModalOpen = false;
       });
     },
 

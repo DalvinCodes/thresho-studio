@@ -93,8 +93,8 @@ export class MemoryStorage implements FileStorageService {
 
     console.log(`[MemoryStorage] Saved file: ${id} (${formatBytes(blob.size)})`);
 
-    // Return blob URL
-    return this.createFileUrl(id, blob);
+    // Return storage URL - blob URL will be created on-demand when getFileUrl is called
+    return `memory://${id}`;
   }
 
   async getFile(id: string): Promise<Blob | null> {

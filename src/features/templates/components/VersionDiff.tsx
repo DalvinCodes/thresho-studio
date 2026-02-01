@@ -57,7 +57,7 @@ export function VersionDiff({ oldVersion, newVersion, onClose }: VersionDiffProp
           {onClose && (
             <button
               onClick={onClose}
-              className="p-2 hover:bg-surface-hover rounded-lg transition-colors"
+              className="p-2 hover:bg-surface-hover rounded-3xl transition-colors"
             >
               ← Back
             </button>
@@ -74,7 +74,7 @@ export function VersionDiff({ oldVersion, newVersion, onClose }: VersionDiffProp
 
         <div className="flex items-center gap-4">
           {/* View Mode Toggle */}
-          <div className="flex bg-background rounded-lg p-1 border border-border">
+          <div className="flex bg-background rounded-3xl p-1 border border-border">
             <button
               onClick={() => setViewMode('split')}
               className={`px-3 py-1.5 text-sm rounded transition-colors ${
@@ -384,7 +384,7 @@ interface VariableCardProps {
 
 function VariableCard({ variable, type }: VariableCardProps) {
   return (
-    <div className={`p-3 rounded-lg border ${
+    <div className={`p-3 rounded-3xl border ${
       type === 'added'
         ? 'bg-green-500/5 border-green-500/30'
         : 'bg-red-500/5 border-red-500/30'
@@ -425,7 +425,7 @@ function ModifiedVariableCard({ old, new: newVar }: ModifiedVariableCardProps) {
   if (JSON.stringify(old.enumValues) !== JSON.stringify(newVar.enumValues)) changes.push('options');
 
   return (
-    <div className="p-3 rounded-lg border border-yellow-500/30 bg-yellow-500/5">
+    <div className="p-3 rounded-3xl border border-yellow-500/30 bg-yellow-500/5">
       <div className="flex items-center gap-3 mb-2">
         <code className="text-sm font-mono text-text-primary">{old.name}</code>
         <span className="text-xs px-2 py-0.5 rounded bg-yellow-500/20 text-yellow-400">
@@ -515,7 +515,7 @@ function ConfigDiffView({ oldConfig, newConfig }: ConfigDiffViewProps) {
         {changes.map(({ key, old, new: newVal }) => (
           <div
             key={key}
-            className="p-3 rounded-lg border border-border bg-surface"
+            className="p-3 rounded-3xl border border-border bg-surface"
           >
             <p className="text-sm font-medium text-text-primary capitalize mb-2">
               {key.replace(/([A-Z])/g, ' $1').trim()}

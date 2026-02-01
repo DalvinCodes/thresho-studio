@@ -170,7 +170,7 @@ export function TemplateEditor({ templateId, onClose }: TemplateEditorProps) {
           <button
             onClick={handleDiscard}
             data-testid="back-btn"
-            className="p-2 hover:bg-surface-hover rounded-lg transition-colors"
+            className="p-2 hover:bg-surface-hover rounded-3xl transition-colors"
           >
             ← Back
           </button>
@@ -187,7 +187,7 @@ export function TemplateEditor({ templateId, onClose }: TemplateEditorProps) {
             <button
               onClick={() => setShowPublishModal(true)}
               data-testid="save-template"
-              className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+              className="px-4 py-2 bg-primary text-white rounded-3xl hover:bg-primary/90 transition-colors"
             >
               Save Version
             </button>
@@ -276,7 +276,7 @@ export function TemplateEditor({ templateId, onClose }: TemplateEditorProps) {
       {/* Publish Modal */}
       {showPublishModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-surface rounded-lg p-6 max-w-md w-full mx-4">
+          <div className="bg-surface rounded-3xl p-6 max-w-md w-full mx-4">
             <h3 className="text-lg font-semibold text-text-primary mb-4">
               Save New Version
             </h3>
@@ -289,7 +289,7 @@ export function TemplateEditor({ templateId, onClose }: TemplateEditorProps) {
                 onChange={(e) => setChangeLog(e.target.value)}
                 placeholder="Describe your changes..."
                 rows={3}
-                className="w-full px-3 py-2 bg-background border border-border rounded-lg text-text-primary placeholder:text-text-secondary resize-none"
+                className="w-full px-3 py-2 bg-background border border-border rounded-3xl text-text-primary placeholder:text-text-secondary resize-none"
               />
             </div>
             <div className="flex justify-end gap-2">
@@ -301,7 +301,7 @@ export function TemplateEditor({ templateId, onClose }: TemplateEditorProps) {
               </button>
               <button
                 onClick={handleSave}
-                className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+                className="px-4 py-2 bg-primary text-white rounded-3xl hover:bg-primary/90 transition-colors"
               >
                 Save Version
               </button>
@@ -336,7 +336,7 @@ function EditTab({
         <label className="block text-sm font-medium text-text-primary mb-2">
           System Prompt (optional)
         </label>
-        <div className="flex-1 min-h-0 border border-border rounded-lg overflow-hidden">
+        <div className="flex-1 min-h-0 border border-border rounded-3xl overflow-hidden">
           <MonacoEditor
             value={systemPrompt}
             onChange={onSystemPromptChange}
@@ -352,7 +352,7 @@ function EditTab({
         <label className="block text-sm font-medium text-text-primary mb-2">
           User Prompt
         </label>
-        <div className="flex-1 min-h-0 border border-border rounded-lg overflow-hidden">
+        <div className="flex-1 min-h-0 border border-border rounded-3xl overflow-hidden">
           <MonacoEditor
             value={userPrompt}
             onChange={onUserPromptChange}
@@ -365,7 +365,7 @@ function EditTab({
 
       {/* Detected Variables */}
       {detectedVariables.length > 0 && (
-        <div className="mt-4 p-3 bg-surface rounded-lg border border-border shrink-0">
+        <div className="mt-4 p-3 bg-surface rounded-3xl border border-border shrink-0">
           <p className="text-sm text-text-secondary mb-2">Detected Variables:</p>
           <div className="flex flex-wrap gap-2">
             {detectedVariables.map((v) => (
@@ -467,14 +467,14 @@ function PreviewTab({
         {systemPrompt && (
           <div className="mb-4">
             <p className="text-xs text-text-secondary mb-1">System Prompt</p>
-            <div className="p-3 bg-surface rounded-lg border border-border text-sm text-text-primary whitespace-pre-wrap">
+            <div className="p-3 bg-surface rounded-3xl border border-border text-sm text-text-primary whitespace-pre-wrap">
               {systemPrompt}
             </div>
           </div>
         )}
         <div>
           <p className="text-xs text-text-secondary mb-1">User Prompt</p>
-          <div className="p-3 bg-surface rounded-lg border border-border text-sm text-text-primary whitespace-pre-wrap">
+          <div className="p-3 bg-surface rounded-3xl border border-border text-sm text-text-primary whitespace-pre-wrap">
             {content}
           </div>
         </div>
@@ -508,7 +508,7 @@ function VariablesTab({
     <div className="h-full p-4 overflow-y-auto">
       {/* Validation Errors */}
       {validationErrors.length > 0 && (
-        <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
+        <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-3xl">
           <p className="text-sm font-medium text-red-500 mb-1">Validation Issues</p>
           <ul className="text-sm text-red-400 list-disc list-inside">
             {validationErrors.map((error, i) => (
@@ -520,7 +520,7 @@ function VariablesTab({
 
       {/* Undefined Variables Warning */}
       {undefinedVars.length > 0 && (
-        <div className="mb-4 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+        <div className="mb-4 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-3xl">
           <p className="text-sm font-medium text-yellow-500 mb-1">Undefined Variables</p>
           <p className="text-sm text-yellow-400">
             Found variables not yet defined: {undefinedVars.map((v) => `{{${v}}}`).join(', ')}
@@ -543,7 +543,7 @@ function VariablesTab({
 
       <button
         onClick={onAddVariable}
-        className="mt-4 w-full py-2 border-2 border-dashed border-border rounded-lg text-text-secondary hover:text-text-primary hover:border-primary transition-colors"
+        className="mt-4 w-full py-2 border-2 border-dashed border-border rounded-3xl text-text-secondary hover:text-text-primary hover:border-primary transition-colors"
       >
         + Add Variable
       </button>
@@ -561,7 +561,7 @@ interface VariableEditorProps {
 
 function VariableEditor({ variable, isUsed, onChange, onRemove }: VariableEditorProps) {
   return (
-    <div className={`p-4 bg-surface rounded-lg border ${isUsed ? 'border-border' : 'border-yellow-500/30'}`}>
+    <div className={`p-4 bg-surface rounded-3xl border ${isUsed ? 'border-border' : 'border-yellow-500/30'}`}>
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 grid grid-cols-3 gap-3">
           {/* Name */}
@@ -690,7 +690,7 @@ function HistoryTab({
   return (
     <div className="h-full p-4 overflow-y-auto">
       {selectedForCompare && (
-        <div className="mb-4 p-3 bg-primary/10 border border-primary/30 rounded-lg">
+        <div className="mb-4 p-3 bg-primary/10 border border-primary/30 rounded-3xl">
           <p className="text-sm text-text-primary">
             Select another version to compare with v{selectedForCompare.version}
           </p>
@@ -709,7 +709,7 @@ function HistoryTab({
             key={version.id}
             onClick={() => onSelectVersion(templateId, version.id)}
             className={`
-              p-4 rounded-lg border cursor-pointer transition-colors
+              p-4 rounded-3xl border cursor-pointer transition-colors
               ${version.id === currentVersionId
                 ? 'border-primary bg-primary/10'
                 : 'border-border bg-surface hover:bg-surface-hover'

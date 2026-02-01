@@ -4,6 +4,7 @@
  */
 
 import { useState, useCallback } from 'react';
+import { Folder, Star, FolderOpen, Pencil, Trash2 } from 'lucide-react';
 import type { UUID } from '../../../core/types/common';
 import type { AssetCollection } from '../../../core/types/asset';
 import { useAssetStore, useCollections, useSelectedAssets } from '../store';
@@ -82,7 +83,7 @@ export function CollectionSidebar({
           <h3 className="font-semibold text-text-primary">Collections</h3>
           <button
             onClick={() => setIsCreating(true)}
-            className="text-primary hover:text-primary/80 transition-colors text-sm"
+            className="text-primary hover:text-primary-hover transition-colors text-sm"
           >
             + New
           </button>
@@ -103,12 +104,12 @@ export function CollectionSidebar({
                 }
               }}
               placeholder="Collection name..."
-              className="flex-1 px-2 py-1 text-sm bg-background border border-border rounded text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-1 focus:ring-primary"
+              className="flex-1 h-8 px-2 text-sm bg-background border border-border rounded text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-1 focus:ring-primary"
               autoFocus
             />
             <button
               onClick={handleCreateCollection}
-              className="px-2 py-1 text-sm bg-primary text-white rounded hover:bg-primary/90 transition-colors"
+              className="px-2 py-1 text-sm bg-primary text-white rounded hover:bg-primary-hover transition-colors"
             >
               Add
             </button>
@@ -129,7 +130,7 @@ export function CollectionSidebar({
             }
           `}
         >
-          <span className="text-lg">📁</span>
+          <Folder className="w-5 h-5" />
           <span className="flex-1 font-medium">All Assets</span>
         </button>
 
@@ -144,7 +145,7 @@ export function CollectionSidebar({
             }
           `}
         >
-          <span className="text-lg">⭐</span>
+          <Star className="w-5 h-5" />
           <span className="flex-1 font-medium">Favorites</span>
         </button>
 
@@ -161,12 +162,12 @@ export function CollectionSidebar({
             className={`
               group w-full px-4 py-3 text-left flex items-center gap-3 transition-colors cursor-pointer
               ${selectedCollectionId === collection.id
-                ? 'bg-primary/10 text-primary border-l-2 border-primary'
-                : 'text-text-primary hover:bg-surface-hover'
+              ? 'bg-primary-light text-primary border-l-2 border-primary'
+              : 'text-text-primary hover:bg-surface-hover'
               }
             `}
           >
-            <span className="text-lg">📂</span>
+            <FolderOpen className="w-5 h-5" />
 
             {editingId === collection.id ? (
               <input
@@ -181,7 +182,7 @@ export function CollectionSidebar({
                   }
                 }}
                 onBlur={handleSaveEdit}
-                className="flex-1 px-1 py-0.5 text-sm bg-background border border-border rounded text-text-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                className="flex-1 h-8 px-2 text-sm bg-background border border-border rounded text-text-primary focus:outline-none focus:ring-1 focus:ring-primary"
                 autoFocus
                 onClick={(e) => e.stopPropagation()}
               />
@@ -215,14 +216,14 @@ export function CollectionSidebar({
                     className="p-1 text-text-secondary hover:text-text-primary transition-colors"
                     title="Rename"
                   >
-                    ✏️
+                    <Pencil className="w-4 h-4" />
                   </button>
                   <button
                     onClick={(e) => handleDeleteCollection(collection.id, e)}
                     className="p-1 text-text-secondary hover:text-red-500 transition-colors"
                     title="Delete"
                   >
-                    🗑️
+                    <Trash2 className="w-4 h-4" />
                   </button>
                 </>
               )}
@@ -232,13 +233,21 @@ export function CollectionSidebar({
 
         {/* Empty state */}
         {collections.length === 0 && (
-          <div className="px-4 py-8 text-center text-text-secondary text-sm">
-            <p className="mb-2">No collections yet</p>
+          <div className="flex flex-col items-center justify-center p-8 text-center">
+            <div className="w-14 h-14 rounded-3xl bg-[var(--color-primary)]/10 flex items-center justify-center mb-4">
+              <FolderOpen className="w-7 h-7 text-[var(--color-primary)]" />
+            </div>
+            <h3 className="text-lg font-semibold text-[var(--color-text)] mb-2">
+              No collections yet
+            </h3>
+            <p className="text-[var(--color-text-muted)] text-sm mb-4 max-w-xs">
+              Organize your assets into collections for easier management and quick access.
+            </p>
             <button
               onClick={() => setIsCreating(true)}
-              className="text-primary hover:underline"
+              className="px-4 py-2 bg-[var(--color-primary)] text-white rounded-3xl font-medium hover:bg-[var(--color-primary-hover)] transition-colors text-sm"
             >
-              Create your first collection
+              Create First Collection
             </button>
           </div>
         )}
@@ -258,7 +267,7 @@ export function CollectionSidebar({
                 onSelectCollection(id);
               }
             }}
-            className="w-full px-3 py-2 text-sm bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+            className="w-full px-3 py-2 text-sm bg-primary text-white rounded-3xl hover:bg-primary/90 transition-colors"
           >
             Create Collection from Selected
           </button>
