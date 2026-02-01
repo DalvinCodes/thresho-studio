@@ -4,9 +4,9 @@
  */
 
 import { useState, useCallback } from 'react';
-import { Film, ClipboardList, Play, Copy, Pencil, Trash2 } from 'lucide-react';
+import { Film, ClipboardList } from 'lucide-react';
 import type { UUID } from '../../../core/types/common';
-import type { Shot, ShotStatus, ShotType } from '../../../core/types/shotList';
+import type { Shot, ShotStatus, ShotType, CreateShotInput } from '../../../core/types/shotList';
 import {
   useShotListStore,
   useSelectedShotList,
@@ -15,6 +15,8 @@ import {
   useFilterOptions,
   useListStats,
 } from '../store';
+import { EnhancedShotTable } from './EnhancedShotTable';
+import { BatchCreateModal } from './BatchCreateModal';
 
 interface ShotListViewProps {
   shotListId: UUID;
@@ -41,8 +43,12 @@ export function ShotListView({ shotListId, onEditShot, onGenerateShot }: ShotLis
   const openCreateShotModal = store.openCreateShotModal;
   const closeCreateShotModal = store.closeCreateShotModal;
   const isCreateShotModalOpen = store.isCreateShotModalOpen;
+  const updateShot = store.updateShot;
+  const createMultipleShots = store.createMultipleShots;
+  const reorderShot = store.reorderShot;
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
 
   // Handle search
   const handleSearch = useCallback((query: string) => {
@@ -74,6 +80,17 @@ export function ShotListView({ shotListId, onEditShot, onGenerateShot }: ShotLis
     closeCreateShotModal();
   }, [shotListId, createShot, closeCreateShotModal]);
 
+  // Handle batch creation
+  const handleCreateMultipleShots = useCallback(async (shotInputs: CreateShotInput[]) => {
+    await createMultipleShots(shotInputs);
+    setIsBatchModalOpen(false);
+  }, [createMultipleShots]);
+
+  // Handle shot updates
+  const handleUpdateShot = useCallback((shotId: UUID, updates: Partial<Shot>) => {
+    updateShot(shotId, updates);
+  }, [updateShot]);
+
   if (!shotList) {
     return (
       <div className="h-full flex items-center justify-center">
@@ -95,12 +112,20 @@ export function ShotListView({ shotListId, onEditShot, onGenerateShot }: ShotLis
               </p>
             )}
           </div>
-          <button
-            onClick={() => openCreateShotModal()}
-            className="px-4 py-2 bg-primary text-white rounded-3xl hover:bg-primary/90 transition-colors"
-          >
-            + Add Shot
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => openCreateShotModal()}
+              className="px-4 py-2 bg-primary text-white rounded-3xl hover:bg-primary/90 transition-colors"
+            >
+              + Add Shot
+            </button>
+            <button
+              onClick={() => setIsBatchModalOpen(true)}
+              className="px-4 py-2 border border-border text-text-primary rounded-3xl hover:bg-surface-raised transition-colors"
+            >
+              + Add Multiple
+            </button>
+          </div>
         </div>
 
         {/* Toolbar */}
@@ -181,21 +206,32 @@ export function ShotListView({ shotListId, onEditShot, onGenerateShot }: ShotLis
         {shots.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-text-secondary">
             <p className="mb-4">No shots found</p>
-            <button
-              onClick={() => openCreateShotModal()}
-              className="text-primary hover:underline"
-            >
-              Add your first shot
-            </button>
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => openCreateShotModal()}
+                className="text-primary hover:underline"
+              >
+                Add your first shot
+              </button>
+              <span className="text-text-secondary">or</span>
+              <button
+                onClick={() => setIsBatchModalOpen(true)}
+                className="text-primary hover:underline"
+              >
+                Import multiple shots
+              </button>
+            </div>
           </div>
         ) : viewMode === 'table' ? (
-          <ShotTable
+          <EnhancedShotTable
             shots={shots}
             onSelect={selectShot}
             onEdit={onEditShot}
             onDelete={deleteShot}
             onDuplicate={duplicateShot}
             onStatusChange={updateShotStatus}
+            onUpdateShot={handleUpdateShot}
+            onReorder={reorderShot}
             onGenerate={onGenerateShot}
           />
         ) : (
@@ -215,154 +251,16 @@ export function ShotListView({ shotListId, onEditShot, onGenerateShot }: ShotLis
           onCreate={handleCreateShot}
         />
       )}
+
+      {/* Batch Create Modal */}
+      {isBatchModalOpen && (
+        <BatchCreateModal
+          shotListId={shotListId}
+          onClose={() => setIsBatchModalOpen(false)}
+          onCreate={handleCreateMultipleShots}
+        />
+      )}
     </div>
-  );
-}
-
-// Shot Table Component
-interface ShotTableProps {
-  shots: Shot[];
-  onSelect: (id: UUID) => void;
-  onEdit?: (id: UUID) => void;
-  onDelete: (id: UUID) => void;
-  onDuplicate: (id: UUID) => void;
-  onStatusChange: (id: UUID, status: ShotStatus) => void;
-  onGenerate?: (id: UUID) => void;
-}
-
-function ShotTable({
-  shots,
-  onSelect,
-  onEdit,
-  onDelete,
-  onDuplicate,
-  onStatusChange,
-  onGenerate,
-}: ShotTableProps) {
-  const priorityLabels = ['', 'Critical', 'High', 'Medium', 'Low', 'Optional'];
-
-  return (
-    <table className="w-full">
-      <thead className="bg-surface sticky top-0">
-        <tr className="text-left text-sm text-text-secondary">
-          <th className="px-4 py-3 font-medium w-16">#</th>
-          <th className="px-4 py-3 font-medium">Name</th>
-          <th className="px-4 py-3 font-medium">Type</th>
-          <th className="px-4 py-3 font-medium">Status</th>
-          <th className="px-4 py-3 font-medium">Priority</th>
-          <th className="px-4 py-3 font-medium w-24">Duration</th>
-          <th className="px-4 py-3 font-medium w-32">Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        {shots.map((shot, index) => (
-          <tr
-            key={shot.id}
-            onClick={() => onSelect(shot.id)}
-            className={`
-              border-t border-border cursor-pointer transition-colors
-              ${index % 2 === 0 ? 'bg-surface' : 'bg-bg-subtle'}
-              hover:bg-surface-raised
-            `}
-          >
-            <td className="px-4 py-3 text-sm font-mono text-text-secondary">
-              {shot.shotNumber}
-            </td>
-            <td className="px-4 py-3">
-              <div>
-                <p className="text-text-primary font-medium">{shot.name}</p>
-                <p className="text-sm text-text-secondary line-clamp-1">
-                  {shot.description}
-                </p>
-              </div>
-            </td>
-            <td className="px-4 py-3 text-sm text-text-primary capitalize">
-              {shot.shotType.replace('-', ' ')}
-            </td>
-            <td className="px-4 py-3">
-              <select
-                value={shot.status}
-                onChange={(e) => {
-                  e.stopPropagation();
-                  onStatusChange(shot.id, e.target.value as ShotStatus);
-                }}
-                onClick={(e) => e.stopPropagation()}
-                className="px-2 py-1 bg-background border border-border rounded text-sm text-text-primary"
-              >
-                <option value="planned">Planned</option>
-                <option value="scripted">Scripted</option>
-                <option value="storyboarded">Storyboarded</option>
-                <option value="approved">Approved</option>
-                <option value="in-progress">In Progress</option>
-                <option value="review">In Review</option>
-                <option value="completed">Completed</option>
-                <option value="rejected">Rejected</option>
-              </select>
-            </td>
-            <td className="px-4 py-3 text-sm">
-              <span className={`px-2 py-0.5 rounded text-xs ${
-                shot.priority === 1 ? 'bg-red-500/20 text-red-400' :
-                shot.priority === 2 ? 'bg-orange-500/20 text-orange-400' :
-                shot.priority === 3 ? 'bg-yellow-500/20 text-yellow-400' :
-                shot.priority === 4 ? 'bg-blue-500/20 text-blue-400' :
-                'bg-gray-500/20 text-gray-400'
-              }`}>
-                {priorityLabels[shot.priority]}
-              </span>
-            </td>
-            <td className="px-4 py-3 text-sm text-text-secondary">
-              {shot.duration ? `${shot.duration}s` : '-'}
-            </td>
-            <td className="px-4 py-3">
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onEdit?.(shot.id);
-                  }}
-                  className="p-1.5 text-text-secondary hover:text-primary transition-colors"
-                  title="Edit"
-                >
-                  <Pencil className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onGenerate?.(shot.id);
-                  }}
-                  className="p-1.5 text-text-secondary hover:text-primary transition-colors"
-                  title="Generate"
-                >
-                  <Play className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDuplicate(shot.id);
-                  }}
-                  className="p-1.5 text-text-secondary hover:text-primary transition-colors"
-                  title="Duplicate"
-                >
-                  <Copy className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (confirm(`Delete shot "${shot.name}"?`)) {
-                      onDelete(shot.id);
-                    }
-                  }}
-                  className="p-1.5 text-text-secondary hover:text-red-500 transition-colors"
-                  title="Delete"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
   );
 }
 
