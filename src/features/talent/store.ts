@@ -24,6 +24,9 @@ import type {
   TalentPersonality,
   TalentPromptFragments,
   TalentValidationResult,
+  TalentGenerationState,
+  TalentGeneratedImage,
+  CharacterSheetAngle,
 } from '../../core/types/talent';
 
 interface TalentState {
@@ -37,6 +40,9 @@ interface TalentState {
   isEditing: boolean;
   editDraft: Partial<TalentProfile> | null;
   isDirty: boolean;
+
+  // AI Generation state per talent
+  generationStates: Map<UUID, TalentGenerationState>;
 }
 
 interface TalentActions {
@@ -84,6 +90,17 @@ interface TalentActions {
   loadFromDatabase: (talents: TalentProfile[]) => void;
   exportTalent: (id: UUID) => string;
   importTalent: (json: string) => UUID;
+
+  // AI Generation actions
+  initGenerationState: (talentId: UUID) => void;
+  setGenerationProvider: (talentId: UUID, providerId: string) => void;
+  setGenerationStep: (talentId: UUID, step: TalentGenerationState['generationStep']) => void;
+  setCurrentHeadshot: (talentId: UUID, headshot: TalentGeneratedImage | null) => void;
+  setCharacterSheet: (talentId: UUID, images: TalentGeneratedImage[]) => void;
+  setGenerationError: (talentId: UUID, error: string | null) => void;
+  setIsGenerating: (talentId: UUID, isGenerating: boolean) => void;
+  clearGenerationState: (talentId: UUID) => void;
+  getGenerationState: (talentId: UUID) => TalentGenerationState | undefined;
 }
 
 type TalentStore = TalentState & TalentActions;
@@ -116,6 +133,7 @@ export const useTalentStore = create<TalentStore>()(
     isEditing: false,
     editDraft: null,
     isDirty: false,
+    generationStates: new Map(),
 
     // CRUD Operations
     createTalent: (name, type) => {
@@ -604,6 +622,90 @@ export const useTalentStore = create<TalentStore>()(
 
       return newId;
     },
+
+    // AI Generation actions
+    initGenerationState: (talentId) => {
+      set((state) => {
+        if (!state.generationStates.has(talentId)) {
+          state.generationStates.set(talentId, {
+            currentHeadshot: null,
+            characterSheet: [],
+            isGenerating: false,
+            generationStep: 'idle',
+            selectedProviderId: null,
+            error: null,
+          });
+        }
+      });
+    },
+
+    setGenerationProvider: (talentId, providerId) => {
+      set((state) => {
+        const genState = state.generationStates.get(talentId);
+        if (genState) {
+          genState.selectedProviderId = providerId;
+        }
+      });
+    },
+
+    setGenerationStep: (talentId, step) => {
+      set((state) => {
+        const genState = state.generationStates.get(talentId);
+        if (genState) {
+          genState.generationStep = step;
+        }
+      });
+    },
+
+    setCurrentHeadshot: (talentId, headshot) => {
+      set((state) => {
+        const genState = state.generationStates.get(talentId);
+        if (genState) {
+          genState.currentHeadshot = headshot;
+        }
+      });
+    },
+
+    setCharacterSheet: (talentId, images) => {
+      set((state) => {
+        const genState = state.generationStates.get(talentId);
+        if (genState) {
+          genState.characterSheet = images;
+        }
+      });
+    },
+
+    setGenerationError: (talentId, error) => {
+      set((state) => {
+        const genState = state.generationStates.get(talentId);
+        if (genState) {
+          genState.error = error;
+          genState.isGenerating = false;
+        }
+      });
+    },
+
+    setIsGenerating: (talentId, isGenerating) => {
+      set((state) => {
+        const genState = state.generationStates.get(talentId);
+        if (genState) {
+          genState.isGenerating = isGenerating;
+          if (isGenerating) {
+            genState.error = null;
+          }
+        }
+      });
+    },
+
+    clearGenerationState: (talentId) => {
+      set((state) => {
+        state.generationStates.delete(talentId);
+      });
+    },
+
+    getGenerationState: (talentId) => {
+      return get().generationStates.get(talentId);
+    },
   }))
 );
 
@@ -727,6 +829,14 @@ export const useTalentTags = () => {
     }
     return Array.from(tags).sort();
   }, [talents]);
+};
+
+export const useTalentGenerationState = (talentId: UUID | null) => {
+  const generationStates = useTalentStore((state) => state.generationStates);
+  return useMemo(
+    () => (talentId ? generationStates.get(talentId) : undefined),
+    [generationStates, talentId]
+  );
 };
 
 /**
