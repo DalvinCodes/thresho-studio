@@ -64,6 +64,7 @@ interface ShotListActions {
 
   // Shot CRUD
   createShot: (input: CreateShotInput) => UUID;
+  createMultipleShots: (inputs: CreateShotInput[]) => UUID[];
   updateShot: (id: UUID, updates: Partial<Shot>) => void;
   deleteShot: (id: UUID) => void;
   duplicateShot: (id: UUID) => UUID;
@@ -343,6 +344,80 @@ export const useShotListStore = create<ShotListStore>()(
       }
 
       return id;
+    },
+
+    createMultipleShots: (inputs) => {
+      const now = createTimestamp();
+      const createdIds: UUID[] = [];
+      const createdShots: Shot[] = [];
+
+      if (inputs.length === 0) return createdIds;
+
+      const shotListId = inputs[0].shotListId;
+      const shotList = get().shotLists.get(shotListId);
+      if (!shotList) throw new Error('Shot list not found');
+
+      const shotsInList = get().getShotsForList(shotListId);
+      let maxIndex = shotsInList.reduce((max, s) => Math.max(max, s.orderIndex), -1);
+      let currentShotNumber = shotsInList.length;
+
+      for (const input of inputs) {
+        const id = createUUID();
+        currentShotNumber++;
+        maxIndex++;
+
+        const shot: Shot = {
+          id,
+          shotListId: input.shotListId,
+          shotNumber: String(currentShotNumber),
+          name: input.name,
+          description: input.description,
+          shotType: input.shotType || 'medium',
+          cameraMovement: input.cameraMovement || 'static',
+          lighting: input.lighting || shotList.defaultLighting,
+          aspectRatio: input.aspectRatio || shotList.defaultAspectRatio,
+          duration: input.duration,
+          location: input.location,
+          subjects: input.subjects || [],
+          props: [],
+          status: 'planned',
+          priority: input.priority || 3,
+          orderIndex: maxIndex,
+          tags: input.tags || [],
+          createdAt: now,
+          updatedAt: now,
+        };
+
+        createdIds.push(id);
+        createdShots.push(shot);
+      }
+
+      set((state) => {
+        for (const shot of createdShots) {
+          state.shots.set(shot.id, shot);
+        }
+
+        const list = state.shotLists.get(shotListId);
+        if (list) {
+          list.totalShots += createdShots.length;
+          list.updatedAt = now;
+        }
+      });
+
+      for (const shot of createdShots) {
+        saveShotToDb(shot).catch((err) =>
+          console.error('Failed to save shot:', err)
+        );
+      }
+
+      const updatedList = get().shotLists.get(shotListId);
+      if (updatedList) {
+        saveShotListToDb(updatedList).catch((err) =>
+          console.error('Failed to update shot list count:', err)
+        );
+      }
+
+      return createdIds;
     },
 
     updateShot: (id, updates) => {
