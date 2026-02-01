@@ -3,7 +3,7 @@
  * Step 1 UI for generating and approving a talent headshot
  */
 
-import { useState, useCallback } from 'react';
+import { useCallback } from 'react';
 import type { UUID } from '../../../core/types/common';
 import { createUUID, createTimestamp } from '../../../core/types/common';
 import type { TalentProfile, TalentGeneratedImage } from '../../../core/types/talent';

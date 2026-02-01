@@ -5,7 +5,7 @@
  */
 
 import { useEffect, useCallback, useState } from 'react';
-import type { UUID } from '../../../core/types/common';
+
 import type { TalentProfile, TalentGeneratedImage, TalentAppearance } from '../../../core/types/talent';
 import { useTalentStore, useTalentGenerationState } from '../store';
 import { useProvidersForType } from '../../providers/store';

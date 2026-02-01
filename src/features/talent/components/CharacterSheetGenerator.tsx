@@ -3,7 +3,7 @@
  * Step 2 UI for generating a 5-angle character sheet
  */
 
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useMemo } from 'react';
 import type { UUID } from '../../../core/types/common';
 import { createUUID, createTimestamp } from '../../../core/types/common';
 import type { TalentProfile, TalentGeneratedImage, CharacterSheetAngle } from '../../../core/types/talent';
@@ -37,7 +37,10 @@ export function CharacterSheetGenerator({
     setGenerationStep,
   } = useTalentStore();
 
-  const characterSheet = generationState?.characterSheet ?? [];
+  const characterSheet = useMemo(
+    () => generationState?.characterSheet ?? [],
+    [generationState?.characterSheet]
+  );
   const isGenerating = generationState?.isGenerating ?? false;
   const error = generationState?.error ?? null;
   const currentHeadshot = generationState?.currentHeadshot ?? null;

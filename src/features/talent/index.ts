@@ -13,6 +13,7 @@ export {
   useTalentsByType,
   useFavoriteTalents,
   useTalentTags,
+  useTalentGenerationState,
   initTalentStore,
 } from './store';
 
@@ -32,11 +33,28 @@ export {
   getTalentSummary,
 } from './services/talentPromptService';
 
+export {
+  buildHeadshotPrompt,
+  buildCharacterSheetPrompts,
+  hasAppearanceAttributes,
+  generateRandomAttributes,
+  mergeWithRandomAttributes,
+  CHARACTER_SHEET_ANGLES,
+} from './services/headshotGenerationService';
+
+export {
+  analyzeHeadshotImage,
+  mergeAnalyzedAttributes,
+} from './services/talentVisionService';
+
 // Components
 export { TalentLibrary } from './components/TalentLibrary';
 export { TalentEditor } from './components/TalentEditor';
 export { TalentCard } from './components/TalentCard';
 export { TalentSelector } from './components/TalentSelector';
+export { TalentAIGenerationTab } from './components/TalentAIGenerationTab';
+export { HeadshotGenerator } from './components/HeadshotGenerator';
+export { CharacterSheetGenerator } from './components/CharacterSheetGenerator';
 
 // Types (re-export from core)
 export type {
@@ -48,4 +66,7 @@ export type {
   TalentPromptFragments,
   TalentFilters,
   TalentValidationResult,
+  CharacterSheetAngle,
+  TalentGeneratedImage,
+  TalentGenerationState,
 } from '../../core/types/talent';

@@ -21,12 +21,10 @@ import type {
   TalentReferenceImage,
   TalentFilters,
   TalentAppearance,
-  TalentPersonality,
   TalentPromptFragments,
   TalentValidationResult,
   TalentGenerationState,
   TalentGeneratedImage,
-  CharacterSheetAngle,
 } from '../../core/types/talent';
 
 interface TalentState {
