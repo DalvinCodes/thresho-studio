@@ -64,7 +64,7 @@ interface ShotListActions {
 
   // Shot CRUD
   createShot: (input: CreateShotInput) => UUID;
-  createMultipleShots: (inputs: CreateShotInput[]) => UUID[];
+  createMultipleShots: (inputs: CreateShotInput[]) => Promise<UUID[]>;
   updateShot: (id: UUID, updates: Partial<Shot>) => void;
   deleteShot: (id: UUID) => void;
   duplicateShot: (id: UUID) => UUID;
@@ -346,21 +346,40 @@ export const useShotListStore = create<ShotListStore>()(
       return id;
     },
 
-    createMultipleShots: (inputs) => {
+    createMultipleShots: async (inputs) => {
+      // Validation: Check for non-empty array
+      if (!inputs.length) {
+        throw new Error('No shots to create');
+      }
+
+      // Validation: Check all inputs have shotListId
+      const shotListId = inputs[0].shotListId;
+      if (!shotListId) {
+        throw new Error('Shot list ID is required');
+      }
+
+      // Validation: Check all inputs have the same shotListId
+      const allSameList = inputs.every((input) => input.shotListId === shotListId);
+      if (!allSameList) {
+        throw new Error('All shots must belong to the same shot list');
+      }
+
+      // Validation: Check shot list exists
+      const shotList = get().shotLists.get(shotListId);
+      if (!shotList) {
+        throw new Error('Shot list not found');
+      }
+
       const now = createTimestamp();
       const createdIds: UUID[] = [];
-      const createdShots: Shot[] = [];
+      const shotsToCreate: Shot[] = [];
 
-      if (inputs.length === 0) return createdIds;
-
-      const shotListId = inputs[0].shotListId;
-      const shotList = get().shotLists.get(shotListId);
-      if (!shotList) throw new Error('Shot list not found');
-
+      // Get starting indices
       const shotsInList = get().getShotsForList(shotListId);
       let maxIndex = shotsInList.reduce((max, s) => Math.max(max, s.orderIndex), -1);
       let currentShotNumber = shotsInList.length;
 
+      // Build all shots in memory first (no state changes yet)
       for (const input of inputs) {
         const id = createUUID();
         currentShotNumber++;
@@ -389,32 +408,32 @@ export const useShotListStore = create<ShotListStore>()(
         };
 
         createdIds.push(id);
-        createdShots.push(shot);
+        shotsToCreate.push(shot);
       }
 
+      // Persist all shots to database first (before state update)
+      for (const shot of shotsToCreate) {
+        await saveShotToDb(shot);
+      }
+
+      // Only update state if all DB writes succeed
       set((state) => {
-        for (const shot of createdShots) {
+        for (const shot of shotsToCreate) {
           state.shots.set(shot.id, shot);
         }
 
+        // Update shot list count
         const list = state.shotLists.get(shotListId);
         if (list) {
-          list.totalShots += createdShots.length;
+          list.totalShots += shotsToCreate.length;
           list.updatedAt = now;
         }
       });
 
-      for (const shot of createdShots) {
-        saveShotToDb(shot).catch((err) =>
-          console.error('Failed to save shot:', err)
-        );
-      }
-
+      // Persist updated shot list count
       const updatedList = get().shotLists.get(shotListId);
       if (updatedList) {
-        saveShotListToDb(updatedList).catch((err) =>
-          console.error('Failed to update shot list count:', err)
-        );
+        await saveShotListToDb(updatedList);
       }
 
       return createdIds;
