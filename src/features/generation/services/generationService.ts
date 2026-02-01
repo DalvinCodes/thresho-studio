@@ -15,8 +15,16 @@ import type { ProviderError, StreamChunk } from '../../../core/types/provider';
 import { useProviderStore } from '../../providers/store';
 import { useTemplateStore } from '../../templates/store';
 import { useBrandStore } from '../../brands/store';
+import { useTalentStore } from '../../talent/store';
 import { renderPrompt } from '../../templates/services/templateService';
 import { injectBrandTokens } from '../../../core/utils/tokenInjection';
+import {
+  getStorage,
+  isStorageInitialized,
+  downloadFromUrl,
+  generateThumbnail,
+} from '../../../core/storage';
+import { injectTalents, buildTalentTokenMap } from '../../../core/utils/talentInjection';
 
 // Service response types
 interface ValidationResult {
@@ -111,6 +119,22 @@ export async function preparePrompt(request: GenerationRequest): Promise<Prepare
   let systemPrompt: string | undefined;
   let userPrompt: string;
 
+  // Get talents if specified
+  let talents: import('../../../core/types/talent').TalentProfile[] = [];
+  if (request.talentIds && request.talentIds.length > 0) {
+    const talentStore = useTalentStore.getState();
+    talents = talentStore.getTalentsByIds(request.talentIds);
+  }
+
+  // Build talent token map for variable substitution
+  const talentTokens = buildTalentTokenMap(talents);
+
+  // Merge talent tokens with request variables
+  const variables: Record<string, string | number | boolean> = {
+    ...request.variables,
+    ...talentTokens,
+  };
+
   // Get prompt from template or custom
   if (request.customPrompt) {
     userPrompt = request.customPrompt;
@@ -140,8 +164,8 @@ export async function preparePrompt(request: GenerationRequest): Promise<Prepare
       brand = brandStore.brands.get(request.brandId);
     }
 
-    // Render the prompt
-    const rendered = renderPrompt(version, request.variables || {}, brand!);
+    // Render the prompt with combined variables (including talent tokens)
+    const rendered = renderPrompt(version, variables, brand!);
     systemPrompt = rendered.systemPrompt;
     userPrompt = rendered.userPrompt;
   } else {
@@ -159,6 +183,20 @@ export async function preparePrompt(request: GenerationRequest): Promise<Prepare
         const systemInjection = injectBrandTokens(systemPrompt, brand);
         systemPrompt = systemInjection.injectedContent;
       }
+    }
+  }
+
+  // Inject talent descriptions (handles {{TALENTS}} placeholder or appends)
+  if (talents.length > 0) {
+    // Get provider type for provider-specific prompt fragments
+    const providerStore = useProviderStore.getState();
+    const providerId = request.providerId || providerStore.getDefaultProvider(request.type);
+    const provider = providerId ? providerStore.providers.get(providerId) : undefined;
+    const providerType = provider?.config.type || request.providerType;
+
+    userPrompt = injectTalents(userPrompt, talents, providerType);
+    if (systemPrompt) {
+      systemPrompt = injectTalents(systemPrompt, talents, providerType);
     }
   }
 
@@ -281,16 +319,58 @@ export async function generateImage(
     style: request.parameters?.style,
   });
 
-  onProgress?.(90);
+  onProgress?.(50);
 
   // Generate asset IDs for the images
-  const urls = result.images.map((img) => img.url);
-  const assetIds = urls.map(() => createUUID());
+  const assetIds = result.images.map(() => createUUID());
+  const storedUrls: string[] = [];
+
+  // Download and store each image if storage is available
+  if (isStorageInitialized()) {
+    const storage = getStorage();
+    const storageType = storage.getStorageType();
+
+    for (let i = 0; i < result.images.length; i++) {
+      const img = result.images[i];
+      const assetId = assetIds[i];
+
+      try {
+        // Download the image
+        const blob = await downloadFromUrl(img.url);
+
+        // Save to storage
+        await storage.saveFile(assetId, blob, {
+          name: `generated-image-${assetId}.png`,
+          mimeType: blob.type || 'image/png',
+          size: blob.size,
+          createdAt: Date.now(),
+        });
+
+        // Generate and save thumbnail
+        const thumbnail = await generateThumbnail(blob, blob.type || 'image/png');
+        if (thumbnail) {
+          await storage.saveThumbnail(assetId, thumbnail);
+        }
+
+        // Use storage URL
+        storedUrls.push(`${storageType}://${assetId}`);
+
+        onProgress?.(50 + ((i + 1) / result.images.length) * 40);
+      } catch (error) {
+        console.warn(`[GenerationService] Failed to store image ${i}:`, error);
+        // Fall back to original URL
+        storedUrls.push(img.url);
+      }
+    }
+  } else {
+    // No storage available, use original URLs
+    storedUrls.push(...result.images.map((img) => img.url));
+  }
 
   onProgress?.(100);
 
   return {
-    urls,
+    urls: storedUrls,
     assetIds,
   };
 }
@@ -351,10 +431,52 @@ export async function pollVideoJob(
 
   if (result.status === 'complete' && result.urls) {
     const assetIds = result.urls.map(() => createUUID());
+    const storedUrls: string[] = [];
+
+    // Download and store videos if storage is available
+    if (isStorageInitialized()) {
+      const storage = getStorage();
+      const storageType = storage.getStorageType();
+
+      for (let i = 0; i < result.urls.length; i++) {
+        const url = result.urls[i];
+        const assetId = assetIds[i];
+
+        try {
+          // Download the video
+          const blob = await downloadFromUrl(url);
+
+          // Save to storage
+          await storage.saveFile(assetId, blob, {
+            name: `generated-video-${assetId}.mp4`,
+            mimeType: blob.type || 'video/mp4',
+            size: blob.size,
+            createdAt: Date.now(),
+          });
+
+          // Generate and save thumbnail from video
+          const thumbnail = await generateThumbnail(blob, blob.type || 'video/mp4');
+          if (thumbnail) {
+            await storage.saveThumbnail(assetId, thumbnail);
+          }
+
+          // Use storage URL
+          storedUrls.push(`${storageType}://${assetId}`);
+        } catch (error) {
+          console.warn(`[GenerationService] Failed to store video ${i}:`, error);
+          // Fall back to original URL
+          storedUrls.push(url);
+        }
+      }
+    } else {
+      // No storage available, use original URLs
+      storedUrls.push(...result.urls);
+    }
+
     return {
       jobId,
       status: 'complete',
-      urls: result.urls,
+      urls: storedUrls,
       assetIds,
     };
   }

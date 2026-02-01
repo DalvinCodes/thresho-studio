@@ -3,10 +3,16 @@
  * Manages shot lists and individual shots with persistence
  */
 
+import { useMemo } from 'react';
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import type { UUID, ContentType } from '../../core/types/common';
 import { createUUID, createTimestamp } from '../../core/types/common';
+import { useGenerationStore } from '../generation/store';
+import { useProviderStore } from '../providers/store';
+import { useBrandStore } from '../brands/store';
+import { useTalentStore } from '../talent/store';
+import { composeShotPrompt } from './services/shotPromptService';
 import type {
   Shot,
   ShotList,
@@ -93,6 +99,11 @@ interface ShotListActions {
     completed: number;
     averagePriority: number;
   };
+
+  // Generation
+  generateShot: (shotId: UUID) => Promise<UUID | null>;
+  updateShotFromGeneration: (shotId: UUID, generationId: UUID, assetId?: UUID, error?: string) => void;
+  generateSelectedShots: (shotIds: UUID[]) => Promise<Map<UUID, UUID | null>>;
 
   // Persistence
   loadFromDatabase: (data: {
@@ -691,62 +702,416 @@ export const useShotListStore = create<ShotListStore>()(
         }
       });
     },
+
+    // Generation
+    generateShot: async (shotId) => {
+      const state = get();
+      const shot = state.shots.get(shotId);
+      if (!shot) {
+        console.error('Shot not found:', shotId);
+        return null;
+      }
+
+      const shotList = state.shotLists.get(shot.shotListId);
+      if (!shotList) {
+        console.error('Shot list not found:', shot.shotListId);
+        return null;
+      }
+
+      // Check if description is present
+      if (!shot.description || shot.description.trim().length < 10) {
+        console.error('Shot description is too short');
+        return null;
+      }
+
+      // Get the content type from the shot list
+      const contentType = shotList.contentType;
+
+      // Check if a provider is configured for this content type
+      const providerStore = useProviderStore.getState();
+      const defaultProviderId = providerStore.getDefaultProvider(contentType);
+      if (!defaultProviderId) {
+        console.error(`No ${contentType} provider configured`);
+        return null;
+      }
+
+      const provider = providerStore.providers.get(defaultProviderId);
+      if (!provider || provider.status !== 'active') {
+        console.error('Provider is not active');
+        return null;
+      }
+
+      // Get brand if brandId is set on the shot list
+      let brand: Parameters<typeof composeShotPrompt>[0]['brand'] | undefined;
+      if (shotList.brandId) {
+        const brandStore = useBrandStore.getState();
+        const brandProfile = brandStore.brands.get(shotList.brandId);
+        if (brandProfile) {
+          brand = {
+            aesthetic: brandProfile.tokens.visualStyle.aesthetic || '',
+            photographyStyle: brandProfile.tokens.visualStyle.photographyStyle || '',
+            mood: brandProfile.tokens.visualStyle.mood || '',
+            colorPalette: brandProfile.tokens.colors.paletteDescription || '',
+          };
+        }
+      }
+
+      // Get talents if talentIds are set on the shot
+      let talents: import('../../core/types/talent').TalentProfile[] | undefined;
+      if (shot.talentIds && shot.talentIds.length > 0) {
+        const talentStore = useTalentStore.getState();
+        talents = talentStore.getTalentsByIds(shot.talentIds);
+      }
+
+      // Compose the prompt
+      const composedPrompt = composeShotPrompt({
+        shot,
+        shotList,
+        brand,
+        talents,
+      });
+
+      // Update shot status to in-progress
+      set((s) => {
+        const shotToUpdate = s.shots.get(shotId);
+        if (shotToUpdate) {
+          shotToUpdate.status = 'in-progress';
+          shotToUpdate.updatedAt = createTimestamp();
+        }
+      });
+
+      // Start the generation
+      const generationStore = useGenerationStore.getState();
+      const requestId = generationStore.startGeneration({
+        type: contentType,
+        providerId: defaultProviderId,
+        providerType: provider.config.type,
+        brandId: shotList.brandId,
+        talentIds: shot.talentIds,
+        customPrompt: composedPrompt.userPrompt,
+        parameters: {
+          aspectRatio: shot.aspectRatio,
+          duration: shot.duration,
+          negativePrompt: composedPrompt.negativePrompt,
+          style: composedPrompt.technicalParameters.style,
+        },
+        metadata: {
+          shotId,
+          shotListId: shot.shotListId,
+          systemPrompt: composedPrompt.systemPrompt,
+        },
+      });
+
+      // Store the generation request ID in shot metadata
+      set((s) => {
+        const shotToUpdate = s.shots.get(shotId);
+        if (shotToUpdate) {
+          shotToUpdate.metadata = {
+            ...shotToUpdate.metadata,
+            generationRequestId: requestId,
+          };
+        }
+      });
+
+      return requestId;
+    },
+
+    updateShotFromGeneration: (shotId, generationId, assetId, error) => {
+      set((state) => {
+        const shot = state.shots.get(shotId);
+        if (!shot) return;
+
+        const now = createTimestamp();
+
+        if (error) {
+          // Generation failed
+          shot.status = 'rejected';
+          shot.metadata = {
+            ...shot.metadata,
+            generationError: error,
+            lastGenerationId: generationId,
+          };
+        } else if (assetId) {
+          // Generation succeeded
+          shot.status = 'completed';
+          shot.generatedAssetId = assetId;
+          shot.metadata = {
+            ...shot.metadata,
+            lastGenerationId: generationId,
+            generationError: undefined,
+          };
+
+          // Update the shot list's completed shots count
+          const shotList = state.shotLists.get(shot.shotListId);
+          if (shotList) {
+            shotList.completedShots++;
+            shotList.updatedAt = now;
+          }
+        }
+
+        shot.updatedAt = now;
+      });
+    },
+
+    generateSelectedShots: async (shotIds) => {
+      const results = new Map<UUID, UUID | null>();
+
+      // Process shots sequentially to avoid overwhelming providers
+      for (const shotId of shotIds) {
+        const requestId = await get().generateShot(shotId);
+        results.set(shotId, requestId);
+
+        // Small delay between generations to be respectful to APIs
+        if (shotIds.indexOf(shotId) < shotIds.length - 1) {
+          await new Promise((resolve) => setTimeout(resolve, 100));
+        }
+      }
+
+      return results;
+    },
   }))
 );
 
-// Selectors
+// Selectors - Using proper memoization to prevent infinite re-renders
 
+/**
+ * Returns all shot lists as an array.
+ * Memoized to prevent new array creation on every render.
+ */
 export const useShotLists = () => {
-  const store = useShotListStore();
-  return Array.from(store.shotLists.values());
+  const shotLists = useShotListStore((state) => state.shotLists);
+  return useMemo(() => Array.from(shotLists.values()), [shotLists]);
 };
 
+/**
+ * Returns a specific shot list by ID.
+ * Uses Zustand's built-in shallow comparison via selector.
+ */
 export const useShotList = (id: UUID | null) => {
-  const store = useShotListStore();
-  return id ? store.shotLists.get(id) : undefined;
+  return useShotListStore((state) => (id ? state.shotLists.get(id) : undefined));
 };
 
+/**
+ * Returns the currently selected shot list.
+ * Memoized to prevent unnecessary re-renders.
+ */
 export const useSelectedShotList = () => {
-  const store = useShotListStore();
-  return store.selectedShotListId ? store.shotLists.get(store.selectedShotListId) : undefined;
+  const shotLists = useShotListStore((state) => state.shotLists);
+  const selectedShotListId = useShotListStore((state) => state.selectedShotListId);
+  return useMemo(
+    () => (selectedShotListId ? shotLists.get(selectedShotListId) : undefined),
+    [shotLists, selectedShotListId]
+  );
 };
 
+/**
+ * Returns the currently selected shot.
+ * Memoized to prevent unnecessary re-renders.
+ */
 export const useSelectedShot = () => {
-  const store = useShotListStore();
-  return store.selectedShotId ? store.shots.get(store.selectedShotId) : undefined;
+  const shots = useShotListStore((state) => state.shots);
+  const selectedShotId = useShotListStore((state) => state.selectedShotId);
+  return useMemo(
+    () => (selectedShotId ? shots.get(selectedShotId) : undefined),
+    [shots, selectedShotId]
+  );
 };
 
+/**
+ * Returns all shots for a specific list, sorted by orderIndex.
+ * Memoized to prevent new array creation on every render.
+ */
 export const useShotsForList = (listId: UUID | null) => {
-  const store = useShotListStore();
-  return listId ? store.getShotsForList(listId) : [];
+  const shots = useShotListStore((state) => state.shots);
+  return useMemo(
+    () =>
+      listId
+        ? Array.from(shots.values())
+            .filter((s) => s.shotListId === listId)
+            .sort((a, b) => a.orderIndex - b.orderIndex)
+        : [],
+    [shots, listId]
+  );
 };
 
+/**
+ * Returns filtered and sorted shots for a specific list.
+ * Applies current filter and sort options.
+ * Memoized to prevent new array creation on every render.
+ */
 export const useFilteredShots = (listId: UUID | null) => {
-  const store = useShotListStore();
-  return listId ? store.getSortedShots(listId) : [];
+  const shots = useShotListStore((state) => state.shots);
+  const filterOptions = useShotListStore((state) => state.filterOptions);
+  const sortOptions = useShotListStore((state) => state.sortOptions);
+
+  return useMemo(() => {
+    if (!listId) return [];
+
+    // Get shots for this list
+    let result = Array.from(shots.values())
+      .filter((s) => s.shotListId === listId)
+      .sort((a, b) => a.orderIndex - b.orderIndex);
+
+    // Apply filters
+    if (filterOptions.status?.length) {
+      result = result.filter((s) => filterOptions.status!.includes(s.status));
+    }
+
+    if (filterOptions.shotType?.length) {
+      result = result.filter((s) => filterOptions.shotType!.includes(s.shotType));
+    }
+
+    if (filterOptions.priority?.length) {
+      result = result.filter((s) => filterOptions.priority!.includes(s.priority));
+    }
+
+    if (filterOptions.tags?.length) {
+      result = result.filter((s) =>
+        filterOptions.tags!.some((tag) => s.tags.includes(tag))
+      );
+    }
+
+    if (filterOptions.hasGeneratedAsset !== undefined) {
+      result = result.filter((s) =>
+        filterOptions.hasGeneratedAsset ? !!s.generatedAssetId : !s.generatedAssetId
+      );
+    }
+
+    if (filterOptions.searchQuery) {
+      const query = filterOptions.searchQuery.toLowerCase();
+      result = result.filter(
+        (s) =>
+          s.name.toLowerCase().includes(query) ||
+          s.description.toLowerCase().includes(query) ||
+          s.shotNumber.toLowerCase().includes(query)
+      );
+    }
+
+    // Apply sorting
+    return [...result].sort((a, b) => {
+      let comparison = 0;
+
+      switch (sortOptions.field) {
+        case 'orderIndex':
+          comparison = a.orderIndex - b.orderIndex;
+          break;
+        case 'shotNumber':
+          comparison = a.shotNumber.localeCompare(b.shotNumber);
+          break;
+        case 'priority':
+          comparison = a.priority - b.priority;
+          break;
+        case 'status':
+          comparison = a.status.localeCompare(b.status);
+          break;
+        case 'createdAt':
+          comparison = a.createdAt - b.createdAt;
+          break;
+        case 'updatedAt':
+          comparison = a.updatedAt - b.updatedAt;
+          break;
+      }
+
+      return sortOptions.direction === 'asc' ? comparison : -comparison;
+    });
+  }, [shots, listId, filterOptions, sortOptions]);
 };
 
+/**
+ * Returns all equipment presets as an array.
+ * Memoized to prevent new array creation on every render.
+ */
 export const useEquipmentPresets = () => {
-  const store = useShotListStore();
-  return Array.from(store.equipmentPresets.values());
+  const equipmentPresets = useShotListStore((state) => state.equipmentPresets);
+  return useMemo(() => Array.from(equipmentPresets.values()), [equipmentPresets]);
 };
 
+/**
+ * Returns the current view mode.
+ * Uses direct selector - primitive values don't need memoization.
+ */
 export const useViewMode = () => {
-  const store = useShotListStore();
-  return store.viewMode;
+  return useShotListStore((state) => state.viewMode);
 };
 
+/**
+ * Returns the current filter options.
+ * Uses direct selector - object reference is stable in Zustand.
+ */
 export const useFilterOptions = () => {
-  const store = useShotListStore();
-  return store.filterOptions;
+  return useShotListStore((state) => state.filterOptions);
 };
 
+/**
+ * Returns the current sort options.
+ * Uses direct selector - object reference is stable in Zustand.
+ */
 export const useSortOptions = () => {
-  const store = useShotListStore();
-  return store.sortOptions;
+  return useShotListStore((state) => state.sortOptions);
 };
 
+/**
+ * Returns statistics for a specific shot list.
+ * Memoized to prevent object recreation on every render.
+ */
 export const useListStats = (listId: UUID | null) => {
-  const store = useShotListStore();
-  return listId ? store.getListStats(listId) : null;
+  const shots = useShotListStore((state) => state.shots);
+
+  return useMemo(() => {
+    if (!listId) return null;
+
+    const listShots = Array.from(shots.values()).filter(
+      (s) => s.shotListId === listId
+    );
+
+    const byStatus: Record<ShotStatus, number> = {
+      planned: 0,
+      scripted: 0,
+      storyboarded: 0,
+      approved: 0,
+      'in-progress': 0,
+      review: 0,
+      completed: 0,
+      rejected: 0,
+    };
+
+    let totalPriority = 0;
+
+    for (const shot of listShots) {
+      byStatus[shot.status]++;
+      totalPriority += shot.priority;
+    }
+
+    return {
+      total: listShots.length,
+      byStatus,
+      completed: byStatus.completed,
+      averagePriority: listShots.length > 0 ? totalPriority / listShots.length : 0,
+    };
+  }, [shots, listId]);
+};
+
+/**
+ * Returns whether a specific shot is currently being generated.
+ * Based on shot status being 'in-progress'.
+ */
+export const useShotIsGenerating = (shotId: UUID | null) => {
+  const shots = useShotListStore((state) => state.shots);
+  return useMemo(() => {
+    if (!shotId) return false;
+    const shot = shots.get(shotId);
+    return shot?.status === 'in-progress';
+  }, [shots, shotId]);
+};
+
+/**
+ * Returns all shots that are currently being generated.
+ * Useful for displaying a global generation queue.
+ */
+export const useGeneratingShots = () => {
+  const shots = useShotListStore((state) => state.shots);
+  return useMemo(
+    () => Array.from(shots.values()).filter((s) => s.status === 'in-progress'),
+    [shots]
+  );
 };

@@ -25,6 +25,8 @@ import {
   suggestShotType,
   suggestLighting,
 } from '../services/shotPromptService';
+import { useProvidersForType } from '../../providers/store';
+import { useActiveGeneration } from '../../generation/store';
 
 interface ShotEditorProps {
   shotId: UUID;
@@ -36,9 +38,63 @@ export function ShotEditor({ shotId: _shotId, onClose, onGenerate }: ShotEditorP
   const shot = useSelectedShot();
   const shotList = useSelectedShotList();
   const presets = useEquipmentPresets();
-  const { updateShot, applyPresetToShot } = useShotListStore();
+  const { updateShot, applyPresetToShot, generateShot, updateShotFromGeneration } = useShotListStore();
 
   const [activeTab, setActiveTab] = useState<'details' | 'technical' | 'prompt' | 'audio'>('details');
+
+  // Generation state
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generationRequestId, setGenerationRequestId] = useState<UUID | null>(null);
+  const [generationError, setGenerationError] = useState<string | null>(null);
+  const [generationSuccess, setGenerationSuccess] = useState(false);
+
+  // Check if provider is configured for the content type
+  const contentType = shotList?.contentType || 'image';
+  const availableProviders = useProvidersForType(contentType);
+  const activeProviders = availableProviders.filter((p) => p.status === 'active');
+  const hasActiveProvider = activeProviders.length > 0;
+
+  // Track active generation status
+  const activeGeneration = useActiveGeneration(generationRequestId);
+
+  // Watch for generation completion
+  useEffect(() => {
+    if (!generationRequestId || !shot) return;
+
+    if (activeGeneration) {
+      // Update based on generation status
+      if (activeGeneration.status === 'completed') {
+        setIsGenerating(false);
+        setGenerationSuccess(true);
+        setGenerationError(null);
+        // Get asset ID from generation result if available
+        // For now, mark the shot as completed
+        updateShotFromGeneration(shot.id, generationRequestId, undefined);
+        setGenerationRequestId(null);
+      } else if (activeGeneration.status === 'failed' || activeGeneration.status === 'cancelled') {
+        setIsGenerating(false);
+        setGenerationSuccess(false);
+        setGenerationError('Generation failed. Please try again.');
+        updateShotFromGeneration(shot.id, generationRequestId, undefined, 'Generation failed');
+        setGenerationRequestId(null);
+      }
+    }
+  }, [activeGeneration, generationRequestId, shot, updateShotFromGeneration]);
+
+  // Clear success/error messages after a delay
+  useEffect(() => {
+    if (generationSuccess) {
+      const timer = setTimeout(() => setGenerationSuccess(false), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [generationSuccess]);
+
+  useEffect(() => {
+    if (generationError) {
+      const timer = setTimeout(() => setGenerationError(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [generationError]);
 
   // Local form state
   const [formData, setFormData] = useState<Partial<Shot>>({});
@@ -94,6 +150,45 @@ export function ShotEditor({ shotId: _shotId, onClose, onGenerate }: ShotEditorP
     }
   }, [shot, applyPresetToShot]);
 
+  // Handle generate click
+  const handleGenerate = useCallback(async () => {
+    if (!shot) return;
+
+    // Save any pending changes first
+    if (Object.keys(formData).length > 0) {
+      updateShot(shot.id, formData);
+    }
+
+    setIsGenerating(true);
+    setGenerationError(null);
+    setGenerationSuccess(false);
+
+    try {
+      const requestId = await generateShot(shot.id);
+      if (requestId) {
+        setGenerationRequestId(requestId);
+        // Also call the external handler if provided
+        onGenerate?.(shot.id);
+      } else {
+        setGenerationError('Failed to start generation. Check provider configuration.');
+        setIsGenerating(false);
+      }
+    } catch (error) {
+      setGenerationError(error instanceof Error ? error.message : 'Unknown error');
+      setIsGenerating(false);
+    }
+  }, [shot, formData, updateShot, generateShot, onGenerate]);
+
+  // Determine if generate button should be disabled
+  const canGenerate = validation?.isReady && hasActiveProvider && !isGenerating;
+  const generateButtonTitle = !validation?.isReady
+    ? 'Shot description is required (min 10 characters)'
+    : !hasActiveProvider
+    ? `No ${contentType} provider configured`
+    : isGenerating
+    ? 'Generation in progress...'
+    : 'Generate content for this shot';
+
   if (!shot) {
     return (
       <div className="h-full flex items-center justify-center">
@@ -126,12 +221,28 @@ export function ShotEditor({ shotId: _shotId, onClose, onGenerate }: ShotEditorP
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Generation feedback */}
+          {generationSuccess && (
+            <span className="text-sm text-green-400">Generation complete!</span>
+          )}
+          {generationError && (
+            <span className="text-sm text-red-400">{generationError}</span>
+          )}
+          
           <button
-            onClick={() => onGenerate?.(shot.id)}
-            disabled={!validation?.isReady}
-            className="px-4 py-2 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            onClick={handleGenerate}
+            disabled={!canGenerate}
+            title={generateButtonTitle}
+            className="px-4 py-2 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
           >
-            🎬 Generate
+            {isGenerating ? (
+              <>
+                <span className="animate-spin">&#8987;</span>
+                Generating...
+              </>
+            ) : (
+              <>Generate</>
+            )}
           </button>
           <button
             onClick={handleSave}

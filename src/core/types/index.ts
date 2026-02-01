@@ -12,3 +12,4 @@ export * from './brand';
 export * from './generation';
 export * from './asset';
 export * from './project';
+export * from './talent';

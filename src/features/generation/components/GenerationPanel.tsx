@@ -18,7 +18,10 @@ import {
   useGenerationQueue,
   useGenerationStats,
   useStreamedContent,
+  useBatchQueue,
+  useBatchQueueStats,
 } from '../store';
+import { GenerationQueue } from './GenerationQueue';
 
 interface GenerationPanelProps {
   onViewResult?: (id: UUID) => void;
@@ -27,11 +30,17 @@ interface GenerationPanelProps {
 export function GenerationPanel({ onViewResult }: GenerationPanelProps) {
   const activeGenerations = useActiveGenerations();
   const queue = useGenerationQueue();
+  const _batchQueue = useBatchQueue();
+  const batchQueueStats = useBatchQueueStats();
   const history = useGenerationHistory({ limit: 20 });
   const stats: GenerationStats | null = useGenerationStats();
   const { cancelGeneration, retryGeneration, clearHistory } = useGenerationStore();
 
-  const [activeTab, setActiveTab] = useState<'active' | 'queue' | 'history'>('active');
+  const [activeTab, setActiveTab] = useState<'active' | 'queue' | 'batch' | 'history'>('active');
+
+  // Count queued items from batch queue
+  const batchQueuedCount = batchQueueStats?.queued || 0;
+  const batchProcessingCount = batchQueueStats?.processing || 0;
 
   const handleCancel = useCallback(async (id: UUID) => {
     await cancelGeneration(id);
@@ -48,7 +57,7 @@ export function GenerationPanel({ onViewResult }: GenerationPanelProps) {
         <h2 className="text-lg font-semibold text-text-primary">Generation</h2>
         {stats && (
           <p className="text-sm text-text-secondary mt-1">
-            {stats.totalGenerations} total • {activeGenerations.length} active • {queue.length} queued
+            {stats.totalGenerations} total • {activeGenerations.length} active • {batchQueuedCount + batchProcessingCount} in batch queue
           </p>
         )}
       </div>
@@ -57,7 +66,8 @@ export function GenerationPanel({ onViewResult }: GenerationPanelProps) {
       <div className="flex border-b border-border bg-surface">
         {[
           { key: 'active', label: 'Active', count: activeGenerations.length },
-          { key: 'queue', label: 'Queue', count: queue.length },
+          { key: 'batch', label: 'Batch Queue', count: batchQueuedCount + batchProcessingCount },
+          { key: 'queue', label: 'Legacy Queue', count: queue.length },
           { key: 'history', label: 'History', count: history.length },
         ].map((tab) => (
           <button
@@ -91,6 +101,10 @@ export function GenerationPanel({ onViewResult }: GenerationPanelProps) {
           />
         )}
 
+        {activeTab === 'batch' && (
+          <GenerationQueue onViewResult={onViewResult} />
+        )}
+
         {activeTab === 'queue' && (
           <QueueList
             queue={queue}
@@ -109,7 +123,7 @@ export function GenerationPanel({ onViewResult }: GenerationPanelProps) {
       </div>
 
       {/* Stats Footer */}
-      {stats && (
+      {stats && activeTab !== 'batch' && (
         <div className="p-4 border-t border-border bg-surface">
           <div className="grid grid-cols-4 gap-4 text-center">
             <div>
@@ -208,7 +222,7 @@ function ActiveGenerationCard({ generation, onCancel, onViewResult }: ActiveGene
         </div>
 
         <div className="flex items-center gap-2">
-          <span className={`px-2 py-0.5 text-xs text-white rounded ${statusColors[generation.status]}`}>
+          <span data-testid="generation-status" className={`px-2 py-0.5 text-xs text-white rounded ${statusColors[generation.status]}`}>
             {generation.status}
           </span>
           {generation.canCancel && (
@@ -239,7 +253,7 @@ function ActiveGenerationCard({ generation, onCancel, onViewResult }: ActiveGene
 
       {/* Streamed content preview */}
       {generation.type === 'text' && streamedContent && (
-        <div className="mt-3 p-3 bg-background rounded border border-border max-h-32 overflow-y-auto">
+        <div data-testid="stream-output" className="mt-3 p-3 bg-background rounded border border-border max-h-32 overflow-y-auto">
           <pre className="text-sm text-text-primary whitespace-pre-wrap font-mono">
             {streamedContent.slice(-500)}
             {generation.status === 'streaming' && (

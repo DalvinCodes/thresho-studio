@@ -17,7 +17,8 @@ export type ProviderType =
   | 'imagen'      // Google Imagen 3
   | 'runway'      // Runway Gen-4
   | 'veo'         // Google Veo 3
-  | 'kling';      // Kling AI
+  | 'kling'       // Kling AI
+  | 'openrouter'; // OpenRouter - unified API for multiple providers
 export type ContentType = 'text' | 'image' | 'video';
 export type AssetFormat = 'jpg' | 'jpeg' | 'png' | 'gif' | 'webp' | 'svg' | 'mp4' | 'webm' | 'mov' | 'txt' | 'md';
 

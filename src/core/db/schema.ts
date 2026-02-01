@@ -25,6 +25,11 @@ export async function initializeSchema(): Promise<void> {
   await createAssetCollectionsTable(db);
   await createGenerationRecordsTable(db);
   await createProjectsTable(db);
+  await createShotListsTable(db);
+  await createShotsTable(db);
+  await createEquipmentPresetsTable(db);
+  await createTalentProfilesTable(db);
+  await createTalentReferenceImagesTable(db);
 
   // Create indexes
   await createIndexes(db);
@@ -239,6 +244,139 @@ async function createProjectsTable(db: DB): Promise<void> {
   `);
 }
 
+async function createShotListsTable(db: DB): Promise<void> {
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS shot_lists (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT,
+      projectId TEXT,
+      director TEXT,
+      cinematographer TEXT,
+      productionDate INTEGER,
+      contentType TEXT NOT NULL CHECK(contentType IN ('text', 'image', 'video')),
+      brandId TEXT,
+      status TEXT DEFAULT 'draft' CHECK(status IN ('draft', 'in-production', 'completed', 'archived')),
+      totalShots INTEGER DEFAULT 0,
+      completedShots INTEGER DEFAULT 0,
+      defaultAspectRatio TEXT DEFAULT '16:9',
+      defaultLighting TEXT DEFAULT 'natural',
+      defaultEquipmentPresetId TEXT,
+      tags TEXT DEFAULT '[]',
+      metadata TEXT,
+      createdAt INTEGER NOT NULL,
+      updatedAt INTEGER NOT NULL,
+      FOREIGN KEY (projectId) REFERENCES projects(id) ON DELETE SET NULL,
+      FOREIGN KEY (brandId) REFERENCES brand_profiles(id) ON DELETE SET NULL,
+      FOREIGN KEY (defaultEquipmentPresetId) REFERENCES equipment_presets(id) ON DELETE SET NULL
+    )
+  `);
+}
+
+async function createShotsTable(db: DB): Promise<void> {
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS shots (
+      id TEXT PRIMARY KEY,
+      shotListId TEXT NOT NULL,
+      shotNumber TEXT NOT NULL,
+      name TEXT NOT NULL,
+      description TEXT NOT NULL,
+      notes TEXT,
+      shotType TEXT NOT NULL,
+      cameraMovement TEXT NOT NULL,
+      lighting TEXT NOT NULL,
+      aspectRatio TEXT NOT NULL,
+      duration INTEGER,
+      fps INTEGER,
+      referenceImageUrl TEXT,
+      storyboardImageUrl TEXT,
+      generatedAssetId TEXT,
+      location TEXT,
+      subjects TEXT DEFAULT '[]',
+      props TEXT DEFAULT '[]',
+      dialogue TEXT,
+      soundEffects TEXT DEFAULT '[]',
+      musicCue TEXT,
+      status TEXT DEFAULT 'planned' CHECK(status IN ('planned', 'scripted', 'storyboarded', 'approved', 'in-progress', 'review', 'completed', 'rejected')),
+      priority INTEGER DEFAULT 3,
+      orderIndex INTEGER NOT NULL,
+      promptTemplateId TEXT,
+      generatedPrompt TEXT,
+      providerPreference TEXT,
+      estimatedDuration INTEGER,
+      actualDuration INTEGER,
+      tags TEXT DEFAULT '[]',
+      metadata TEXT,
+      createdAt INTEGER NOT NULL,
+      updatedAt INTEGER NOT NULL,
+      FOREIGN KEY (shotListId) REFERENCES shot_lists(id) ON DELETE CASCADE,
+      FOREIGN KEY (generatedAssetId) REFERENCES assets(id) ON DELETE SET NULL,
+      FOREIGN KEY (promptTemplateId) REFERENCES prompt_templates(id) ON DELETE SET NULL
+    )
+  `);
+}
+
+async function createEquipmentPresetsTable(db: DB): Promise<void> {
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS equipment_presets (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT,
+      camera TEXT,
+      lens TEXT,
+      lighting TEXT NOT NULL,
+      movement TEXT NOT NULL,
+      shotType TEXT NOT NULL,
+      aspectRatio TEXT NOT NULL,
+      fps INTEGER,
+      resolution TEXT,
+      isDefault INTEGER DEFAULT 0,
+      tags TEXT DEFAULT '[]',
+      createdAt INTEGER NOT NULL,
+      updatedAt INTEGER NOT NULL
+    )
+  `);
+}
+
+async function createTalentProfilesTable(db: DB): Promise<void> {
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS talent_profiles (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      type TEXT NOT NULL CHECK(type IN ('character', 'person', 'creature', 'object', 'environment', 'style')),
+      description TEXT NOT NULL,
+      appearance TEXT NOT NULL,
+      personality TEXT,
+      primaryImageId TEXT,
+      promptFragments TEXT NOT NULL,
+      tags TEXT DEFAULT '[]',
+      brandId TEXT,
+      projectId TEXT,
+      isFavorite INTEGER DEFAULT 0,
+      isArchived INTEGER DEFAULT 0,
+      createdAt INTEGER NOT NULL,
+      updatedAt INTEGER NOT NULL,
+      FOREIGN KEY (brandId) REFERENCES brand_profiles(id) ON DELETE SET NULL,
+      FOREIGN KEY (projectId) REFERENCES projects(id) ON DELETE SET NULL
+    )
+  `);
+}
+
+async function createTalentReferenceImagesTable(db: DB): Promise<void> {
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS talent_reference_images (
+      id TEXT PRIMARY KEY,
+      talentId TEXT NOT NULL,
+      url TEXT NOT NULL,
+      thumbnailUrl TEXT,
+      caption TEXT,
+      isPrimary INTEGER DEFAULT 0,
+      createdAt INTEGER NOT NULL,
+      FOREIGN KEY (talentId) REFERENCES talent_profiles(id) ON DELETE CASCADE
+    )
+  `);
+}
+
 async function createIndexes(db: DB): Promise<void> {
   // Provider indexes
   await db.exec('CREATE INDEX IF NOT EXISTS idx_providers_active ON providers(isActive)');
@@ -273,6 +411,33 @@ async function createIndexes(db: DB): Promise<void> {
 
   // Project indexes
   await db.exec('CREATE INDEX IF NOT EXISTS idx_projects_archived ON projects(isArchived)');
+
+  // Shot list indexes
+  await db.exec('CREATE INDEX IF NOT EXISTS idx_shot_lists_project ON shot_lists(projectId)');
+  await db.exec('CREATE INDEX IF NOT EXISTS idx_shot_lists_status ON shot_lists(status)');
+  await db.exec('CREATE INDEX IF NOT EXISTS idx_shot_lists_content_type ON shot_lists(contentType)');
+  await db.exec('CREATE INDEX IF NOT EXISTS idx_shot_lists_created ON shot_lists(createdAt DESC)');
+
+  // Shot indexes
+  await db.exec('CREATE INDEX IF NOT EXISTS idx_shots_shot_list ON shots(shotListId)');
+  await db.exec('CREATE INDEX IF NOT EXISTS idx_shots_status ON shots(status)');
+  await db.exec('CREATE INDEX IF NOT EXISTS idx_shots_order ON shots(shotListId, orderIndex)');
+  await db.exec('CREATE INDEX IF NOT EXISTS idx_shots_created ON shots(createdAt DESC)');
+
+  // Equipment preset indexes
+  await db.exec('CREATE INDEX IF NOT EXISTS idx_equipment_presets_default ON equipment_presets(isDefault)');
+
+  // Talent profile indexes
+  await db.exec('CREATE INDEX IF NOT EXISTS idx_talent_profiles_type ON talent_profiles(type)');
+  await db.exec('CREATE INDEX IF NOT EXISTS idx_talent_profiles_brand ON talent_profiles(brandId)');
+  await db.exec('CREATE INDEX IF NOT EXISTS idx_talent_profiles_project ON talent_profiles(projectId)');
+  await db.exec('CREATE INDEX IF NOT EXISTS idx_talent_profiles_favorite ON talent_profiles(isFavorite)');
+  await db.exec('CREATE INDEX IF NOT EXISTS idx_talent_profiles_archived ON talent_profiles(isArchived)');
+  await db.exec('CREATE INDEX IF NOT EXISTS idx_talent_profiles_created ON talent_profiles(createdAt DESC)');
+
+  // Talent reference images indexes
+  await db.exec('CREATE INDEX IF NOT EXISTS idx_talent_reference_images_talent ON talent_reference_images(talentId)');
+  await db.exec('CREATE INDEX IF NOT EXISTS idx_talent_reference_images_primary ON talent_reference_images(isPrimary)');
 }
 
 /**
@@ -283,6 +448,11 @@ export async function resetDatabase(): Promise<void> {
   const db = getDatabase();
 
   const tables = [
+    'talent_reference_images',
+    'talent_profiles',
+    'shots',
+    'shot_lists',
+    'equipment_presets',
     'generation_records',
     'assets',
     'asset_collections',

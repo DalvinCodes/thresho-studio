@@ -22,6 +22,10 @@ export { ImagenAdapter } from './imagenAdapter';
 export { RunwayAdapter } from './runwayAdapter';
 export { VeoAdapter } from './veoAdapter';
 
+// Unified providers
+export { OpenRouterAdapter } from './openRouterAdapter';
+export type { OpenRouterAPIModel } from './openRouterAdapter';
+
 import type { ProviderType } from '../../../core/types/common';
 import type { ProviderConfig, ProviderCredential } from '../../../core/types/provider';
 import { BaseAdapter } from './baseAdapter';
@@ -34,6 +38,7 @@ import { FluxProAdapter } from './fluxProAdapter';
 import { ImagenAdapter } from './imagenAdapter';
 import { RunwayAdapter } from './runwayAdapter';
 import { VeoAdapter } from './veoAdapter';
+import { OpenRouterAdapter } from './openRouterAdapter';
 
 /**
  * Adapter registry mapping provider types to adapter classes
@@ -49,6 +54,7 @@ const adapterRegistry: Record<ProviderType, new (config: ProviderConfig, credent
   runway: RunwayAdapter,
   veo: VeoAdapter,
   kling: OpenAIAdapter, // Placeholder - Kling uses similar API pattern
+  openrouter: OpenRouterAdapter,
 };
 
 /**
@@ -186,11 +192,21 @@ export const providerMeta: ProviderMeta[] = [
   {
     type: 'veo',
     name: 'veo',
-    displayName: 'Google Veo 3',
+    displayName: 'Google Veo',
     description: 'Video generation with native audio',
     icon: '🎥',
     requiresApiKey: true,
     docsUrl: 'https://cloud.google.com/vertex-ai/generative-ai/docs/video/generate-videos',
     contentTypes: ['video'],
+  },
+  {
+    type: 'openrouter',
+    name: 'openrouter',
+    displayName: 'OpenRouter',
+    description: 'Access 100+ AI models with one API key - OpenAI, Anthropic, Google, and more',
+    icon: '🌐',
+    requiresApiKey: true,
+    docsUrl: 'https://openrouter.ai/docs',
+    contentTypes: ['text', 'image'],
   },
 ];

@@ -1,6 +1,7 @@
 /**
- * SQLite database adapter using @sqlite.org/sqlite-wasm with OPFS
- * Provides persistent storage in the browser
+ * SQLite database adapter using @sqlite.org/sqlite-wasm
+ * Uses in-memory SQLite with IndexedDB persistence (export/import database blob)
+ * This approach works in the main thread without needing OPFS/Workers
  */
 
 import type { UUID } from '../types/common';
@@ -18,9 +19,112 @@ let db: Database | null = null;
 let isInitializing = false;
 let initPromise: Promise<Database> | null = null;
 
+// IndexedDB storage for database persistence
+const IDB_NAME = 'thresho-studio-db';
+const IDB_STORE = 'sqlite-data';
+const IDB_KEY = 'database';
+
+// Debounce timer for saving
+let saveTimeout: ReturnType<typeof setTimeout> | null = null;
+const SAVE_DEBOUNCE_MS = 1000; // Save 1 second after last write
+
 /**
- * Initialize the SQLite database with OPFS persistence
- * Uses a worker for better performance
+ * Open IndexedDB connection
+ */
+function openIndexedDB(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(IDB_NAME, 1);
+    
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve(request.result);
+    
+    request.onupgradeneeded = (event) => {
+      const db = (event.target as IDBOpenDBRequest).result;
+      if (!db.objectStoreNames.contains(IDB_STORE)) {
+        db.createObjectStore(IDB_STORE);
+      }
+    };
+  });
+}
+
+/**
+ * Load database blob from IndexedDB
+ */
+async function loadDatabaseFromIDB(): Promise<ArrayBuffer | null> {
+  try {
+    const idb = await openIndexedDB();
+    return new Promise((resolve, reject) => {
+      const tx = idb.transaction(IDB_STORE, 'readonly');
+      const store = tx.objectStore(IDB_STORE);
+      const request = store.get(IDB_KEY);
+      
+      request.onerror = () => {
+        idb.close();
+        reject(request.error);
+      };
+      request.onsuccess = () => {
+        idb.close();
+        resolve(request.result || null);
+      };
+    });
+  } catch (error) {
+    console.warn('Failed to load database from IndexedDB:', error);
+    return null;
+  }
+}
+
+/**
+ * Save database blob to IndexedDB
+ */
+async function saveDatabaseToIDB(data: ArrayBuffer): Promise<void> {
+  try {
+    const idb = await openIndexedDB();
+    return new Promise((resolve, reject) => {
+      const tx = idb.transaction(IDB_STORE, 'readwrite');
+      const store = tx.objectStore(IDB_STORE);
+      const request = store.put(data, IDB_KEY);
+      
+      request.onerror = () => {
+        idb.close();
+        reject(request.error);
+      };
+      request.onsuccess = () => {
+        idb.close();
+        resolve();
+      };
+    });
+  } catch (error) {
+    console.error('Failed to save database to IndexedDB:', error);
+  }
+}
+
+// Store reference to sqlite3 and sqliteDb for export operations
+let sqlite3Instance: any = null;
+let sqliteDbInstance: any = null;
+
+/**
+ * Schedule a debounced save of the database
+ */
+function scheduleSave(): void {
+  if (saveTimeout) {
+    clearTimeout(saveTimeout);
+  }
+  
+  saveTimeout = setTimeout(async () => {
+    if (sqlite3Instance && sqliteDbInstance) {
+      try {
+        const data = sqlite3Instance.capi.sqlite3_js_db_export(sqliteDbInstance.pointer);
+        await saveDatabaseToIDB(data.buffer);
+        console.log('Database saved to IndexedDB');
+      } catch (error) {
+        console.error('Failed to export database:', error);
+      }
+    }
+  }, SAVE_DEBOUNCE_MS);
+}
+
+/**
+ * Initialize the SQLite database with IndexedDB persistence
  */
 export async function initDatabase(): Promise<Database> {
   // Return existing connection
@@ -44,23 +148,45 @@ export async function initDatabase(): Promise<Database> {
 
       console.log('SQLite WASM initialized, version:', sqlite3.version.libVersion);
 
-      // Check for OPFS support
-      const hasOPFS = 'opfs' in sqlite3;
+      // Store sqlite3 reference for later export
+      sqlite3Instance = sqlite3;
 
-      let sqliteDb: unknown;
-
-      if (hasOPFS) {
-        // Use OPFS for persistent storage
-        console.log('Using OPFS for persistent storage');
-        sqliteDb = new sqlite3.oo1.OpfsDb('/thresho-studio.db');
+      // Try to load existing database from IndexedDB
+      const existingData = await loadDatabaseFromIDB();
+      
+      let sqliteDb: any;
+      
+      if (existingData) {
+        // Deserialize existing database
+        console.log('Loading existing database from IndexedDB...');
+        const p = sqlite3.wasm.allocFromTypedArray(new Uint8Array(existingData));
+        sqliteDb = new sqlite3.oo1.DB();
+        const rc = sqlite3.capi.sqlite3_deserialize(
+          sqliteDb.pointer,
+          'main',
+          p,
+          existingData.byteLength,
+          existingData.byteLength,
+          sqlite3.capi.SQLITE_DESERIALIZE_FREEONCLOSE | sqlite3.capi.SQLITE_DESERIALIZE_RESIZEABLE
+        );
+        if (rc !== 0) {
+          console.warn('Failed to deserialize database, creating new one');
+          sqliteDb.close();
+          sqliteDb = new sqlite3.oo1.DB(':memory:');
+        } else {
+          console.log('Database loaded from IndexedDB');
+        }
       } else {
-        // Fallback to in-memory (data won't persist across sessions)
-        console.warn('OPFS not available, using in-memory database');
+        // Create new in-memory database
+        console.log('Creating new in-memory database');
         sqliteDb = new sqlite3.oo1.DB(':memory:');
       }
 
-      // Create our wrapper
-      db = createDatabaseWrapper(sqliteDb as SQLiteDB);
+      // Store reference for export
+      sqliteDbInstance = sqliteDb;
+
+      // Create our wrapper with auto-save on writes
+      db = createDatabaseWrapper(sqliteDb as SQLiteDB, true);
 
       console.log('Database initialized successfully');
       return db;
@@ -82,12 +208,13 @@ interface SQLiteDB {
   exec(sql: string, options?: { bind?: unknown[] }): void;
   selectObjects<T>(sql: string, params?: unknown[]): T[];
   close(): void;
+  pointer?: number;
 }
 
 /**
  * Create a wrapper around the SQLite database with async interface
  */
-function createDatabaseWrapper(sqliteDb: SQLiteDB): Database {
+function createDatabaseWrapper(sqliteDb: SQLiteDB, enableAutoSave = false): Database {
   return {
     async exec(sql: string, params?: unknown[]): Promise<void> {
       try {
@@ -95,6 +222,10 @@ function createDatabaseWrapper(sqliteDb: SQLiteDB): Database {
           sqliteDb.exec(sql, { bind: params });
         } else {
           sqliteDb.exec(sql);
+        }
+        // Schedule save after write operations
+        if (enableAutoSave && !sql.trim().toUpperCase().startsWith('SELECT')) {
+          scheduleSave();
         }
       } catch (error) {
         console.error('SQL exec error:', sql, error);
@@ -118,8 +249,20 @@ function createDatabaseWrapper(sqliteDb: SQLiteDB): Database {
     },
 
     async close(): Promise<void> {
+      // Save before closing
+      if (sqlite3Instance && sqliteDbInstance) {
+        try {
+          const data = sqlite3Instance.capi.sqlite3_js_db_export(sqliteDbInstance.pointer);
+          await saveDatabaseToIDB(data.buffer);
+          console.log('Database saved before closing');
+        } catch (error) {
+          console.error('Failed to save database before closing:', error);
+        }
+      }
       sqliteDb.close();
       db = null;
+      sqlite3Instance = null;
+      sqliteDbInstance = null;
     },
   };
 }
@@ -221,5 +364,25 @@ export async function closeDatabase(): Promise<void> {
     await db.close();
     db = null;
     initPromise = null;
+  }
+}
+
+/**
+ * Force save the database to IndexedDB (useful before page unload)
+ */
+export async function forceSaveDatabase(): Promise<void> {
+  if (saveTimeout) {
+    clearTimeout(saveTimeout);
+    saveTimeout = null;
+  }
+  
+  if (sqlite3Instance && sqliteDbInstance) {
+    try {
+      const data = sqlite3Instance.capi.sqlite3_js_db_export(sqliteDbInstance.pointer);
+      await saveDatabaseToIDB(data.buffer);
+      console.log('Database force-saved to IndexedDB');
+    } catch (error) {
+      console.error('Failed to force-save database:', error);
+    }
   }
 }

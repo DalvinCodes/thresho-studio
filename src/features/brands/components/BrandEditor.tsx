@@ -28,7 +28,7 @@ interface BrandEditorProps {
 
 export function BrandEditor({ brandId, onClose }: BrandEditorProps) {
   const brand = useSelectedBrand();
-  const { isEditing, draft, isDirty } = useBrandEditor();
+  const { draft, isDirty } = useBrandEditor();
   const {
     startEditing,
     updateDraft,
@@ -39,7 +39,7 @@ export function BrandEditor({ brandId, onClose }: BrandEditorProps) {
     updateTypographyTokens,
     updateVisualStyleTokens,
     updateVoiceTokens,
-    updateAssetTokens,
+    // updateAssetTokens, - unused
     addCustomToken,
     removeCustomToken,
     updateCustomToken,

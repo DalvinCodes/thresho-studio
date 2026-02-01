@@ -3,6 +3,7 @@
  * Manages prompt templates, versions, and labels
  */
 
+import { useMemo } from 'react';
 import { create } from 'zustand';
 import { devtools, subscribeWithSelector } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
@@ -17,6 +18,13 @@ import type {
   TemplateWithVersion,
   TemplateSearchParams,
 } from '../../core/types/prompt';
+import {
+  loadTemplatesFromDb,
+  saveTemplateToDb,
+  saveVersionToDb,
+  saveLabelToDb,
+  deleteLabelFromDb,
+} from './services/templateDbService';
 
 interface TemplateStoreState {
   // Template data
@@ -162,6 +170,9 @@ export const useTemplateStore = create<TemplateStore>()(
             s.labels.set(id, []);
           });
 
+          // Persist to database
+          await saveTemplateToDb(template);
+
           return id;
         },
 
@@ -172,6 +183,8 @@ export const useTemplateStore = create<TemplateStore>()(
             if (template) {
               Object.assign(template, updates);
               template.updatedAt = createTimestamp();
+              // Persist to database (fire and forget)
+              saveTemplateToDb({ ...template });
             }
           });
         },
@@ -183,6 +196,8 @@ export const useTemplateStore = create<TemplateStore>()(
             if (template) {
               template.isArchived = true;
               template.updatedAt = createTimestamp();
+              // Persist to database (fire and forget)
+              saveTemplateToDb({ ...template });
             }
           });
         },
@@ -254,8 +269,13 @@ export const useTemplateStore = create<TemplateStore>()(
             if (t) {
               t.currentVersionId = id;
               t.updatedAt = createTimestamp();
+              // Persist template update to database (fire and forget)
+              saveTemplateToDb({ ...t });
             }
           });
+
+          // Persist version to database
+          await saveVersionToDb(promptVersion);
 
           return id;
         },
@@ -289,12 +309,15 @@ export const useTemplateStore = create<TemplateStore>()(
           set((s) => {
             const labels = s.labels.get(templateId) || [];
             const existing = labels.find((l) => l.label === label);
+            const now = createTimestamp();
 
             if (existing) {
               existing.versionId = versionId;
-              existing.updatedAt = createTimestamp();
+              existing.updatedAt = now;
+              // Persist to database (fire and forget)
+              saveLabelToDb({ ...existing });
             } else {
-              labels.push({
+              const newLabel: PromptLabel = {
                 id: createUUID(),
                 templateId,
                 versionId,
@@ -302,10 +325,13 @@ export const useTemplateStore = create<TemplateStore>()(
                 labelType: label === 'production' ? 'production' :
                            label === 'staging' ? 'staging' :
                            label === 'draft' ? 'draft' : 'experiment',
-                createdAt: createTimestamp(),
-                updatedAt: createTimestamp(),
-              });
+                createdAt: now,
+                updatedAt: now,
+              };
+              labels.push(newLabel);
               s.labels.set(templateId, labels);
+              // Persist to database (fire and forget)
+              saveLabelToDb(newLabel);
             }
           });
         },
@@ -317,6 +343,8 @@ export const useTemplateStore = create<TemplateStore>()(
             const filtered = labels.filter((l) => l.label !== label);
             s.labels.set(templateId, filtered);
           });
+          // Persist to database (fire and forget)
+          deleteLabelFromDb(templateId, label);
         },
 
         // Get version by label
@@ -473,7 +501,29 @@ export const useTemplateStore = create<TemplateStore>()(
           });
 
           try {
-            // TODO: Load from SQLite
+            const { templates, versions, labels } = await loadTemplatesFromDb();
+
+            set((s) => {
+              // Clear existing data
+              s.templates.clear();
+              s.versions.clear();
+              s.labels.clear();
+
+              // Load templates
+              for (const template of templates) {
+                s.templates.set(template.id, template);
+              }
+
+              // Load versions
+              for (const [templateId, templateVersions] of versions) {
+                s.versions.set(templateId, templateVersions);
+              }
+
+              // Load labels
+              for (const [templateId, templateLabels] of labels) {
+                s.labels.set(templateId, templateLabels);
+              }
+            });
           } finally {
             set((s) => {
               s.isLoading = false;
@@ -545,29 +595,46 @@ export const useTemplateStore = create<TemplateStore>()(
   )
 );
 
-// Selector hooks - use subscribeWithSelector for arrays/objects
+// Selector hooks - use useMemo to prevent infinite re-renders from new array/object creation
 export const useTemplates = () => {
-  const store = useTemplateStore();
-  return store.getFilteredTemplates();
+  const templates = useTemplateStore((state) => state.templates);
+  const versions = useTemplateStore((state) => state.versions);
+  const labels = useTemplateStore((state) => state.labels);
+  const searchParams = useTemplateStore((state) => state.searchParams);
+  const getFilteredTemplates = useTemplateStore((state) => state.getFilteredTemplates);
+
+  return useMemo(
+    () => getFilteredTemplates(),
+    [templates, versions, labels, searchParams, getFilteredTemplates]
+  );
 };
 
-export const useSelectedTemplate = () =>
-  useTemplateStore((state) =>
-    state.selectedTemplateId
-      ? state.templates.get(state.selectedTemplateId)
-      : null
-  );
+export const useSelectedTemplate = () => {
+  const selectedTemplateId = useTemplateStore((state) => state.selectedTemplateId);
+  const templates = useTemplateStore((state) => state.templates);
 
-export const useSelectedVersion = () =>
-  useTemplateStore((state) =>
-    state.selectedVersionId
-      ? state.getVersion(state.selectedVersionId)
-      : null
+  return useMemo(
+    () => (selectedTemplateId ? templates.get(selectedTemplateId) : null),
+    [selectedTemplateId, templates]
   );
+};
+
+export const useSelectedVersion = () => {
+  const selectedVersionId = useTemplateStore((state) => state.selectedVersionId);
+  const versions = useTemplateStore((state) => state.versions);
+
+  return useMemo(() => {
+    if (!selectedVersionId) return null;
+    for (const templateVersions of versions.values()) {
+      const found = templateVersions.find((v) => v.id === selectedVersionId);
+      if (found) return found;
+    }
+    return null;
+  }, [selectedVersionId, versions]);
+};
 
 export const useEditorDraft = () => {
-  const store = useTemplateStore();
-  return store.editorDraft;
+  return useTemplateStore((state) => state.editorDraft);
 };
 
 export const useHasUnsavedChanges = () =>

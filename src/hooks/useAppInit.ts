@@ -6,6 +6,18 @@
 import { useEffect, useRef } from 'react';
 import { useAppStore } from '../core/store';
 import { initDatabase, initializeSchema } from '../core/db';
+import { initializeStorage, getStorageType } from '../core/storage';
+
+// Store initialization imports
+import { useProviderStore } from '../features/providers/store';
+import { initBrandStore } from '../features/brands/store';
+import { initTalentStore } from '../features/talent/store';
+import { useTemplateStore } from '../features/templates/store';
+import { useAssetStore } from '../features/assets/store';
+import { loadAssetsFromDb } from '../features/assets/services/assetDbService';
+import { useGenerationStore } from '../features/generation/store';
+import { useShotListStore } from '../features/shotList/store';
+import { loadShotListsFromDb } from '../features/shotList/services/shotListDbService';
 
 /**
  * Hook to initialize the application on mount
@@ -30,16 +42,56 @@ export function useAppInit() {
       try {
         console.log('Initializing Thresho Studio...');
 
-        // Step 1: Initialize SQLite database
+        // Step 1: Initialize file storage
+        console.log('Initializing file storage...');
+        await initializeStorage();
+        const storageType = getStorageType();
+        console.log(`  - Using ${storageType} storage`);
+
+        // Step 2: Initialize SQLite database
         console.log('Initializing database...');
         await initDatabase();
 
-        // Step 2: Create database schema
+        // Step 3: Create database schema
         console.log('Creating database schema...');
         await initializeSchema();
 
-        // Step 3: Load any seed data if needed
-        // await seedDefaultData();
+        // Step 4: Load all stores from database
+        console.log('Loading stores from database...');
+        
+        // Load providers (includes validation of credentials)
+        await useProviderStore.getState().loadFromDatabase();
+        console.log('  - Providers loaded');
+        
+        // Load brands
+        await initBrandStore();
+        console.log('  - Brands loaded');
+        
+        // Load talent profiles
+        await initTalentStore();
+        console.log('  - Talents loaded');
+        
+        // Load templates
+        await useTemplateStore.getState().loadFromDatabase();
+        console.log('  - Templates loaded');
+        
+        // Load assets
+        const { assets, collections } = await loadAssetsFromDb();
+        useAssetStore.getState().loadFromDatabase(assets, collections);
+        console.log(`  - Assets loaded (${assets.length} assets, ${collections.length} collections)`);
+        
+        // Load generation history
+        await useGenerationStore.getState().initializeFromDatabase();
+        console.log('  - Generation history loaded');
+        
+        // Load shot lists
+        const shotListData = await loadShotListsFromDb();
+        useShotListStore.getState().loadFromDatabase(shotListData);
+        console.log(`  - Shot lists loaded (${shotListData.shotLists.length} lists, ${shotListData.shots.length} shots)`);
+
+        // Step 5: Initialize default providers if none exist
+        await useProviderStore.getState().initializeDefaults();
+        console.log('  - Default providers initialized');
 
         console.log('Thresho Studio initialized successfully');
         setInitState('ready');

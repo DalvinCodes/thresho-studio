@@ -5,14 +5,17 @@
 
 import { useState } from 'react';
 import { ProviderSettings } from '../features/providers/components/ProviderSettings';
+import { StorageSettings as StorageSettingsFeature } from '../features/settings';
+import { CostDashboard } from '../features/generation/components/CostDashboard';
 
-type SettingsTab = 'providers' | 'preferences' | 'storage' | 'about';
+type SettingsTab = 'providers' | 'costs' | 'preferences' | 'storage' | 'about';
 
 export function SettingsPage() {
   const [activeTab, setActiveTab] = useState<SettingsTab>('providers');
 
   const tabs = [
     { id: 'providers' as const, label: 'Providers', icon: '⚡' },
+    { id: 'costs' as const, label: 'Costs', icon: '💰' },
     { id: 'preferences' as const, label: 'Preferences', icon: '⚙️' },
     { id: 'storage' as const, label: 'Storage', icon: '💾' },
     { id: 'about' as const, label: 'About', icon: 'ℹ️' },
@@ -48,10 +51,20 @@ export function SettingsPage() {
       {/* Settings Content */}
       <div className="flex-1 overflow-y-auto">
         {activeTab === 'providers' && <ProviderSettings />}
+        {activeTab === 'costs' && <CostsSettings />}
         {activeTab === 'preferences' && <PreferencesSettings />}
         {activeTab === 'storage' && <StorageSettings />}
         {activeTab === 'about' && <AboutSettings />}
       </div>
+    </div>
+  );
+}
+
+// Costs Settings - wrapper for the CostDashboard
+function CostsSettings() {
+  return (
+    <div className="max-w-4xl mx-auto p-8">
+      <CostDashboard />
     </div>
   );
 }
@@ -116,54 +129,18 @@ function PreferencesSettings() {
   );
 }
 
-// Storage Settings
+// Storage Settings - wrapper to use the feature component with page styling
 function StorageSettings() {
   return (
     <div className="max-w-2xl mx-auto p-8 space-y-6">
       <div>
         <h3 className="text-xl font-semibold text-text-primary mb-2">Storage</h3>
-        <p className="text-text-secondary">Manage your local data and storage</p>
+        <p className="text-text-secondary">Manage your local data and file storage</p>
       </div>
 
+      {/* File Storage Section */}
       <div className="bg-surface rounded-lg border border-border p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <p className="font-medium text-text-primary">Database Size</p>
-            <p className="text-sm text-text-secondary">SQLite database stored locally</p>
-          </div>
-          <p className="text-text-primary font-mono">~0 MB</p>
-        </div>
-
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <p className="font-medium text-text-primary">Cached Assets</p>
-            <p className="text-sm text-text-secondary">Locally cached generated content</p>
-          </div>
-          <p className="text-text-primary font-mono">~0 MB</p>
-        </div>
-
-        <div className="h-2 bg-background rounded-full overflow-hidden">
-          <div className="h-full bg-primary w-1/4" />
-        </div>
-        <p className="text-sm text-text-secondary mt-2">
-          Using approximately 0% of available storage
-        </p>
-      </div>
-
-      <div className="bg-surface rounded-lg border border-border p-6 space-y-4">
-        <h4 className="font-medium text-text-primary">Data Management</h4>
-
-        <button className="w-full py-2 bg-background border border-border rounded-lg text-text-primary hover:bg-surface-hover transition-colors">
-          Export All Data
-        </button>
-
-        <button className="w-full py-2 bg-background border border-border rounded-lg text-text-primary hover:bg-surface-hover transition-colors">
-          Import Data
-        </button>
-
-        <button className="w-full py-2 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 hover:bg-red-500/20 transition-colors">
-          Clear All Data
-        </button>
+        <StorageSettingsFeature />
       </div>
     </div>
   );

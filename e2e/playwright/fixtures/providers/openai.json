@@ -1,0 +1,80 @@
+{
+  "textSuccess": {
+    "id": "mock-completion-id",
+    "object": "chat.completion",
+    "created": 1704067200,
+    "model": "gpt-4o",
+    "choices": [
+      {
+        "index": 0,
+        "message": {
+          "role": "assistant",
+          "content": "This is a mock response from OpenAI GPT-4."
+        },
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 15,
+      "completion_tokens": 25,
+      "total_tokens": 40
+    }
+  },
+  "textError": {
+    "error": {
+      "message": "Invalid API key provided",
+      "type": "invalid_request_error",
+      "code": "invalid_api_key"
+    }
+  },
+  "imageSuccess": {
+    "created": 1704067200,
+    "data": [
+      {
+        "url": "https://example.com/mock-image.png",
+        "revised_prompt": "A beautiful landscape with mountains and sunset"
+      }
+    ]
+  },
+  "streamChunks": [
+    {
+      "id": "mock-stream-id",
+      "object": "chat.completion.chunk",
+      "created": 1704067200,
+      "model": "gpt-4o",
+      "choices": [
+        {
+          "index": 0,
+          "delta": { "content": "Hello" },
+          "finish_reason": null
+        }
+      ]
+    },
+    {
+      "id": "mock-stream-id",
+      "object": "chat.completion.chunk",
+      "created": 1704067200,
+      "model": "gpt-4o",
+      "choices": [
+        {
+          "index": 0,
+          "delta": { "content": " world" },
+          "finish_reason": null
+        }
+      ]
+    },
+    {
+      "id": "mock-stream-id",
+      "object": "chat.completion.chunk",
+      "created": 1704067200,
+      "model": "gpt-4o",
+      "choices": [
+        {
+          "index": 0,
+          "delta": {},
+          "finish_reason": "stop"
+        }
+      ]
+    }
+  ]
+}

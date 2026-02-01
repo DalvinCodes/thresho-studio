@@ -10,6 +10,7 @@ import type { TemplateWithVersion, PromptVariable } from '../core/types/prompt';
 import { useGenerationStore, GenerationPanel } from '../features/generation';
 import { useTemplates, useTemplateStore } from '../features/templates/store';
 import { useBrands, useDefaultBrand } from '../features/brands';
+import { TalentSelector } from '../features/talent/components/TalentSelector';
 
 export function GeneratePage() {
   const templates: TemplateWithVersion[] = useTemplates();
@@ -20,6 +21,7 @@ export function GeneratePage() {
   const [contentType, setContentType] = useState<ContentType>('text');
   const [selectedTemplateId, setSelectedTemplateId] = useState<UUID | null>(null);
   const [selectedBrandId, setSelectedBrandId] = useState<UUID | null>(defaultBrand?.id || null);
+  const [selectedTalentIds, setSelectedTalentIds] = useState<UUID[]>([]);
   const [customPrompt, setCustomPrompt] = useState('');
   const [variables, setVariables] = useState<Record<string, string | number | boolean>>({});
   const [parameters, setParameters] = useState<GenerationParameters>({
@@ -59,13 +61,14 @@ export function GeneratePage() {
       type: contentType,
       promptTemplateId: selectedTemplateId || undefined,
       brandId: selectedBrandId || undefined,
+      talentIds: selectedTalentIds.length > 0 ? selectedTalentIds : undefined,
       customPrompt: !selectedTemplateId ? customPrompt : undefined,
       variables,
       parameters,
     };
 
     startGeneration(request);
-  }, [contentType, selectedTemplateId, selectedBrandId, customPrompt, variables, parameters, startGeneration]);
+  }, [contentType, selectedTemplateId, selectedBrandId, selectedTalentIds, customPrompt, variables, parameters, startGeneration]);
 
   // Check if can generate
   const canGenerate = selectedTemplateId || customPrompt.trim().length > 0;
@@ -139,6 +142,7 @@ export function GeneratePage() {
               <textarea
                 value={customPrompt}
                 onChange={(e) => setCustomPrompt(e.target.value)}
+                data-testid="prompt-input"
                 placeholder={
                   contentType === 'text'
                     ? 'Enter your prompt...'
@@ -234,6 +238,24 @@ export function GeneratePage() {
             {selectedBrandId && (
               <p className="mt-2 text-sm text-text-secondary">
                 Brand tokens will be automatically injected into your prompt.
+              </p>
+            )}
+          </div>
+
+          {/* Talent Selection */}
+          <div className="bg-surface rounded-lg border border-border p-4">
+            <label className="block text-sm font-medium text-text-primary mb-3">
+              Talents
+            </label>
+            <TalentSelector
+              selectedIds={selectedTalentIds}
+              onChange={setSelectedTalentIds}
+              filterByBrandId={selectedBrandId || undefined}
+              placeholder="Select talents to include..."
+            />
+            {selectedTalentIds.length > 0 && (
+              <p className="mt-2 text-sm text-text-secondary">
+                Talent descriptions will be injected into your prompt. Use {'{{TALENTS}}'} placeholder for precise placement.
               </p>
             )}
           </div>
@@ -396,6 +418,7 @@ export function GeneratePage() {
           <button
             onClick={handleGenerate}
             disabled={!canGenerate}
+            data-testid="generate-btn"
             className="w-full py-4 bg-primary text-white text-lg font-semibold rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             ✨ Generate {contentType.charAt(0).toUpperCase() + contentType.slice(1)}

@@ -1,0 +1,38 @@
+{
+  "createJobSuccess": {
+    "id": "job-runway-123456",
+    "status": "pending",
+    "created_at": "2024-01-01T00:00:00Z"
+  },
+  "createJobError": {
+    "error": {
+      "message": "Invalid request parameters",
+      "type": "invalid_request"
+    }
+  },
+  "statusQueued": {
+    "id": "job-runway-123456",
+    "status": "pending",
+    "progress": 0,
+    "created_at": "2024-01-01T00:00:00Z"
+  },
+  "statusProcessing": {
+    "id": "job-runway-123456",
+    "status": "running",
+    "progress": 45,
+    "estimated_time_remaining": 120
+  },
+  "statusCompleted": {
+    "id": "job-runway-123456",
+    "status": "succeeded",
+    "progress": 100,
+    "output": ["https://example.com/runway-video.mp4"],
+    "completed_at": "2024-01-01T00:01:30Z"
+  },
+  "statusFailed": {
+    "id": "job-runway-123456",
+    "status": "failed",
+    "progress": 0,
+    "failure": "Content policy violation detected"
+  }
+}

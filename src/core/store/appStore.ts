@@ -25,6 +25,7 @@ export type AppPage =
   | 'templates'
   | 'assets'
   | 'brands'
+  | 'talent'
   | 'shotlist'
   | 'projects'
   | 'settings';

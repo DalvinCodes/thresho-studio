@@ -1,0 +1,29 @@
+{
+  "predictSuccess": {
+    "predictions": [
+      {
+        "bytesBase64Encoded": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+        "mimeType": "image/png"
+      }
+    ]
+  },
+  "predictMultiple": {
+    "predictions": [
+      {
+        "bytesBase64Encoded": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+        "mimeType": "image/png"
+      },
+      {
+        "bytesBase64Encoded": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+        "mimeType": "image/png"
+      }
+    ]
+  },
+  "predictError": {
+    "error": {
+      "code": 400,
+      "message": "Invalid image generation request",
+      "status": "INVALID_ARGUMENT"
+    }
+  }
+}

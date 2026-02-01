@@ -37,6 +37,9 @@ export interface GenerationRequest {
   brandId?: UUID;
   variables?: Record<string, string | number | boolean>;
 
+  // Talent selection
+  talentIds?: UUID[];
+
   // Generation parameters
   parameters?: GenerationParameters;
 

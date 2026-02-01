@@ -12,6 +12,8 @@ import type {
   LightingSetup,
   AspectRatio,
 } from '../../../core/types/shotList';
+import type { TalentProfile } from '../../../core/types/talent';
+import { buildTalentDescription, matchTalentsToSubjects } from '../../../core/utils/talentInjection';
 
 // Shot type descriptions for prompt composition
 const SHOT_TYPE_DESCRIPTIONS: Record<ShotType, string> = {
@@ -99,7 +101,7 @@ const ASPECT_RATIO_HINTS: Record<AspectRatio, string> = {
  * Compose a professional prompt from shot metadata
  */
 export function composeShotPrompt(context: ShotPromptContext): ComposedShotPrompt {
-  const { shot, shotList, brand, equipmentPreset } = context;
+  const { shot, shotList, brand, equipmentPreset, talents } = context;
 
   // Build the main prompt components
   const components: string[] = [];
@@ -112,9 +114,28 @@ export function composeShotPrompt(context: ShotPromptContext): ComposedShotPromp
     components.push(shot.description);
   }
 
-  // 3. Subjects
+  // 3. Subjects - with talent matching
   if (shot.subjects && shot.subjects.length > 0) {
-    components.push(`featuring ${shot.subjects.join(', ')}`);
+    // Try to match talents to subjects
+    const matchedTalents = talents 
+      ? matchTalentsToSubjects(talents, shot.subjects)
+      : [];
+
+    if (matchedTalents.length > 0) {
+      // Use detailed talent descriptions for matched subjects
+      const talentDescriptions = matchedTalents.map(t => t.name);
+      const unmatchedSubjects = shot.subjects.filter(
+        s => !matchedTalents.some(t => 
+          t.name.toLowerCase().includes(s.toLowerCase()) ||
+          s.toLowerCase().includes(t.name.toLowerCase())
+        )
+      );
+      
+      const allSubjects = [...talentDescriptions, ...unmatchedSubjects];
+      components.push(`featuring ${allSubjects.join(', ')}`);
+    } else {
+      components.push(`featuring ${shot.subjects.join(', ')}`);
+    }
   }
 
   // 4. Location
@@ -149,7 +170,20 @@ export function composeShotPrompt(context: ShotPromptContext): ComposedShotPromp
   }
 
   // Compose the user prompt
-  const userPrompt = components.join(', ') + '.';
+  let userPrompt = components.join(', ') + '.';
+
+  // 9. Add detailed talent descriptions if available
+  if (talents && talents.length > 0) {
+    // Match talents to shot subjects for focused descriptions
+    const matchedTalents = shot.subjects && shot.subjects.length > 0
+      ? matchTalentsToSubjects(talents, shot.subjects)
+      : talents;
+
+    if (matchedTalents.length > 0) {
+      const talentDescription = buildTalentDescription(matchedTalents);
+      userPrompt += `\n\n--- Character Details ---\n${talentDescription}`;
+    }
+  }
 
   // Build system prompt for context
   let systemPrompt: string | undefined;

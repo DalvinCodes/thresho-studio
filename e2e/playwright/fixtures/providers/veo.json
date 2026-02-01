@@ -1,0 +1,45 @@
+{
+  "generateSuccess": {
+    "name": "operations/veo-1234567890",
+    "metadata": {
+      "@type": "type.googleapis.com/google.cloud.aiplatform.v1.CreateVideoResponse"
+    }
+  },
+  "generateError": {
+    "error": {
+      "code": 400,
+      "message": "Invalid video generation request",
+      "status": "INVALID_ARGUMENT"
+    }
+  },
+  "operationProcessing": {
+    "name": "operations/veo-1234567890",
+    "metadata": {
+      "progress": 0.5,
+      "@type": "type.googleapis.com/google.cloud.aiplatform.v1.CreateVideoMetadata"
+    },
+    "done": false
+  },
+  "operationCompleted": {
+    "name": "operations/veo-1234567890",
+    "done": true,
+    "response": {
+      "generatedVideos": [
+        {
+          "video": {
+            "uri": "https://example.com/veo-video.mp4",
+            "mimeType": "video/mp4"
+          }
+        }
+      ]
+    }
+  },
+  "operationFailed": {
+    "name": "operations/veo-1234567890",
+    "done": true,
+    "error": {
+      "code": 500,
+      "message": "Video generation failed"
+    }
+  }
+}

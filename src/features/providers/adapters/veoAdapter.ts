@@ -21,7 +21,7 @@ export class VeoAdapter extends BaseAdapter {
   }
 
   get displayName() {
-    return 'Google Veo 3';
+    return 'Google Veo';
   }
 
   get description() {
@@ -32,7 +32,7 @@ export class VeoAdapter extends BaseAdapter {
     return [
       {
         type: 'video',
-        models: ['veo-3.0', 'veo-2.0'],
+        models: ['veo-3.1-generate', 'veo-2.0-generate'],
         maxResolution: '4K',
         supportsStreaming: false,
         supportsBatching: false,
@@ -61,7 +61,7 @@ export class VeoAdapter extends BaseAdapter {
       throw this.createError('NO_CREDENTIALS', 'Google API key not configured', false);
     }
 
-    const model = request.model || 'veo-3.0';
+    const model = request.model || 'veo-3.1-generate';
     const url = `${this.baseUrl}/models/${model}:generateVideo?key=${this.credential!.apiKey}`;
 
     const body: Record<string, unknown> = {

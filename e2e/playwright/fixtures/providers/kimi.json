@@ -1,0 +1,64 @@
+{
+  "textSuccess": {
+    "id": "mock-kimi-completion",
+    "object": "chat.completion",
+    "created": 1704067200,
+    "model": "moonshot-v1-128k",
+    "choices": [
+      {
+        "index": 0,
+        "message": {
+          "role": "assistant",
+          "content": "This is a mock response from Kimi K2.5 with 256K context window support."
+        },
+        "finish_reason": "stop"
+      }
+    ],
+    "usage": {
+      "prompt_tokens": 12,
+      "completion_tokens": 22,
+      "total_tokens": 34
+    }
+  },
+  "streamChunks": [
+    {
+      "id": "mock-kimi-stream",
+      "object": "chat.completion.chunk",
+      "created": 1704067200,
+      "model": "moonshot-v1-128k",
+      "choices": [
+        {
+          "index": 0,
+          "delta": { "content": "Kimi" },
+          "finish_reason": null
+        }
+      ]
+    },
+    {
+      "id": "mock-kimi-stream",
+      "object": "chat.completion.chunk",
+      "created": 1704067200,
+      "model": "moonshot-v1-128k",
+      "choices": [
+        {
+          "index": 0,
+          "delta": { "content": " streaming" },
+          "finish_reason": null
+        }
+      ]
+    },
+    {
+      "id": "mock-kimi-stream",
+      "object": "chat.completion.chunk",
+      "created": 1704067200,
+      "model": "moonshot-v1-128k",
+      "choices": [
+        {
+          "index": 0,
+          "delta": { "content": " response" },
+          "finish_reason": "stop"
+        }
+      ]
+    }
+  ]
+}

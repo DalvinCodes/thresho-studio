@@ -1,0 +1,262 @@
+[
+  {
+    "name": "Product Launch Campaign",
+    "description": "Complete shot list for a product launch video campaign",
+    "contentType": "video",
+    "shots": [
+      {
+        "shotNumber": "1",
+        "name": "Opening Hero",
+        "description": "Wide establishing shot of product in stunning environment",
+        "shotType": "wide",
+        "cameraMovement": "static",
+        "lighting": "golden-hour",
+        "aspectRatio": "16:9",
+        "duration": 5,
+        "priority": 1,
+        "notes": "Hook viewers in first 3 seconds"
+      },
+      {
+        "shotNumber": "2",
+        "name": "Product Detail",
+        "description": "Close-up of product features and craftsmanship",
+        "shotType": "close-up",
+        "cameraMovement": "dolly-in",
+        "lighting": "studio-three-point",
+        "aspectRatio": "16:9",
+        "duration": 4,
+        "priority": 1
+      },
+      {
+        "shotNumber": "3",
+        "name": "In Use - Hands",
+        "description": "Hands interacting with product showing scale and usability",
+        "shotType": "medium",
+        "cameraMovement": "static",
+        "lighting": "natural",
+        "aspectRatio": "16:9",
+        "duration": 3,
+        "priority": 2
+      },
+      {
+        "shotNumber": "4",
+        "name": "Lifestyle Context",
+        "description": "Product in real-world setting with user",
+        "shotType": "medium",
+        "cameraMovement": "pan-right",
+        "lighting": "natural",
+        "aspectRatio": "16:9",
+        "duration": 5,
+        "priority": 2
+      },
+      {
+        "shotNumber": "5",
+        "name": "Feature Highlight",
+        "description": "Extreme close-up of key differentiating feature",
+        "shotType": "extreme-close",
+        "cameraMovement": "rack-focus",
+        "lighting": "studio-butterfly",
+        "aspectRatio": "16:9",
+        "duration": 3,
+        "priority": 1
+      },
+      {
+        "shotNumber": "6",
+        "name": "Brand Logo Reveal",
+        "description": "Clean shot of branding with product",
+        "shotType": "close-up",
+        "cameraMovement": "static",
+        "lighting": "high-key",
+        "aspectRatio": "16:9",
+        "duration": 2,
+        "priority": 1
+      }
+    ]
+  },
+  {
+    "name": "Social Media Content Series",
+    "description": "Multiple shots optimized for various social platforms",
+    "contentType": "image",
+    "shots": [
+      {
+        "shotNumber": "1A",
+        "name": "Instagram Square",
+        "description": "Centered product shot for Instagram feed",
+        "shotType": "medium",
+        "cameraMovement": "static",
+        "lighting": "studio-three-point",
+        "aspectRatio": "1:1",
+        "priority": 1
+      },
+      {
+        "shotNumber": "1B",
+        "name": "Instagram Portrait",
+        "description": "Vertical product shot for Instagram",
+        "shotType": "medium",
+        "cameraMovement": "static",
+        "lighting": "studio-three-point",
+        "aspectRatio": "4:5",
+        "priority": 1
+      },
+      {
+        "shotNumber": "2",
+        "name": "Story Format",
+        "description": "Full vertical shot for Instagram Stories",
+        "shotType": "medium",
+        "cameraMovement": "static",
+        "lighting": "natural",
+        "aspectRatio": "9:16",
+        "priority": 2
+      },
+      {
+        "shotNumber": "3",
+        "name": "Detail Flat Lay",
+        "description": "Overhead shot showing product with accessories",
+        "shotType": "aerial",
+        "cameraMovement": "static",
+        "lighting": "studio-three-point",
+        "aspectRatio": "1:1",
+        "priority": 2
+      },
+      {
+        "shotNumber": "4",
+        "name": "Lifestyle Wide",
+        "description": "Wide environmental shot for carousel",
+        "shotType": "wide",
+        "cameraMovement": "static",
+        "lighting": "natural",
+        "aspectRatio": "16:9",
+        "priority": 3
+      }
+    ]
+  },
+  {
+    "name": "E-commerce Product Photos",
+    "description": "Standard e-commerce product photography shots",
+    "contentType": "image",
+    "shots": [
+      {
+        "shotNumber": "1",
+        "name": "Hero White Background",
+        "description": "Clean product on white background - main image",
+        "shotType": "medium",
+        "cameraMovement": "static",
+        "lighting": "high-key",
+        "aspectRatio": "1:1",
+        "priority": 1
+      },
+      {
+        "shotNumber": "2",
+        "name": "Angle 1 - 45°",
+        "description": "Three-quarter angle showing depth",
+        "shotType": "medium",
+        "cameraMovement": "static",
+        "lighting": "high-key",
+        "aspectRatio": "1:1",
+        "priority": 1
+      },
+      {
+        "shotNumber": "3",
+        "name": "Angle 2 - Side",
+        "description": "Side profile view",
+        "shotType": "medium",
+        "cameraMovement": "static",
+        "lighting": "high-key",
+        "aspectRatio": "1:1",
+        "priority": 2
+      },
+      {
+        "shotNumber": "4",
+        "name": "Detail Shot",
+        "description": "Close-up of texture/material",
+        "shotType": "close-up",
+        "cameraMovement": "static",
+        "lighting": "studio-three-point",
+        "aspectRatio": "1:1",
+        "priority": 2
+      },
+      {
+        "shotNumber": "5",
+        "name": "Scale Reference",
+        "description": "Product with common object for scale",
+        "shotType": "medium",
+        "cameraMovement": "static",
+        "lighting": "high-key",
+        "aspectRatio": "1:1",
+        "priority": 3
+      },
+      {
+        "shotNumber": "6",
+        "name": "Lifestyle Context",
+        "description": "Product in use in real setting",
+        "shotType": "medium",
+        "cameraMovement": "static",
+        "lighting": "natural",
+        "aspectRatio": "4:5",
+        "priority": 3
+      }
+    ]
+  },
+  {
+    "name": "Brand Film B-Roll",
+    "description": "Atmospheric b-roll shots for brand film",
+    "contentType": "video",
+    "shots": [
+      {
+        "shotNumber": "B1",
+        "name": "Golden Hour Wide",
+        "description": "Sweeping wide shot at golden hour",
+        "shotType": "wide",
+        "cameraMovement": "pan-left",
+        "lighting": "golden-hour",
+        "aspectRatio": "21:9",
+        "duration": 8,
+        "priority": 1
+      },
+      {
+        "shotNumber": "B2",
+        "name": "Product Detail Rack Focus",
+        "description": "Rack focus from foreground to product",
+        "shotType": "close-up",
+        "cameraMovement": "rack-focus",
+        "lighting": "natural",
+        "aspectRatio": "21:9",
+        "duration": 5,
+        "priority": 1
+      },
+      {
+        "shotNumber": "B3",
+        "name": "Handheld Movement",
+        "description": "Organic handheld shot following subject",
+        "shotType": "medium",
+        "cameraMovement": "follow",
+        "lighting": "natural",
+        "aspectRatio": "21:9",
+        "duration": 6,
+        "priority": 2
+      },
+      {
+        "shotNumber": "B4",
+        "name": "Macro Texture",
+        "description": "Extreme close-up of material texture",
+        "shotType": "extreme-close",
+        "cameraMovement": "static",
+        "lighting": "studio-rembrandt",
+        "aspectRatio": "21:9",
+        "duration": 4,
+        "priority": 2
+      },
+      {
+        "shotNumber": "B5",
+        "name": "Dutch Angle",
+        "description": "Stylized dutch angle for tension",
+        "shotType": "medium",
+        "cameraMovement": "static",
+        "lighting": "low-key",
+        "aspectRatio": "21:9",
+        "duration": 3,
+        "priority": 3
+      }
+    ]
+  }
+]

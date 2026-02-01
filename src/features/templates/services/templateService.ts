@@ -11,6 +11,7 @@ import type {
 } from '../../../core/types/prompt';
 import type { BrandProfile, BrandTokenSchema } from '../../../core/types/brand';
 import { useTemplateStore } from '../store';
+import { getAvailableTalentTokenNames } from '../../../core/utils/talentInjection';
 
 // Variable placeholder pattern: {{variableName}} or {{brand.tokenKey}}
 const VARIABLE_PATTERN = /\{\{([a-zA-Z_][a-zA-Z0-9_]*(?:\.[a-zA-Z_][a-zA-Z0-9_]*)?)\}\}/g;
@@ -446,4 +447,41 @@ export function getAllTags(): string[] {
   }
 
   return Array.from(tags).sort();
+}
+
+/**
+ * Get all available token names for autocomplete (brand + talent)
+ */
+export function getAllAvailableTokens(): { brand: string[]; talent: string[] } {
+  // Brand tokens (existing)
+  const brandTokens = [
+    'primary_color',
+    'secondary_color',
+    'accent_color',
+    'neutral_dark',
+    'neutral_light',
+    'palette_description',
+    'primary_font',
+    'secondary_font',
+    'typography_style',
+    'aesthetic',
+    'photography_style',
+    'mood',
+    'art_direction',
+    'tone',
+    'forbidden_terms',
+    'forbidden_elements',
+    'writing_style',
+    'logo_url',
+    'icon_set_url',
+    'watermark_url',
+  ];
+
+  // Talent tokens from utility
+  const talentTokens = getAvailableTalentTokenNames();
+
+  return {
+    brand: brandTokens,
+    talent: talentTokens,
+  };
 }

@@ -1,0 +1,238 @@
+[
+  {
+    "name": "Product Hero Shot",
+    "description": "High-impact product photography for hero sections and main visuals",
+    "outputType": "image",
+    "category": "product",
+    "tags": ["product", "hero", "marketing"],
+    "systemPrompt": "You are an expert product photographer and prompt engineer. Create detailed, professional prompts for high-quality product photography.",
+    "userPrompt": "Professional product photography of {{product}}, {{setting}}, {{lighting}}, shot with {{camera}}, {{style}}, high resolution, commercial quality, sharp focus",
+    "variables": [
+      {
+        "name": "product",
+        "type": "string",
+        "description": "Product name or description",
+        "required": true
+      },
+      {
+        "name": "setting",
+        "type": "string",
+        "description": "Background and environment",
+        "required": false,
+        "defaultValue": "on clean white background"
+      },
+      {
+        "name": "lighting",
+        "type": "string",
+        "description": "Lighting setup",
+        "required": false,
+        "defaultValue": "soft studio lighting with subtle shadows"
+      },
+      {
+        "name": "camera",
+        "type": "string",
+        "description": "Camera equipment",
+        "required": false,
+        "defaultValue": "high-end DSLR with 85mm lens"
+      },
+      {
+        "name": "style",
+        "type": "string",
+        "description": "Photography style",
+        "required": false,
+        "defaultValue": "minimalist modern aesthetic"
+      }
+    ]
+  },
+  {
+    "name": "Lifestyle Scene",
+    "description": "Natural lifestyle photography showing products in use",
+    "outputType": "image",
+    "category": "lifestyle",
+    "tags": ["lifestyle", "contextual", "authentic"],
+    "systemPrompt": "You are a lifestyle photographer specializing in authentic, natural-looking product photography. Create prompts that feel genuine and relatable.",
+    "userPrompt": "Lifestyle photography of {{subject}} {{action}} in {{location}}, {{time_of_day}}, {{mood}}, natural candid moment, authentic feel, {{brand_style}}, documentary style",
+    "variables": [
+      {
+        "name": "subject",
+        "type": "string",
+        "description": "Main subject or person",
+        "required": true
+      },
+      {
+        "name": "action",
+        "type": "string",
+        "description": "What they're doing",
+        "required": false,
+        "defaultValue": "using the product"
+      },
+      {
+        "name": "location",
+        "type": "string",
+        "description": "Setting/location",
+        "required": false,
+        "defaultValue": "modern home interior"
+      },
+      {
+        "name": "time_of_day",
+        "type": "string",
+        "description": "Lighting time",
+        "required": false,
+        "defaultValue": "golden hour natural light"
+      },
+      {
+        "name": "mood",
+        "type": "string",
+        "description": "Emotional tone",
+        "required": false,
+        "defaultValue": "warm and inviting"
+      },
+      {
+        "name": "brand_style",
+        "type": "brand_token",
+        "description": "Brand visual style",
+        "required": false,
+        "brandTokenKey": "visualStyle.aesthetic"
+      }
+    ]
+  },
+  {
+    "name": "Social Media Post",
+    "description": "Optimized for social media platforms",
+    "outputType": "image",
+    "category": "social",
+    "tags": ["social", "instagram", "engagement"],
+    "systemPrompt": "Create eye-catching, scroll-stopping visuals optimized for social media engagement.",
+    "userPrompt": "Social media ready image: {{content}}, {{platform}} optimized, {{aspect_ratio}}, bold colors, high contrast, thumb-stopping visual, {{style}}, professional quality",
+    "variables": [
+      {
+        "name": "content",
+        "type": "string",
+        "description": "Main content description",
+        "required": true
+      },
+      {
+        "name": "platform",
+        "type": "enum",
+        "description": "Target platform",
+        "required": false,
+        "defaultValue": "Instagram",
+        "enumValues": ["Instagram", "Facebook", "Twitter", "LinkedIn", "TikTok"]
+      },
+      {
+        "name": "aspect_ratio",
+        "type": "enum",
+        "description": "Image proportions",
+        "required": false,
+        "defaultValue": "1:1 square",
+        "enumValues": ["1:1 square", "4:5 portrait", "16:9 landscape", "9:16 story"]
+      },
+      {
+        "name": "style",
+        "type": "string",
+        "description": "Visual style",
+        "required": false,
+        "defaultValue": "modern and trendy"
+      }
+    ]
+  },
+  {
+    "name": "Brand Story Video",
+    "description": "Cinematic brand narrative for video content",
+    "outputType": "video",
+    "category": "video",
+    "tags": ["video", "brand", "storytelling"],
+    "systemPrompt": "You are a cinematic director creating compelling brand narratives. Craft prompts for high-quality video content.",
+    "userPrompt": "Cinematic video: {{scene_description}}, {{camera_movement}}, {{lighting}}, {{duration}}, {{brand_mood}}, professional color grading, smooth motion, high production value",
+    "variables": [
+      {
+        "name": "scene_description",
+        "type": "string",
+        "description": "What happens in the scene",
+        "required": true
+      },
+      {
+        "name": "camera_movement",
+        "type": "enum",
+        "description": "Camera motion",
+        "required": false,
+        "defaultValue": "smooth dolly in",
+        "enumValues": ["static", "slow pan", "smooth dolly in", "gentle push", "subtle orbit"]
+      },
+      {
+        "name": "lighting",
+        "type": "string",
+        "description": "Lighting setup",
+        "required": false,
+        "defaultValue": "cinematic three-point lighting"
+      },
+      {
+        "name": "duration",
+        "type": "string",
+        "description": "Video length",
+        "required": false,
+        "defaultValue": "4 seconds"
+      },
+      {
+        "name": "brand_mood",
+        "type": "brand_token",
+        "description": "Brand mood descriptor",
+        "required": false,
+        "brandTokenKey": "visualStyle.mood"
+      }
+    ]
+  },
+  {
+    "name": "Marketing Copy",
+    "description": "Generate marketing text content",
+    "outputType": "text",
+    "category": "copy",
+    "tags": ["text", "marketing", "copywriting"],
+    "systemPrompt": "You are a professional copywriter. Create compelling, on-brand marketing copy that resonates with the target audience.",
+    "userPrompt": "Write {{content_type}} about {{topic}} for {{audience}}. Tone: {{tone}}. Length: {{length}}. {{brand_voice}}",
+    "variables": [
+      {
+        "name": "content_type",
+        "type": "enum",
+        "description": "Type of content",
+        "required": true,
+        "enumValues": ["headline", "product description", "social caption", "email subject", "CTA button text"]
+      },
+      {
+        "name": "topic",
+        "type": "string",
+        "description": "Subject matter",
+        "required": true
+      },
+      {
+        "name": "audience",
+        "type": "string",
+        "description": "Target audience",
+        "required": false,
+        "defaultValue": "general consumers"
+      },
+      {
+        "name": "tone",
+        "type": "brand_token",
+        "description": "Brand tone",
+        "required": false,
+        "brandTokenKey": "voice.tone"
+      },
+      {
+        "name": "length",
+        "type": "enum",
+        "description": "Content length",
+        "required": false,
+        "defaultValue": "medium (2-3 sentences)",
+        "enumValues": ["short (5-10 words)", "medium (2-3 sentences)", "long (paragraph)"]
+      },
+      {
+        "name": "brand_voice",
+        "type": "brand_token",
+        "description": "Brand voice guidelines",
+        "required": false,
+        "brandTokenKey": "voice.writingStyle"
+      }
+    ]
+  }
+]

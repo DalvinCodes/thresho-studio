@@ -4,7 +4,7 @@
 
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './core/store';
-import { useAppInit, useIsAppReady } from './hooks/useAppInit';
+import { useAppInit } from './hooks/useAppInit';
 import { useAppStore, useToasts } from './core/store';
 import type { Toast, PageId } from './core/store';
 import { ErrorBoundary } from './shared/components/ErrorBoundary';
@@ -16,6 +16,7 @@ import {
   TemplatesPage,
   AssetsPage,
   BrandsPage,
+  TalentPage,
   ShotListPage,
   SettingsPage,
 } from './pages';
@@ -78,16 +79,16 @@ function ToastContainer() {
   return (
     <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2">
       {toasts.map((toast: Toast) => (
-        <div
-          key={toast.id}
-          className={`
-            px-4 py-3 rounded-lg shadow-lg max-w-sm animate-slide-in
-            ${toast.type === 'success' ? 'bg-green-600' : ''}
-            ${toast.type === 'error' ? 'bg-red-600' : ''}
-            ${toast.type === 'warning' ? 'bg-yellow-600' : ''}
-            ${toast.type === 'info' ? 'bg-blue-600' : ''}
-          `}
-        >
+    <div
+      data-testid={toast.type === 'success' ? 'success-toast' : toast.type === 'error' ? 'error-toast' : 'toast'}
+      className={`
+        px-4 py-3 rounded-lg shadow-lg max-w-sm animate-slide-in
+        ${toast.type === 'success' ? 'bg-green-600' : ''}
+        ${toast.type === 'error' ? 'bg-red-600' : ''}
+        ${toast.type === 'warning' ? 'bg-yellow-600' : ''}
+        ${toast.type === 'info' ? 'bg-blue-600' : ''}
+      `}
+    >
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="font-medium text-white">{toast.title}</p>
@@ -167,6 +168,15 @@ const NAV_ITEMS: Array<{
     ),
   },
   {
+    id: 'talent',
+    label: 'Talent',
+    icon: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+      </svg>
+    ),
+  },
+  {
     id: 'shotlist',
     label: 'Shot List',
     icon: (
@@ -202,6 +212,8 @@ function PageRouter() {
       return <AssetsPage />;
     case 'brands':
       return <BrandsPage />;
+    case 'talent':
+      return <TalentPage />;
     case 'shotlist':
       return <ShotListPage />;
     case 'settings':
@@ -217,7 +229,7 @@ function AppLayout() {
   const setCurrentPage = useAppStore((state) => state.setCurrentPage);
 
   return (
-    <div className="min-h-screen bg-background flex">
+    <div className="min-h-screen bg-background flex" data-testid="app-shell">
       {/* Sidebar */}
       <aside className="w-64 bg-surface border-r border-border flex flex-col flex-shrink-0">
         {/* Logo */}
@@ -233,6 +245,7 @@ function AppLayout() {
               <li key={item.id}>
                 <button
                   onClick={() => setCurrentPage(item.id)}
+                  data-testid={`nav-${item.id}`}
                   className={`
                     w-full px-3 py-2.5 rounded-lg text-left flex items-center gap-3 transition-colors
                     ${

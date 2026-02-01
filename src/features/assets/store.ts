@@ -5,6 +5,7 @@
 
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
+import { useMemo } from 'react';
 import type { UUID, ContentType, AssetFormat } from '../../core/types/common';
 import { createUUID, createTimestamp } from '../../core/types/common';
 import type {
@@ -16,8 +17,25 @@ import type {
   AssetGalleryState,
   AssetUploadInput,
   BatchAssetOperation,
-  AssetWithGeneration,
 } from '../../core/types/asset';
+import {
+  saveAssetToDb,
+  deleteAssetFromDb,
+  deleteAssetsFromDb,
+  saveCollectionToDb,
+  deleteCollectionFromDb,
+} from './services/assetDbService';
+import {
+  getStorage,
+  isStorageInitialized,
+  generateThumbnail,
+  isStorageUrl,
+  parseStorageUrl,
+} from '../../core/storage';
+import {
+  getImageDimensions as getImageDims,
+  getVideoMetadata,
+} from '../../core/storage/thumbnailGenerator';
 
 interface AssetState {
   // Data
@@ -154,19 +172,38 @@ export const useAssetStore = create<AssetStore>()(
         state.gallery.totalCount++;
       });
 
+      // Persist to database (fire and forget, errors are logged)
+      saveAssetToDb(asset).catch((err) =>
+        console.error('Failed to persist asset:', err)
+      );
+
       return id;
     },
 
     updateAsset: (id, updates) => {
+      let updatedAsset: Asset | undefined;
+
       set((state) => {
         const asset = state.assets.get(id);
         if (asset) {
           Object.assign(asset, updates, { updatedAt: createTimestamp() });
+          updatedAsset = { ...asset };
         }
       });
+
+      // Persist to database
+      if (updatedAsset) {
+        saveAssetToDb(updatedAsset).catch((err) =>
+          console.error('Failed to persist asset update:', err)
+        );
+      }
     },
 
     deleteAsset: (id) => {
+      // Get the asset before deleting to check storage URL
+      const asset = get().assets.get(id);
+      const assetUrl = asset?.url;
+
       set((state) => {
         state.assets.delete(id);
         state.selectedAssetIds.delete(id);
@@ -184,31 +221,76 @@ export const useAssetStore = create<AssetStore>()(
           state.lightboxAssetId = null;
         }
       });
+
+      // Delete file from storage if it's a storage URL
+      if (assetUrl && isStorageUrl(assetUrl)) {
+        const parsed = parseStorageUrl(assetUrl);
+        if (parsed && isStorageInitialized()) {
+          const storage = getStorage();
+          storage.deleteFile(parsed.id).catch((err) =>
+            console.error('Failed to delete file from storage:', err)
+          );
+        }
+      }
+
+      // Persist deletion to database
+      deleteAssetFromDb(id).catch((err) =>
+        console.error('Failed to delete asset from db:', err)
+      );
+
+      // Also update collections that contained this asset
+      const collections = get().collections;
+      for (const collection of collections.values()) {
+        saveCollectionToDb(collection).catch((err) =>
+          console.error('Failed to update collection after asset delete:', err)
+        );
+      }
     },
 
     archiveAsset: (id) => {
+      let updatedAsset: Asset | undefined;
+
       set((state) => {
         const asset = state.assets.get(id);
         if (asset) {
           asset.isArchived = true;
           asset.updatedAt = createTimestamp();
+          updatedAsset = { ...asset };
         }
       });
+
+      if (updatedAsset) {
+        saveAssetToDb(updatedAsset).catch((err) =>
+          console.error('Failed to persist archive:', err)
+        );
+      }
     },
 
     unarchiveAsset: (id) => {
+      let updatedAsset: Asset | undefined;
+
       set((state) => {
         const asset = state.assets.get(id);
         if (asset) {
           asset.isArchived = false;
           asset.updatedAt = createTimestamp();
+          updatedAsset = { ...asset };
         }
       });
+
+      if (updatedAsset) {
+        saveAssetToDb(updatedAsset).catch((err) =>
+          console.error('Failed to persist unarchive:', err)
+        );
+      }
     },
 
     // Bulk operations
     batchOperation: (operation) => {
       const { assetIds, operation: op, params } = operation;
+      const updatedAssets: Asset[] = [];
+      const deletedIds: UUID[] = [];
+      const storageIdsToDelete: string[] = [];
 
       set((state) => {
         for (const id of assetIds) {
@@ -217,41 +299,84 @@ export const useAssetStore = create<AssetStore>()(
 
           switch (op) {
             case 'delete':
+              // Collect storage URLs for files to delete
+              if (asset.url && isStorageUrl(asset.url)) {
+                const parsed = parseStorageUrl(asset.url);
+                if (parsed) {
+                  storageIdsToDelete.push(parsed.id);
+                }
+              }
               state.assets.delete(id);
               state.selectedAssetIds.delete(id);
+              deletedIds.push(id);
               break;
             case 'archive':
               asset.isArchived = true;
+              asset.updatedAt = createTimestamp();
+              updatedAssets.push({ ...asset });
               break;
             case 'unarchive':
               asset.isArchived = false;
+              asset.updatedAt = createTimestamp();
+              updatedAssets.push({ ...asset });
               break;
             case 'favorite':
               asset.isFavorite = true;
+              asset.updatedAt = createTimestamp();
+              updatedAssets.push({ ...asset });
               break;
             case 'unfavorite':
               asset.isFavorite = false;
+              asset.updatedAt = createTimestamp();
+              updatedAssets.push({ ...asset });
               break;
             case 'tag':
               if (params?.tags) {
                 asset.tags = [...new Set([...asset.tags, ...params.tags])];
+                asset.updatedAt = createTimestamp();
+                updatedAssets.push({ ...asset });
               }
               break;
             case 'untag':
               if (params?.tags) {
                 asset.tags = asset.tags.filter((t) => !params.tags!.includes(t));
+                asset.updatedAt = createTimestamp();
+                updatedAssets.push({ ...asset });
               }
               break;
             case 'move':
               if (params?.projectId !== undefined) {
                 asset.projectId = params.projectId;
+                asset.updatedAt = createTimestamp();
+                updatedAssets.push({ ...asset });
               }
               break;
           }
-
-          asset.updatedAt = createTimestamp();
         }
       });
+
+      // Persist changes to database
+      if (deletedIds.length > 0) {
+        deleteAssetsFromDb(deletedIds).catch((err) =>
+          console.error('Failed to delete assets from db:', err)
+        );
+
+        // Delete files from storage
+        if (storageIdsToDelete.length > 0 && isStorageInitialized()) {
+          const storage = getStorage();
+          for (const storageId of storageIdsToDelete) {
+            storage.deleteFile(storageId).catch((err) =>
+              console.error('Failed to delete file from storage:', err)
+            );
+          }
+        }
+      }
+
+      for (const asset of updatedAssets) {
+        saveAssetToDb(asset).catch((err) =>
+          console.error('Failed to persist batch update:', err)
+        );
+      }
     },
 
     deleteAssets: (ids) => {
@@ -260,54 +385,99 @@ export const useAssetStore = create<AssetStore>()(
 
     // Favorites
     toggleFavorite: (id) => {
+      let updatedAsset: Asset | undefined;
+
       set((state) => {
         const asset = state.assets.get(id);
         if (asset) {
           asset.isFavorite = !asset.isFavorite;
           asset.updatedAt = createTimestamp();
+          updatedAsset = { ...asset };
         }
       });
+
+      if (updatedAsset) {
+        saveAssetToDb(updatedAsset).catch((err) =>
+          console.error('Failed to persist favorite toggle:', err)
+        );
+      }
     },
 
     setFavorite: (id, isFavorite) => {
+      let updatedAsset: Asset | undefined;
+
       set((state) => {
         const asset = state.assets.get(id);
         if (asset) {
           asset.isFavorite = isFavorite;
           asset.updatedAt = createTimestamp();
+          updatedAsset = { ...asset };
         }
       });
+
+      if (updatedAsset) {
+        saveAssetToDb(updatedAsset).catch((err) =>
+          console.error('Failed to persist favorite:', err)
+        );
+      }
     },
 
     // Tags
     addTag: (id, tag) => {
+      let updatedAsset: Asset | undefined;
+
       set((state) => {
         const asset = state.assets.get(id);
         if (asset && !asset.tags.includes(tag)) {
           asset.tags.push(tag);
           asset.updatedAt = createTimestamp();
+          updatedAsset = { ...asset };
         }
       });
+
+      if (updatedAsset) {
+        saveAssetToDb(updatedAsset).catch((err) =>
+          console.error('Failed to persist tag add:', err)
+        );
+      }
     },
 
     removeTag: (id, tag) => {
+      let updatedAsset: Asset | undefined;
+
       set((state) => {
         const asset = state.assets.get(id);
         if (asset) {
           asset.tags = asset.tags.filter((t) => t !== tag);
           asset.updatedAt = createTimestamp();
+          updatedAsset = { ...asset };
         }
       });
+
+      if (updatedAsset) {
+        saveAssetToDb(updatedAsset).catch((err) =>
+          console.error('Failed to persist tag remove:', err)
+        );
+      }
     },
 
     setTags: (id, tags) => {
+      let updatedAsset: Asset | undefined;
+
       set((state) => {
         const asset = state.assets.get(id);
         if (asset) {
           asset.tags = tags;
           asset.updatedAt = createTimestamp();
+          updatedAsset = { ...asset };
         }
       });
+
+      if (updatedAsset) {
+        saveAssetToDb(updatedAsset).catch((err) =>
+          console.error('Failed to persist tags:', err)
+        );
+      }
     },
 
     // Collections
@@ -327,43 +497,80 @@ export const useAssetStore = create<AssetStore>()(
         state.collections.set(id, collection);
       });
 
+      // Persist to database
+      saveCollectionToDb(collection).catch((err) =>
+        console.error('Failed to persist collection:', err)
+      );
+
       return id;
     },
 
     updateCollection: (id, updates) => {
+      let updatedCollection: AssetCollection | undefined;
+
       set((state) => {
         const collection = state.collections.get(id);
         if (collection) {
           Object.assign(collection, updates, { updatedAt: createTimestamp() });
+          updatedCollection = { ...collection };
         }
       });
+
+      if (updatedCollection) {
+        saveCollectionToDb(updatedCollection).catch((err) =>
+          console.error('Failed to persist collection update:', err)
+        );
+      }
     },
 
     deleteCollection: (id) => {
       set((state) => {
         state.collections.delete(id);
       });
+
+      // Persist deletion
+      deleteCollectionFromDb(id).catch((err) =>
+        console.error('Failed to delete collection from db:', err)
+      );
     },
 
     addToCollection: (collectionId, assetIds) => {
+      let updatedCollection: AssetCollection | undefined;
+
       set((state) => {
         const collection = state.collections.get(collectionId);
         if (collection) {
           collection.assetIds = [...new Set([...collection.assetIds, ...assetIds])];
           collection.updatedAt = createTimestamp();
+          updatedCollection = { ...collection };
         }
       });
+
+      if (updatedCollection) {
+        saveCollectionToDb(updatedCollection).catch((err) =>
+          console.error('Failed to persist collection add:', err)
+        );
+      }
     },
 
     removeFromCollection: (collectionId, assetIds) => {
+      let updatedCollection: AssetCollection | undefined;
+
       set((state) => {
         const collection = state.collections.get(collectionId);
         if (collection) {
           const toRemove = new Set(assetIds);
           collection.assetIds = collection.assetIds.filter((id) => !toRemove.has(id));
           collection.updatedAt = createTimestamp();
+          updatedCollection = { ...collection };
         }
       });
+
+      if (updatedCollection) {
+        saveCollectionToDb(updatedCollection).catch((err) =>
+          console.error('Failed to persist collection remove:', err)
+        );
+      }
     },
 
     // Gallery
@@ -648,11 +855,61 @@ export const useAssetStore = create<AssetStore>()(
       });
 
       try {
-        // Read file
-        const fileData = await readFileAsDataUrl(input.file);
+        const assetId = createUUID();
+        let url: string;
+        let thumbnailUrl: string | undefined;
+        let storageLocation: 'local' | 'blob' = 'blob';
 
         // Get metadata
         const metadata = await extractFileMetadata(input.file);
+
+        set((state) => {
+          state.uploadProgress = 20;
+        });
+
+        // Try to use file storage if available
+        if (isStorageInitialized()) {
+          try {
+            const storage = getStorage();
+            const storageType = storage.getStorageType();
+
+            // Save the file
+            await storage.saveFile(assetId, input.file, {
+              name: input.name || input.file.name,
+              mimeType: input.file.type,
+              size: input.file.size,
+              createdAt: Date.now(),
+            });
+
+            // Create storage URL
+            url = `${storageType}://${assetId}`;
+            storageLocation = 'local';
+
+            set((state) => {
+              state.uploadProgress = 60;
+            });
+
+            // Generate and store thumbnail
+            const thumbnail = await generateThumbnail(input.file, input.file.type);
+            if (thumbnail) {
+              thumbnailUrl = await storage.saveThumbnail(assetId, thumbnail);
+            }
+
+            set((state) => {
+              state.uploadProgress = 80;
+            });
+
+            console.log(`[AssetStore] Uploaded asset ${assetId} to ${storageType}`);
+          } catch (storageError) {
+            console.warn('[AssetStore] File storage failed, falling back to data URL:', storageError);
+            // Fall back to data URL
+            url = await readFileAsDataUrl(input.file);
+            storageLocation = 'blob';
+          }
+        } else {
+          // Storage not initialized, use data URL
+          url = await readFileAsDataUrl(input.file);
+        }
 
         // Create asset
         const id = get().createAsset({
@@ -660,8 +917,9 @@ export const useAssetStore = create<AssetStore>()(
           description: input.description,
           type: getContentTypeFromMime(input.file.type),
           format: getFormatFromMime(input.file.type),
-          url: fileData,
-          storageLocation: 'blob',
+          url,
+          thumbnailUrl,
+          storageLocation,
           metadata,
           projectId: input.projectId,
           tags: input.tags || [],
@@ -729,7 +987,7 @@ async function extractFileMetadata(file: File): Promise<AssetMetadata> {
   // Extract image dimensions
   if (file.type.startsWith('image/')) {
     try {
-      const dimensions = await getImageDimensions(file);
+      const dimensions = await getImageDims(file);
       metadata.width = dimensions.width;
       metadata.height = dimensions.height;
     } catch {
@@ -737,29 +995,19 @@ async function extractFileMetadata(file: File): Promise<AssetMetadata> {
     }
   }
 
-  // Extract video metadata would require more complex handling
-  // (e.g., using a video element to get duration)
+  // Extract video metadata
+  if (file.type.startsWith('video/')) {
+    try {
+      const videoMeta = await getVideoMetadata(file);
+      metadata.width = videoMeta.width;
+      metadata.height = videoMeta.height;
+      metadata.duration = videoMeta.duration;
+    } catch {
+      // Ignore video metadata extraction errors
+    }
+  }
 
   return metadata;
-}
-
-function getImageDimensions(file: File): Promise<{ width: number; height: number }> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    const url = URL.createObjectURL(file);
-
-    img.onload = () => {
-      URL.revokeObjectURL(url);
-      resolve({ width: img.width, height: img.height });
-    };
-
-    img.onerror = () => {
-      URL.revokeObjectURL(url);
-      reject(new Error('Failed to load image'));
-    };
-
-    img.src = url;
-  });
 }
 
 function getContentTypeFromMime(mimeType: string): ContentType {
@@ -782,52 +1030,126 @@ function getFormatFromMime(mimeType: string): AssetFormat {
   return formats[mimeType] || 'png';
 }
 
-// Selectors
+// Selectors - Use proper memoization to prevent infinite re-renders
 
+/**
+ * Returns sorted assets with stable reference.
+ * Only recomputes when assets, filters, or sorting changes.
+ */
 export const useAssets = () => {
-  const store = useAssetStore();
-  return store.getSortedAssets();
+  const assets = useAssetStore((state) => state.assets);
+  const filters = useAssetStore((state) => state.gallery.filters);
+  const sorting = useAssetStore((state) => state.gallery.sorting);
+  const collections = useAssetStore((state) => state.collections);
+  const getSortedAssets = useAssetStore((state) => state.getSortedAssets);
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- dependencies trigger re-computation via getSortedAssets
+  return useMemo(() => getSortedAssets(), [assets, filters, sorting, collections, getSortedAssets]);
 };
 
+/**
+ * Returns a single asset by ID with stable reference.
+ */
 export const useAsset = (id: UUID | null) => {
-  const store = useAssetStore();
-  return id ? store.assets.get(id) : undefined;
+  const assets = useAssetStore((state) => state.assets);
+
+  return useMemo(() => (id ? assets.get(id) : undefined), [assets, id]);
 };
 
+/**
+ * Returns selected assets with stable reference.
+ * Only recomputes when selection or assets change.
+ */
 export const useSelectedAssets = () => {
-  const store = useAssetStore();
-  const selectedIds = Array.from(store.selectedAssetIds);
-  return selectedIds.map((id) => store.assets.get(id)).filter((a): a is Asset => !!a);
+  const assets = useAssetStore((state) => state.assets);
+  const selectedAssetIds = useAssetStore((state) => state.selectedAssetIds);
+
+  return useMemo(() => {
+    const selectedIds = Array.from(selectedAssetIds);
+    return selectedIds
+      .map((id) => assets.get(id))
+      .filter((a): a is Asset => !!a);
+  }, [assets, selectedAssetIds]);
 };
 
+/**
+ * Returns all collections with stable reference.
+ */
 export const useCollections = () => {
-  const store = useAssetStore();
-  return Array.from(store.collections.values());
+  const collections = useAssetStore((state) => state.collections);
+
+  return useMemo(() => Array.from(collections.values()), [collections]);
 };
 
+/**
+ * Returns a single collection by ID with stable reference.
+ */
 export const useCollection = (id: UUID | null) => {
-  const store = useAssetStore();
-  return id ? store.collections.get(id) : undefined;
+  const collections = useAssetStore((state) => state.collections);
+
+  return useMemo(
+    () => (id ? collections.get(id) : undefined),
+    [collections, id]
+  );
 };
 
+/**
+ * Returns gallery state with stable reference.
+ */
 export const useGalleryState = () => {
-  const store = useAssetStore();
-  return store.gallery;
+  const viewMode = useAssetStore((state) => state.gallery.viewMode);
+  const gridColumns = useAssetStore((state) => state.gallery.gridColumns);
+  const filters = useAssetStore((state) => state.gallery.filters);
+  const sorting = useAssetStore((state) => state.gallery.sorting);
+  const visibleRange = useAssetStore((state) => state.gallery.visibleRange);
+  const isLoading = useAssetStore((state) => state.gallery.isLoading);
+  const hasMore = useAssetStore((state) => state.gallery.hasMore);
+  const totalCount = useAssetStore((state) => state.gallery.totalCount);
+
+  return useMemo(
+    () => ({
+      viewMode,
+      gridColumns,
+      filters,
+      sorting,
+      visibleRange,
+      isLoading,
+      hasMore,
+      totalCount,
+    }),
+    [viewMode, gridColumns, filters, sorting, visibleRange, isLoading, hasMore, totalCount]
+  );
 };
 
+/**
+ * Returns lightbox state with stable reference.
+ */
 export const useLightboxState = () => {
-  const store = useAssetStore();
-  return {
-    assetId: store.lightboxAssetId,
-    index: store.lightboxIndex,
-    isOpen: store.lightboxAssetId !== null,
-  };
+  const lightboxAssetId = useAssetStore((state) => state.lightboxAssetId);
+  const lightboxIndex = useAssetStore((state) => state.lightboxIndex);
+
+  return useMemo(
+    () => ({
+      assetId: lightboxAssetId,
+      index: lightboxIndex,
+      isOpen: lightboxAssetId !== null,
+    }),
+    [lightboxAssetId, lightboxIndex]
+  );
 };
 
+/**
+ * Returns upload state with stable reference.
+ */
 export const useUploadState = () => {
-  const store = useAssetStore();
-  return {
-    isUploading: store.isUploading,
-    progress: store.uploadProgress,
-  };
+  const isUploading = useAssetStore((state) => state.isUploading);
+  const uploadProgress = useAssetStore((state) => state.uploadProgress);
+
+  return useMemo(
+    () => ({
+      isUploading,
+      progress: uploadProgress,
+    }),
+    [isUploading, uploadProgress]
+  );
 };

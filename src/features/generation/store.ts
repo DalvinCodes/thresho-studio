@@ -3,6 +3,7 @@
  * Manages active generations and generation history
  */
 
+import { useMemo } from 'react';
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import { createActor } from 'xstate';
@@ -15,7 +16,13 @@ import type {
   GenerationStats,
   ActiveGeneration,
 } from '../../core/types/generation';
-import type { StreamChunk } from '../../core/types/provider';
+import type {
+  QueuedGeneration,
+  QueueConfig,
+  QueueStats,
+  QueueAddOptions,
+} from './types/queue';
+import { DEFAULT_QUEUE_CONFIG } from './types/queue';
 import {
   createGenerationMachine,
   type GenerationMachineContext,
@@ -24,6 +31,11 @@ import {
   createGenerationRecord,
   cancelGeneration,
 } from './services/generationService';
+import {
+  loadGenerationHistoryFromDb,
+  saveGenerationRecordToDb,
+} from './services/generationDbService';
+import * as queueService from './services/generationQueue';
 
 interface GenerationState {
   // Active generations (in-flight)
@@ -34,9 +46,15 @@ interface GenerationState {
   history: Map<UUID, GenerationRecord>;
   historyOrder: UUID[]; // For maintaining order
 
-  // Queue
+  // Legacy queue (keeping for backward compatibility)
   queue: GenerationRequest[];
   maxConcurrent: number;
+
+  // New batch queue system
+  batchQueue: Map<UUID, QueuedGeneration>;
+  queueConfig: QueueConfig;
+  queuePaused: boolean;
+  queueStats: QueueStats | null;
 
   // Statistics cache
   stats: GenerationStats | null;
@@ -48,10 +66,22 @@ interface GenerationActions {
   cancelGeneration: (id: UUID) => Promise<boolean>;
   retryGeneration: (id: UUID) => UUID | null;
 
-  // Queue management
+  // Legacy queue management (keeping for backward compatibility)
   addToQueue: (request: GenerationRequest) => void;
   removeFromQueue: (id: UUID) => void;
   processQueue: () => void;
+
+  // Batch queue management
+  queueGeneration: (request: GenerationRequest, options?: QueueAddOptions) => UUID;
+  cancelQueuedGeneration: (id: UUID) => boolean;
+  cancelAllQueuedGenerations: () => void;
+  setQueueConfig: (config: Partial<QueueConfig>) => void;
+  pauseQueue: () => void;
+  resumeQueue: () => void;
+  updateQueuePriority: (id: UUID, priority: number) => boolean;
+  clearFinishedQueueItems: () => void;
+  getBatchQueueStats: () => QueueStats;
+  getBatchQueueItems: () => QueuedGeneration[];
 
   // Active generation updates
   updateActiveGeneration: (id: UUID, updates: Partial<ActiveGeneration>) => void;
@@ -72,20 +102,38 @@ interface GenerationActions {
 
   // Persistence
   loadFromDatabase: (records: GenerationRecord[]) => void;
+  initializeFromDatabase: () => Promise<void>;
+
+  // Internal: sync queue from service
+  _syncQueueFromService: (items: Map<UUID, QueuedGeneration>) => void;
+  _syncQueueStats: (stats: QueueStats) => void;
 }
 
 type GenerationStore = GenerationState & GenerationActions;
 
 export const useGenerationStore = create<GenerationStore>()(
-  immer((set, get) => ({
-    // Initial state
-    activeGenerations: new Map(),
-    activeActors: new Map(),
-    history: new Map(),
-    historyOrder: [],
-    queue: [],
-    maxConcurrent: 3,
-    stats: null,
+  immer((set, get) => {
+    // Set up queue service callbacks for synchronization
+    queueService.setQueueCallbacks(
+      (items) => get()._syncQueueFromService(items),
+      (stats) => get()._syncQueueStats(stats)
+    );
+
+    return {
+      // Initial state
+      activeGenerations: new Map(),
+      activeActors: new Map(),
+      history: new Map(),
+      historyOrder: [],
+      queue: [],
+      maxConcurrent: 3,
+      stats: null,
+
+      // Batch queue state
+      batchQueue: new Map(),
+      queueConfig: { ...DEFAULT_QUEUE_CONFIG },
+      queuePaused: false,
+      queueStats: null,
 
     // Start a new generation
     startGeneration: (requestInput) => {
@@ -293,6 +341,11 @@ export const useGenerationStore = create<GenerationStore>()(
         // Invalidate stats cache
         state.stats = null;
       });
+
+      // Persist to database (fire and forget)
+      saveGenerationRecordToDb(record).catch((err) => {
+        console.error('Failed to persist generation record to database:', err);
+      });
     },
 
     // Get history record
@@ -447,83 +500,195 @@ export const useGenerationStore = create<GenerationStore>()(
         state.stats = null;
       });
     },
-  }))
+
+    // Initialize from database (load persisted records)
+    initializeFromDatabase: async () => {
+      try {
+        const records = await loadGenerationHistoryFromDb();
+        get().loadFromDatabase(records);
+        console.log(`Loaded ${records.length} generation records from database`);
+      } catch (error) {
+        console.error('Failed to initialize generation history from database:', error);
+      }
+    },
+
+    // Batch queue methods
+    queueGeneration: (request, options = {}) => {
+      return queueService.addToQueue(request, options);
+    },
+
+    cancelQueuedGeneration: (id) => {
+      return queueService.cancelQueued(id);
+    },
+
+    cancelAllQueuedGenerations: () => {
+      queueService.cancelAll();
+    },
+
+    setQueueConfig: (config) => {
+      queueService.setQueueConfig(config);
+      set((state) => {
+        state.queueConfig = { ...state.queueConfig, ...config };
+      });
+    },
+
+    pauseQueue: () => {
+      queueService.pauseQueue();
+      set((state) => {
+        state.queuePaused = true;
+      });
+    },
+
+    resumeQueue: () => {
+      queueService.resumeQueue();
+      set((state) => {
+        state.queuePaused = false;
+      });
+    },
+
+    updateQueuePriority: (id, priority) => {
+      return queueService.updatePriority(id, priority);
+    },
+
+    clearFinishedQueueItems: () => {
+      queueService.clearFinishedItems();
+    },
+
+    getBatchQueueStats: () => {
+      return queueService.getQueueStats();
+    },
+
+    getBatchQueueItems: () => {
+      return queueService.getQueuedItems();
+    },
+
+    // Internal sync methods for queue service callbacks
+    _syncQueueFromService: (items) => {
+      set((state) => {
+        state.batchQueue = items;
+      });
+    },
+
+    _syncQueueStats: (stats) => {
+      set((state) => {
+        state.queueStats = stats;
+      });
+    },
+  };
+  })
 );
 
-// Selectors
+// Selectors - using useMemo to prevent infinite re-renders from new array/object creation
 
 export const useActiveGenerations = () => {
-  const store = useGenerationStore();
-  return Array.from(store.activeGenerations.values());
+  const activeGenerations = useGenerationStore((state) => state.activeGenerations);
+  return useMemo(() => Array.from(activeGenerations.values()), [activeGenerations]);
 };
 
 export const useActiveGeneration = (id: UUID | null) => {
-  const store = useGenerationStore();
-  return id ? store.activeGenerations.get(id) : undefined;
+  const activeGenerations = useGenerationStore((state) => state.activeGenerations);
+  return useMemo(() => (id ? activeGenerations.get(id) : undefined), [activeGenerations, id]);
 };
 
 export const useGenerationHistory = (query?: GenerationHistoryQuery) => {
-  const store = useGenerationStore();
-  return query ? store.queryHistory(query) : store.historyOrder.map((id) => store.history.get(id)!);
+  const history = useGenerationStore((state) => state.history);
+  const historyOrder = useGenerationStore((state) => state.historyOrder);
+  const queryHistory = useGenerationStore((state) => state.queryHistory);
+
+  return useMemo(() => {
+    if (query) {
+      return queryHistory(query);
+    }
+    return historyOrder.map((id) => history.get(id)!);
+  }, [history, historyOrder, query, queryHistory]);
 };
 
 export const useGenerationStats = () => {
-  const store = useGenerationStore();
-  // Return cached stats or compute without caching in selector
-  if (store.stats) {
-    return store.stats;
-  }
+  const stats = useGenerationStore((state) => state.stats);
+  const history = useGenerationStore((state) => state.history);
 
-  // Compute stats without setting state (avoids infinite loop)
-  const stats: GenerationStats = {
-    totalGenerations: store.history.size,
-    byType: { text: 0, image: 0, video: 0 },
-    byProvider: {} as Record<string, number>,
-    byStatus: {
-      pending: 0,
-      validating: 0,
-      preparing: 0,
-      executing: 0,
-      streaming: 0,
-      completed: 0,
-      failed: 0,
-      cancelled: 0,
-    },
-    totalCostUsd: 0,
-    averageDurationMs: 0,
-  };
-
-  let totalDuration = 0;
-  let durationCount = 0;
-
-  for (const record of store.history.values()) {
-    stats.byType[record.type]++;
-    stats.byProvider[record.providerType] = (stats.byProvider[record.providerType] || 0) + 1;
-    stats.byStatus[record.status]++;
-
-    if (record.costEstimateUsd) {
-      stats.totalCostUsd += record.costEstimateUsd;
+  return useMemo(() => {
+    // Return cached stats if available
+    if (stats) {
+      return stats;
     }
 
-    if (record.durationMs) {
-      totalDuration += record.durationMs;
-      durationCount++;
+    // Compute stats without setting state (avoids infinite loop)
+    const computedStats: GenerationStats = {
+      totalGenerations: history.size,
+      byType: { text: 0, image: 0, video: 0 },
+      byProvider: {} as Record<string, number>,
+      byStatus: {
+        pending: 0,
+        validating: 0,
+        preparing: 0,
+        executing: 0,
+        streaming: 0,
+        completed: 0,
+        failed: 0,
+        cancelled: 0,
+      },
+      totalCostUsd: 0,
+      averageDurationMs: 0,
+    };
+
+    let totalDuration = 0;
+    let durationCount = 0;
+
+    for (const record of history.values()) {
+      computedStats.byType[record.type]++;
+      computedStats.byProvider[record.providerType] = (computedStats.byProvider[record.providerType] || 0) + 1;
+      computedStats.byStatus[record.status]++;
+
+      if (record.costEstimateUsd) {
+        computedStats.totalCostUsd += record.costEstimateUsd;
+      }
+
+      if (record.durationMs) {
+        totalDuration += record.durationMs;
+        durationCount++;
+      }
     }
-  }
 
-  if (durationCount > 0) {
-    stats.averageDurationMs = totalDuration / durationCount;
-  }
+    if (durationCount > 0) {
+      computedStats.averageDurationMs = totalDuration / durationCount;
+    }
 
-  return stats;
+    return computedStats;
+  }, [stats, history]);
 };
 
 export const useGenerationQueue = () => {
-  const store = useGenerationStore();
-  return store.queue;
+  const queue = useGenerationStore((state) => state.queue);
+  return useMemo(() => [...queue], [queue]);
 };
 
 export const useStreamedContent = (id: UUID | null) => {
-  const store = useGenerationStore();
-  return id ? store.getStreamedContent(id) : '';
+  const getStreamedContent = useGenerationStore((state) => state.getStreamedContent);
+  return useMemo(() => (id ? getStreamedContent(id) : ''), [getStreamedContent, id]);
+};
+
+// Batch queue selectors
+export const useBatchQueue = () => {
+  const batchQueue = useGenerationStore((state) => state.batchQueue);
+  return useMemo(() => Array.from(batchQueue.values()), [batchQueue]);
+};
+
+export const useBatchQueueStats = () => {
+  const queueStats = useGenerationStore((state) => state.queueStats);
+  const getBatchQueueStats = useGenerationStore((state) => state.getBatchQueueStats);
+  return useMemo(() => queueStats || getBatchQueueStats(), [queueStats, getBatchQueueStats]);
+};
+
+export const useQueuePaused = () => {
+  return useGenerationStore((state) => state.queuePaused);
+};
+
+export const useQueueConfig = () => {
+  return useGenerationStore((state) => state.queueConfig);
+};
+
+export const useBatchQueueItem = (id: UUID | null) => {
+  const batchQueue = useGenerationStore((state) => state.batchQueue);
+  return useMemo(() => (id ? batchQueue.get(id) : undefined), [batchQueue, id]);
 };

@@ -3,7 +3,7 @@
  * Overview of studio activity and quick actions
  */
 
-import { useMemo, useSyncExternalStore, useCallback } from 'react';
+import { useMemo, useCallback } from 'react';
 import { useAppStore } from '../core/store';
 import { useAssetStore } from '../features/assets/store';
 import { useTemplateStore } from '../features/templates/store';
@@ -20,7 +20,7 @@ export function DashboardPage() {
   const brandCount = useBrandStore((s) => s.brands.size);
   const shotListCount = useShotListStore((s) => s.shotLists.size);
   const activeGenCount = useGenerationStore((s) => s.activeGenerations.size);
-  const historySize = useGenerationStore((s) => s.history.size);
+  const _historySize = useGenerationStore((s) => s.history.size);
 
   // Compute completed count - this is a primitive so won't cause re-renders
   const completedCount = useGenerationStore(useCallback((s) => {

@@ -3,6 +3,7 @@
  * Manages provider configurations, credentials, and active adapters
  */
 
+import { useMemo } from 'react';
 import { create } from 'zustand';
 import { devtools, subscribeWithSelector } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
@@ -17,11 +18,24 @@ import type {
 } from '../../core/types/provider';
 import { createAdapter, providerMeta } from './adapters';
 import type { BaseAdapter } from './adapters';
+import type { OpenRouterAPIModel } from './adapters/openRouterAdapter';
+import {
+  loadProvidersFromDb,
+  saveProviderToDb,
+  saveCredentialToDb,
+  deleteProviderFromDb,
+  deleteCredentialFromDb,
+  updateCredentialValidation,
+  setProviderDefaultInDb,
+} from './services/providerDbService';
 
 interface ProviderStoreState {
   // Provider registry
   providers: Map<UUID, ProviderState>;
   activeAdapters: Map<UUID, BaseAdapter>;
+
+  // OpenRouter models cache
+  openRouterModels: Map<UUID, OpenRouterAPIModel[]>;
 
   // Selection
   defaultTextProvider: UUID | null;
@@ -55,6 +69,10 @@ interface ProviderStoreActions {
   // Status
   setProviderStatus: (providerId: UUID, status: ProviderStatus, error?: ProviderError) => void;
 
+  // OpenRouter specific
+  fetchOpenRouterModels: (providerId: UUID) => Promise<OpenRouterAPIModel[]>;
+  getOpenRouterModels: (providerId: UUID) => OpenRouterAPIModel[];
+
   // Bulk operations
   loadFromDatabase: () => Promise<void>;
   initializeDefaults: () => Promise<void>;
@@ -69,6 +87,7 @@ export const useProviderStore = create<ProviderStore>()(
         // Initial state
         providers: new Map(),
         activeAdapters: new Map(),
+        openRouterModels: new Map(),
         defaultTextProvider: null,
         defaultImageProvider: null,
         defaultVideoProvider: null,
@@ -113,6 +132,12 @@ export const useProviderStore = create<ProviderStore>()(
             s.activeAdapters.set(id, adapter);
           });
 
+          // Persist to database
+          await saveProviderToDb(config);
+          if (credential) {
+            await saveCredentialToDb(credential);
+          }
+
           // Validate credentials if provided
           if (credential) {
             await get().validateCredential(id);
@@ -123,13 +148,22 @@ export const useProviderStore = create<ProviderStore>()(
 
         // Update provider config
         updateProvider: (id, updates) => {
+          const provider = get().providers.get(id);
+          if (!provider) return;
+
           set((s) => {
-            const provider = s.providers.get(id);
-            if (provider) {
-              Object.assign(provider.config, updates);
-              provider.config.updatedAt = createTimestamp();
+            const p = s.providers.get(id);
+            if (p) {
+              Object.assign(p.config, updates);
+              p.config.updatedAt = createTimestamp();
             }
           });
+
+          // Persist to database (async, fire-and-forget)
+          const updatedProvider = get().providers.get(id);
+          if (updatedProvider) {
+            saveProviderToDb(updatedProvider.config).catch(console.error);
+          }
         },
 
         // Remove provider
@@ -143,6 +177,9 @@ export const useProviderStore = create<ProviderStore>()(
             if (s.defaultImageProvider === id) s.defaultImageProvider = null;
             if (s.defaultVideoProvider === id) s.defaultVideoProvider = null;
           });
+
+          // Persist deletion to database (async, fire-and-forget)
+          deleteProviderFromDb(id).catch(console.error);
         },
 
         // Set credential
@@ -172,6 +209,9 @@ export const useProviderStore = create<ProviderStore>()(
             adapter.setCredential(credential);
           }
 
+          // Persist to database
+          await saveCredentialToDb(credential);
+
           // Validate
           return get().validateCredential(providerId);
         },
@@ -194,6 +234,7 @@ export const useProviderStore = create<ProviderStore>()(
             }
 
             const isValid = await adapter.validateCredentials();
+            const validatedAt = createTimestamp();
 
             set((s) => {
               const p = s.providers.get(providerId);
@@ -202,8 +243,10 @@ export const useProviderStore = create<ProviderStore>()(
                 if (isValid) {
                   p.lastError = undefined;
                   if (p.credential) {
-                    p.credential.lastValidated = createTimestamp();
+                    p.credential.lastValidated = validatedAt;
                   }
+                  // Refresh capabilities from adapter after successful validation
+                  p.config.capabilities = adapter.getCapabilities();
                 } else {
                   p.lastError = {
                     code: 'INVALID_CREDENTIALS',
@@ -214,6 +257,11 @@ export const useProviderStore = create<ProviderStore>()(
               }
               s.isValidating = null;
             });
+
+            // Persist validation timestamp to database
+            if (isValid) {
+              updateCredentialValidation(providerId, validatedAt).catch(console.error);
+            }
 
             return isValid;
           } catch (error) {
@@ -242,6 +290,9 @@ export const useProviderStore = create<ProviderStore>()(
               p.status = 'inactive';
             }
           });
+
+          // Persist deletion to database (async, fire-and-forget)
+          deleteCredentialFromDb(providerId).catch(console.error);
         },
 
         // Get adapter
@@ -285,6 +336,9 @@ export const useProviderStore = create<ProviderStore>()(
 
         // Set default provider
         setDefaultProvider: (type, providerId) => {
+          // Get current default to clear it
+          const currentDefault = get().getDefaultProvider(type);
+          
           set((s) => {
             switch (type) {
               case 'text':
@@ -298,6 +352,14 @@ export const useProviderStore = create<ProviderStore>()(
                 break;
             }
           });
+          
+          // Persist to database
+          // Clear old default
+          if (currentDefault && currentDefault !== providerId) {
+            setProviderDefaultInDb(currentDefault, false).catch(console.error);
+          }
+          // Set new default
+          setProviderDefaultInDb(providerId, true).catch(console.error);
         },
 
         // Get default provider
@@ -326,6 +388,38 @@ export const useProviderStore = create<ProviderStore>()(
           });
         },
 
+        // Fetch OpenRouter models
+        fetchOpenRouterModels: async (providerId) => {
+          const adapter = get().activeAdapters.get(providerId);
+          if (!adapter || adapter.providerType !== 'openrouter') {
+            return [];
+          }
+
+          try {
+            // Dynamic import for OpenRouter adapter
+            const { OpenRouterAdapter } = await import('./adapters/openRouterAdapter');
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const openRouterAdapter = adapter as any;
+            if (!(openRouterAdapter instanceof OpenRouterAdapter)) {
+              return [];
+            }
+            const models = await openRouterAdapter.fetchAvailableModels();
+
+            set((s) => {
+              s.openRouterModels.set(providerId, models);
+            });
+
+            return models;
+          } catch {
+            return [];
+          }
+        },
+
+        // Get cached OpenRouter models
+        getOpenRouterModels: (providerId) => {
+          return get().openRouterModels.get(providerId) || [];
+        },
+
         // Load from database
         loadFromDatabase: async () => {
           set((s) => {
@@ -333,8 +427,35 @@ export const useProviderStore = create<ProviderStore>()(
           });
 
           try {
-            // TODO: Load providers and credentials from SQLite
-            // For now, just mark as loaded
+            const {
+              providers,
+              defaultTextProviderId,
+              defaultImageProviderId,
+              defaultVideoProviderId,
+            } = await loadProvidersFromDb();
+
+            // Create adapters and populate store
+            for (const providerState of providers) {
+              const adapter = createAdapter(providerState.config, providerState.credential);
+
+              set((s) => {
+                s.providers.set(providerState.config.id, providerState);
+                s.activeAdapters.set(providerState.config.id, adapter);
+              });
+
+              // Validate credentials if present
+              if (providerState.credential?.apiKey) {
+                // Don't await - validate in background
+                get().validateCredential(providerState.config.id).catch(console.error);
+              }
+            }
+
+            // Set defaults
+            set((s) => {
+              s.defaultTextProvider = defaultTextProviderId;
+              s.defaultImageProvider = defaultImageProviderId;
+              s.defaultVideoProvider = defaultVideoProviderId;
+            });
           } finally {
             set((s) => {
               s.isLoading = false;
@@ -346,14 +467,17 @@ export const useProviderStore = create<ProviderStore>()(
         initializeDefaults: async () => {
           const state = get();
 
-          // Check if Gemini Nano is available (free, no API key)
-          const { GeminiNanoAdapter } = await import('./adapters/geminiNanoAdapter');
-          if (await GeminiNanoAdapter.isAvailable()) {
-            const id = await state.registerProvider('gemini-nano');
-            state.setDefaultProvider('text', id);
-          }
+          // First, load saved providers from database
+          await state.loadFromDatabase();
 
-          // TODO: Load saved providers from database
+          // If no providers loaded, check for Gemini Nano (free, no API key)
+          if (state.providers.size === 0) {
+            const { GeminiNanoAdapter } = await import('./adapters/geminiNanoAdapter');
+            if (await GeminiNanoAdapter.isAvailable()) {
+              const id = await state.registerProvider('gemini-nano');
+              state.setDefaultProvider('text', id);
+            }
+          }
         },
       }))
     ),
@@ -361,24 +485,33 @@ export const useProviderStore = create<ProviderStore>()(
   )
 );
 
-// Selector hooks for common patterns - use subscribeWithSelector for arrays
+// Selector hooks for common patterns
+// IMPORTANT: These use useMemo to prevent infinite re-renders from creating new arrays
+
 export const useProviders = () => {
-  const store = useProviderStore();
-  return Array.from(store.providers.values());
+  const providers = useProviderStore((state) => state.providers);
+  return useMemo(() => Array.from(providers.values()), [providers]);
 };
 
 export const useProvider = (id: UUID) =>
   useProviderStore((state) => state.providers.get(id));
 
 export const useActiveProviders = () => {
-  const store = useProviderStore();
-  return Array.from(store.providers.values()).filter((p) => p.status === 'active');
+  const providers = useProviderStore((state) => state.providers);
+  return useMemo(
+    () => Array.from(providers.values()).filter((p) => p.status === 'active'),
+    [providers]
+  );
 };
 
 export const useProvidersForType = (type: ContentType) => {
-  const store = useProviderStore();
-  return Array.from(store.providers.values()).filter((p) =>
-    p.config.capabilities.some((c) => c.type === type)
+  const providers = useProviderStore((state) => state.providers);
+  return useMemo(
+    () =>
+      Array.from(providers.values()).filter((p) =>
+        p.config.capabilities.some((c) => c.type === type)
+      ),
+    [providers, type]
   );
 };
 

@@ -11,6 +11,12 @@ export {
   useGenerationStats,
   useGenerationQueue,
   useStreamedContent,
+  // Batch queue selectors
+  useBatchQueue,
+  useBatchQueueStats,
+  useQueuePaused,
+  useQueueConfig,
+  useBatchQueueItem,
 } from './store';
 
 // Machine
@@ -36,8 +42,28 @@ export {
   cancelGeneration,
 } from './services/generationService';
 
+// Queue Service
+export {
+  addToQueue as addToGenerationQueue,
+  cancelQueued as cancelQueuedGeneration,
+  cancelAll as cancelAllQueuedGenerations,
+  pauseQueue,
+  resumeQueue,
+  isQueuePaused,
+  getQueueStats,
+  getQueuedItems,
+  getQueuedItem,
+  setQueueConfig,
+  getQueueConfig,
+  updatePriority as updateQueueItemPriority,
+  clearFinishedItems as clearFinishedQueueItems,
+  resetQueue,
+} from './services/generationQueue';
+
 // Components
 export { GenerationPanel } from './components/GenerationPanel';
+export { GenerationQueue } from './components/GenerationQueue';
+export { CostDashboard } from './components/CostDashboard';
 
 // Types (re-export from core)
 export type {
@@ -51,3 +77,14 @@ export type {
   GenerationStats,
   ActiveGeneration,
 } from '../../core/types/generation';
+
+// Queue types
+export type {
+  QueuedGeneration,
+  QueueConfig,
+  QueueStats,
+  QueueAddOptions,
+  QueuedGenerationStatus,
+} from './types/queue';
+
+export { DEFAULT_QUEUE_CONFIG } from './types/queue';

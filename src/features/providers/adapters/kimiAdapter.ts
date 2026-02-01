@@ -1,8 +1,8 @@
 /**
- * Kimi K2.5 Provider Adapter (Moonshot AI)
+ * Kimi K2.5 Provider Adapter (Moonshot AI via OpenRouter)
  * OpenAI-compatible API with 256K context window
  * Excellent for agent orchestration and long-context tasks
- * https://platform.moonshot.cn/docs
+ * Uses OpenRouter infrastructure: https://openrouter.ai
  */
 
 import { BaseAdapter } from './baseAdapter';
@@ -15,7 +15,8 @@ import type {
 import type { ContentType } from '../../../core/types/common';
 
 export class KimiAdapter extends BaseAdapter {
-  private baseUrl = 'https://api.moonshot.cn/v1';
+  // Kimi K2.5 uses OpenRouter's API infrastructure
+  private baseUrl = 'https://openrouter.ai/api/v1';
 
   get providerType() {
     return 'kimi' as const;
@@ -34,10 +35,7 @@ export class KimiAdapter extends BaseAdapter {
       {
         type: 'text',
         models: [
-          'moonshot-v1-256k',  // 256K context
-          'moonshot-v1-128k',  // 128K context
-          'moonshot-v1-32k',   // 32K context
-          'moonshot-v1-8k',    // 8K context (fastest)
+          'moonshotai/kimi-k2.5',  // Kimi K2.5 via OpenRouter
         ],
         maxTokens: 256000, // 256K context window
         supportsStreaming: true,
@@ -50,11 +48,17 @@ export class KimiAdapter extends BaseAdapter {
   }
 
   async validateCredentials(): Promise<boolean> {
-    if (!this.credential?.apiKey) return false;
+    if (!this.credential?.apiKey) {
+      return false;
+    }
 
     try {
       const response = await fetch(`${this.baseUrl}/models`, {
-        headers: this.getAuthHeader(),
+        headers: {
+          ...this.getAuthHeader(),
+          'HTTP-Referer': window.location.origin,
+          'X-Title': 'Thresho Studio',
+        },
       });
       return response.ok;
     } catch {
@@ -72,9 +76,11 @@ export class KimiAdapter extends BaseAdapter {
       headers: {
         'Content-Type': 'application/json',
         ...this.getAuthHeader(),
+        'HTTP-Referer': window.location.origin,
+        'X-Title': 'Thresho Studio',
       },
       body: JSON.stringify({
-        model: request.model || 'moonshot-v1-128k',
+        model: request.model || 'moonshotai/kimi-k2.5',
         messages: [
           ...(request.systemPrompt
             ? [{ role: 'system', content: request.systemPrompt }]
@@ -119,9 +125,11 @@ export class KimiAdapter extends BaseAdapter {
       headers: {
         'Content-Type': 'application/json',
         ...this.getAuthHeader(),
+        'HTTP-Referer': window.location.origin,
+        'X-Title': 'Thresho Studio',
       },
       body: JSON.stringify({
-        model: request.model || 'moonshot-v1-128k',
+        model: request.model || 'moonshotai/kimi-k2.5',
         messages: [
           ...(request.systemPrompt
             ? [{ role: 'system', content: request.systemPrompt }]

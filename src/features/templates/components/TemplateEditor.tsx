@@ -163,18 +163,19 @@ export function TemplateEditor({ templateId, onClose }: TemplateEditorProps) {
   }
 
   return (
-    <div className="h-full flex flex-col bg-background">
+    <div className="h-full flex flex-col bg-background" data-testid="template-editor">
       {/* Header */}
       <header className="flex items-center justify-between p-4 border-b border-border bg-surface">
         <div className="flex items-center gap-4">
           <button
             onClick={handleDiscard}
+            data-testid="back-btn"
             className="p-2 hover:bg-surface-hover rounded-lg transition-colors"
           >
             ← Back
           </button>
           <div>
-            <h2 className="text-lg font-semibold text-text-primary">{template.name}</h2>
+            <h2 className="text-lg font-semibold text-text-primary" data-testid="template-name">{template.name}</h2>
             <p className="text-sm text-text-secondary">
               {currentVersion ? `v${currentVersion.version}` : 'Draft'}
               {hasUnsavedChanges && ' • Unsaved changes'}
@@ -185,6 +186,7 @@ export function TemplateEditor({ templateId, onClose }: TemplateEditorProps) {
           {hasUnsavedChanges && (
             <button
               onClick={() => setShowPublishModal(true)}
+              data-testid="save-template"
               className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
             >
               Save Version

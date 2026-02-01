@@ -153,6 +153,7 @@ export interface Shot extends BaseEntity {
   promptTemplateId?: UUID;   // Template to use for generation
   generatedPrompt?: string;  // Auto-composed prompt
   providerPreference?: string;
+  talentIds?: UUID[];        // Selected talents for this shot
 
   // Timing
   estimatedDuration?: number;
@@ -285,6 +286,7 @@ export interface ShotPromptContext {
     colorPalette: string;
   };
   equipmentPreset?: EquipmentPreset;
+  talents?: import('./talent').TalentProfile[];
 }
 
 // Composed shot prompt result

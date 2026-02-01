@@ -14,6 +14,8 @@ import {
   useSelectedAssets,
   useLightboxState,
 } from '../store';
+import { StorageImage, StorageVideo } from '../../../components/StorageMedia';
+import { ExportDialog } from './ExportDialog';
 
 interface AssetGalleryProps {
   onAssetSelect?: (asset: Asset) => void;
@@ -28,10 +30,10 @@ export function AssetGallery({ onAssetSelect, onAssetDoubleClick }: AssetGallery
 
   const {
     setFilters,
-    setSorting,
+    // setSorting, - unused
     setViewMode,
     setGridColumns,
-    clearFilters,
+    // clearFilters, - unused
     toggleSelection,
     selectRange,
     selectAll,
@@ -48,6 +50,7 @@ export function AssetGallery({ onAssetSelect, onAssetDoubleClick }: AssetGallery
   const [searchQuery, setSearchQuery] = useState('');
   const [lastSelectedId, setLastSelectedId] = useState<UUID | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [showExportDialog, setShowExportDialog] = useState(false);
 
   const parentRef = useRef<HTMLDivElement>(null);
 
@@ -236,6 +239,12 @@ export function AssetGallery({ onAssetSelect, onAssetDoubleClick }: AssetGallery
               {selectedAssets.length} selected
             </span>
             <button
+              onClick={() => setShowExportDialog(true)}
+              className="px-2 py-1 text-sm text-primary hover:bg-primary/10 rounded transition-colors"
+            >
+              Export
+            </button>
+            <button
               onClick={() => deleteAssets(selectedAssets.map((a) => a.id))}
               className="px-2 py-1 text-sm text-red-400 hover:bg-red-500/10 rounded transition-colors"
             >
@@ -248,6 +257,16 @@ export function AssetGallery({ onAssetSelect, onAssetDoubleClick }: AssetGallery
               Clear
             </button>
           </div>
+        )}
+
+        {/* Export all button */}
+        {selectedAssets.length === 0 && assets.length > 0 && (
+          <button
+            onClick={() => setShowExportDialog(true)}
+            className="px-3 py-1.5 text-sm bg-background text-text-secondary hover:text-text-primary rounded-lg transition-colors"
+          >
+            Export All
+          </button>
         )}
       </div>
 
@@ -338,6 +357,14 @@ export function AssetGallery({ onAssetSelect, onAssetDoubleClick }: AssetGallery
           onPrev={prevInLightbox}
         />
       )}
+
+      {/* Export Dialog */}
+      {showExportDialog && (
+        <ExportDialog
+          assets={selectedAssets.length > 0 ? selectedAssets : assets}
+          onClose={() => setShowExportDialog(false)}
+        />
+      )}
     </div>
   );
 }
@@ -370,7 +397,7 @@ function AssetGridItem({ asset, isSelected, onClick, onDoubleClick, onFavorite }
       {/* Thumbnail */}
       <div className="aspect-square bg-background flex items-center justify-center">
         {asset.type === 'image' && asset.url ? (
-          <img
+          <StorageImage
             src={asset.thumbnailUrl || asset.url}
             alt={asset.name}
             className="w-full h-full object-cover"
@@ -378,7 +405,7 @@ function AssetGridItem({ asset, isSelected, onClick, onDoubleClick, onFavorite }
           />
         ) : asset.type === 'video' && asset.thumbnailUrl ? (
           <>
-            <img
+            <StorageImage
               src={asset.thumbnailUrl}
               alt={asset.name}
               className="w-full h-full object-cover"
@@ -459,7 +486,7 @@ function AssetListItem({ asset, isSelected, onClick, onDoubleClick, onFavorite }
       {/* Thumbnail */}
       <div className="w-14 h-14 rounded bg-background flex items-center justify-center overflow-hidden flex-shrink-0">
         {asset.type === 'image' && asset.url ? (
-          <img
+          <StorageImage
             src={asset.thumbnailUrl || asset.url}
             alt={asset.name}
             className="w-full h-full object-cover"
@@ -572,13 +599,13 @@ function AssetLightbox({ onClose, onNext, onPrev }: AssetLightboxProps) {
         onClick={(e) => e.stopPropagation()}
       >
         {asset.type === 'image' ? (
-          <img
+          <StorageImage
             src={asset.url}
             alt={asset.name}
             className="max-w-full max-h-[90vh] object-contain"
           />
         ) : asset.type === 'video' ? (
-          <video
+          <StorageVideo
             src={asset.url}
             controls
             autoPlay
