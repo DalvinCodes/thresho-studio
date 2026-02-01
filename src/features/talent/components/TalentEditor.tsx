@@ -19,6 +19,7 @@ import {
   useTalentEditor,
 } from '../store';
 import { composeTalentPrompt } from '../services/talentPromptService';
+import { TalentAIGenerationTab } from './TalentAIGenerationTab';
 
 interface TalentEditorProps {
   talentId: UUID;
@@ -51,7 +52,7 @@ export function TalentEditor({ talentId, onClose }: TalentEditorProps) {
   } = useTalentStore();
 
   const [activeTab, setActiveTab] = useState<
-    'general' | 'appearance' | 'personality' | 'images' | 'prompts'
+    'general' | 'appearance' | 'ai-generation' | 'personality' | 'images' | 'prompts'
   >('general');
   const [validationResult, setValidationResult] = useState<ReturnType<typeof validateTalent> | null>(null);
   const [promptPreview, setPromptPreview] = useState('');
@@ -143,6 +144,7 @@ export function TalentEditor({ talentId, onClose }: TalentEditorProps) {
         {[
           { key: 'general', label: 'General', icon: '📋' },
           { key: 'appearance', label: 'Appearance', icon: '👁️' },
+          ...(showPersonalityTab ? [{ key: 'ai-generation', label: 'AI Generation', icon: '🤖' }] : []),
           ...(showPersonalityTab ? [{ key: 'personality', label: 'Personality', icon: '🧠' }] : []),
           { key: 'images', label: 'Reference Images', icon: '🖼️' },
           { key: 'prompts', label: 'Prompt Fragments', icon: '✏️' },
@@ -187,6 +189,10 @@ export function TalentEditor({ talentId, onClose }: TalentEditorProps) {
             personality={draft.personality || {}}
             onUpdate={(personality) => updateDraft({ personality })}
           />
+        )}
+
+        {activeTab === 'ai-generation' && showPersonalityTab && (
+          <TalentAIGenerationTab talent={talent} />
         )}
 
         {activeTab === 'images' && (
