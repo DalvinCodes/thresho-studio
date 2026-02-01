@@ -87,6 +87,41 @@ export interface TalentReferenceImage {
 }
 
 /**
+ * Character sheet angle types
+ */
+export type CharacterSheetAngle = 'front' | 'back' | 'left-profile' | 'right-profile' | 'three-quarter';
+
+/**
+ * AI-generated image for a talent (headshot or character sheet)
+ */
+export interface TalentGeneratedImage {
+  id: UUID;
+  talentId: UUID;
+  type: 'headshot' | 'character-sheet';
+  angle?: CharacterSheetAngle;
+  url: string;
+  thumbnailUrl?: string;
+  generationPrompt: string;
+  providerId: string;
+  model: string;
+  seed?: number;
+  isApproved: boolean;
+  createdAt: Timestamp;
+}
+
+/**
+ * Generation state for talent AI generation UI
+ */
+export interface TalentGenerationState {
+  currentHeadshot: TalentGeneratedImage | null;
+  characterSheet: TalentGeneratedImage[];
+  isGenerating: boolean;
+  generationStep: 'idle' | 'headshot' | 'analyzing' | 'character-sheet';
+  selectedProviderId: string | null;
+  error: string | null;
+}
+
+/**
  * Full talent profile
  */
 export interface TalentProfile {
