@@ -54,6 +54,7 @@ export { BatchCreateModal } from './components/BatchCreateModal';
 export { EnhancedShotTable } from './components/EnhancedShotTable';
 export { InlineBatchRow } from './components/InlineBatchRow';
 export { CsvInstructionsModal } from './components/CsvInstructionsModal';
+export { ShotGenerationPanel } from './components/ShotGenerationPanel';
 
 // Types (re-export from core)
 export type {
