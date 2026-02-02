@@ -11,16 +11,14 @@ export const AppLayout = ({ children }: AppLayoutProps) => {
 
   return (
     <div className="flex h-screen bg-bg overflow-hidden text-text font-sans">
-      <Sidebar 
-        isCollapsed={isSidebarCollapsed} 
-        onToggle={() => setIsSidebarCollapsed(!isSidebarCollapsed)} 
+      <Sidebar
+        isCollapsed={isSidebarCollapsed}
+        onToggle={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
       />
 
       <div className="flex-1 flex flex-col min-w-0 transition-all duration-300">
         <TopBar />
-        <main className="flex-1 overflow-auto p-8 scroll-smooth">
-          <div className="max-w-[1600px] mx-auto w-full">{children}</div>
-        </main>
+        <main className="flex-1 overflow-auto scroll-smooth">{children}</main>
       </div>
     </div>
   );

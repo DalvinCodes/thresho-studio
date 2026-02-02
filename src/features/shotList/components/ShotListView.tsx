@@ -3,12 +3,28 @@
  * Displays shots in table or storyboard view with filtering and sorting
  */
 
-import { useState, useCallback } from 'react';
-import { Film, ClipboardList, Sparkles } from 'lucide-react';
-import type { UUID } from '../../../core/types/common';
-import type { Shot, ShotStatus, ShotType, CreateShotInput, AspectRatio } from '../../../core/types/shotList';
-import { useGenerationStore } from '../../generation';
-import { composeShotPrompt, validateShotForGeneration } from '../services/shotPromptService';
+import { useState, useCallback } from "react";
+import {
+  Film,
+  ClipboardList,
+  Sparkles,
+  ChevronDown,
+  Plus,
+  Trash2,
+} from "lucide-react";
+import type { UUID } from "../../../core/types/common";
+import { TalentSelector } from "../../talent/components/TalentSelector";
+import type {
+  Shot,
+  ShotStatus,
+  ShotType,
+  CreateShotInput,
+} from "../../../core/types/shotList";
+import { useGenerationStore } from "../../generation";
+import {
+  composeShotPrompt,
+  validateShotForGeneration,
+} from "../services/shotPromptService";
 import {
   useShotListStore,
   useSelectedShotList,
@@ -16,18 +32,37 @@ import {
   useViewMode,
   useFilterOptions,
   useListStats,
-} from '../store';
-import { EnhancedShotTable } from './EnhancedShotTable';
-import { BatchCreateModal } from './BatchCreateModal';
-import { BatchGenerationPanel } from './BatchGenerationPanel';
+} from "../store";
+import { EnhancedShotTable } from "./EnhancedShotTable";
+import { BatchCreateModal } from "./BatchCreateModal";
+import { BatchGenerationPanel } from "./BatchGenerationPanel";
+
+interface ShotListSummary {
+  id: UUID;
+  name: string;
+  totalShots: number;
+  completedShots: number;
+}
 
 interface ShotListViewProps {
   shotListId: UUID;
+  allShotLists?: ShotListSummary[];
+  onSelectShotList?: (id: UUID) => void;
+  onCreateShotList?: () => void;
+  onDeleteShotList?: (id: UUID) => void;
   onEditShot?: (shotId: UUID) => void;
   onGenerateShot?: (shotId: UUID) => void;
 }
 
-export function ShotListView({ shotListId, onEditShot, onGenerateShot }: ShotListViewProps) {
+export function ShotListView({
+  shotListId,
+  allShotLists = [],
+  onSelectShotList,
+  onCreateShotList,
+  onDeleteShotList,
+  onEditShot,
+  onGenerateShot,
+}: ShotListViewProps) {
   const shotList = useSelectedShotList();
   const shots = useFilteredShots(shotListId);
   const viewMode = useViewMode();
@@ -52,112 +87,147 @@ export function ShotListView({ shotListId, onEditShot, onGenerateShot }: ShotLis
 
   const { startGeneration } = useGenerationStore();
 
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
   const [isBatchGenerationOpen, setIsBatchGenerationOpen] = useState(false);
   const [selectedShotIds, setSelectedShotIds] = useState<UUID[]>([]);
 
   // Handle search
-  const handleSearch = useCallback((query: string) => {
-    setSearchQuery(query);
-    setFilterOptions({ searchQuery: query || undefined });
-  }, [setFilterOptions]);
+  const handleSearch = useCallback(
+    (query: string) => {
+      setSearchQuery(query);
+      setFilterOptions({ searchQuery: query || undefined });
+    },
+    [setFilterOptions],
+  );
 
   // Handle status filter
-  const handleStatusFilter = useCallback((status: ShotStatus | '') => {
-    setFilterOptions({
-      status: status ? [status] : undefined,
-    });
-  }, [setFilterOptions]);
+  const handleStatusFilter = useCallback(
+    (status: ShotStatus | "") => {
+      setFilterOptions({
+        status: status ? [status] : undefined,
+      });
+    },
+    [setFilterOptions],
+  );
 
   // Handle shot type filter
-  const handleShotTypeFilter = useCallback((type: ShotType | '') => {
-    setFilterOptions({
-      shotType: type ? [type] : undefined,
-    });
-  }, [setFilterOptions]);
+  const handleShotTypeFilter = useCallback(
+    (type: ShotType | "") => {
+      setFilterOptions({
+        shotType: type ? [type] : undefined,
+      });
+    },
+    [setFilterOptions],
+  );
 
   // Create new shot
-  const handleCreateShot = useCallback((name: string, description: string) => {
-    createShot({
-      shotListId,
-      name,
-      description,
-    });
-    closeCreateShotModal();
-  }, [shotListId, createShot, closeCreateShotModal]);
+  const handleCreateShot = useCallback(
+    (name: string, description: string, talentIds?: UUID[]) => {
+      createShot({
+        shotListId,
+        name,
+        description,
+        talentIds,
+      });
+      closeCreateShotModal();
+    },
+    [shotListId, createShot, closeCreateShotModal],
+  );
 
   // Handle batch creation
-  const handleCreateMultipleShots = useCallback(async (shotInputs: CreateShotInput[]) => {
-    await createMultipleShots(shotInputs);
-    setIsBatchModalOpen(false);
-  }, [createMultipleShots]);
+  const handleCreateMultipleShots = useCallback(
+    async (shotInputs: CreateShotInput[]) => {
+      await createMultipleShots(shotInputs);
+      setIsBatchModalOpen(false);
+    },
+    [createMultipleShots],
+  );
 
   // Handle shot updates
-  const handleUpdateShot = useCallback((shotId: UUID, updates: Partial<Shot>) => {
-    updateShot(shotId, updates);
-  }, [updateShot]);
+  const handleUpdateShot = useCallback(
+    (shotId: UUID, updates: Partial<Shot>) => {
+      updateShot(shotId, updates);
+    },
+    [updateShot],
+  );
 
   // Handle single shot generation
-  const handleSingleGeneration = useCallback((shotId: UUID, config: { prompt: string; negativePrompt: string; aspectRatio: string; referenceAssetIds?: UUID[]; brandId?: UUID; talentIds?: UUID[] }) => {
-    const shot = shots.find(s => s.id === shotId);
-    if (!shot) return;
-
-    // Create generation request
-    const request = {
-      type: 'image' as const,
-      customPrompt: config.prompt,
-      parameters: {
-        negativePrompt: config.negativePrompt,
-        aspectRatio: config.aspectRatio,
+  const handleSingleGeneration = useCallback(
+    (
+      shotId: UUID,
+      config: {
+        prompt: string;
+        negativePrompt: string;
+        aspectRatio: string;
+        referenceAssetIds?: UUID[];
+        brandId?: UUID;
+        talentIds?: UUID[];
       },
-      brandId: config.brandId,
-      talentIds: config.talentIds,
-      metadata: {
-        shotId: shot.id,
-        shotNumber: shot.shotNumber,
-        referenceAssetIds: config.referenceAssetIds,
-      },
-    };
-
-    // Trigger generation
-    startGeneration(request);
-
-    // Update shot status to 'in-progress'
-    updateShot(shotId, { status: 'in-progress' as ShotStatus });
-  }, [shots, startGeneration, updateShot]);
-
-  // Handle batch generation
-  const handleBatchGeneration = useCallback((shotIds: UUID[]) => {
-    shotIds.forEach(shotId => {
-      const shot = shots.find(s => s.id === shotId);
+    ) => {
+      const shot = shots.find((s) => s.id === shotId);
       if (!shot) return;
 
-      // Validate shot
-      const validation = validateShotForGeneration(shot);
-      if (!validation.valid) return;
-
-      // Compose prompt
-      const promptResult = composeShotPrompt({ shot });
-
-      // Trigger generation
-      startGeneration({
-        type: 'image',
-        customPrompt: promptResult.prompt,
+      // Create generation request
+      const request = {
+        type: "image" as const,
+        customPrompt: config.prompt,
         parameters: {
-          negativePrompt: promptResult.negativePrompt,
-          aspectRatio: shot.aspectRatio,
+          negativePrompt: config.negativePrompt,
+          aspectRatio: config.aspectRatio,
         },
+        brandId: config.brandId,
+        talentIds: config.talentIds,
         metadata: {
           shotId: shot.id,
           shotNumber: shot.shotNumber,
+          referenceAssetIds: config.referenceAssetIds,
         },
-      });
+      };
 
-      // Update status
-      updateShot(shotId, { status: 'in-progress' as ShotStatus });
-    });
-  }, [shots, startGeneration, updateShot]);
+      // Trigger generation
+      startGeneration(request);
+
+      // Update shot status to 'in-progress'
+      updateShot(shotId, { status: "in-progress" as ShotStatus });
+    },
+    [shots, startGeneration, updateShot],
+  );
+
+  // Handle batch generation
+  const handleBatchGeneration = useCallback(
+    (shotIds: UUID[]) => {
+      shotIds.forEach((shotId) => {
+        const shot = shots.find((s) => s.id === shotId);
+        if (!shot) return;
+
+        // Validate shot
+        const validation = validateShotForGeneration(shot);
+        if (!validation.valid) return;
+
+        // Compose prompt
+        const promptResult = composeShotPrompt({ shot });
+
+        // Trigger generation
+        startGeneration({
+          type: "image",
+          customPrompt: promptResult.prompt,
+          parameters: {
+            negativePrompt: promptResult.negativePrompt,
+            aspectRatio: shot.aspectRatio,
+          },
+          metadata: {
+            shotId: shot.id,
+            shotNumber: shot.shotNumber,
+          },
+        });
+
+        // Update status
+        updateShot(shotId, { status: "in-progress" as ShotStatus });
+      });
+    },
+    [shots, startGeneration, updateShot],
+  );
 
   if (!shotList) {
     return (
@@ -168,62 +238,110 @@ export function ShotListView({ shotListId, onEditShot, onGenerateShot }: ShotLis
   }
 
   return (
-    <div className="h-full flex flex-col">
-      {/* Header */}
-      <div className="p-4 border-b border-border bg-surface">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="text-lg font-semibold text-text-primary">{shotList.name}</h2>
-            {stats && (
-              <p className="text-sm text-text-secondary">
-                {stats.total} shots • {stats.completed} completed
-              </p>
-            )}
+    <div className="h-full flex">
+      {/* Left Settings Panel */}
+      <div className="w-64 border-r border-border bg-surface flex flex-col shrink-0">
+        {/* Shot List Selector */}
+        <div className="p-3 border-b border-border">
+          <label className="text-xs font-medium text-text-secondary uppercase tracking-wider mb-2 block">
+            Shot List
+          </label>
+          <div className="relative">
+            <select
+              value={shotListId}
+              onChange={(e) => onSelectShotList?.(e.target.value as UUID)}
+              className="w-full px-3 py-2 pr-8 bg-background border border-border rounded-lg text-text-primary text-sm appearance-none cursor-pointer hover:border-primary focus:outline-none focus:ring-2 focus:ring-primary"
+            >
+              {allShotLists.map((list) => (
+                <option key={list.id} value={list.id}>
+                  {list.name} ({list.totalShots})
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-text-secondary pointer-events-none" />
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex gap-2 mt-2">
             <button
-              onClick={() => openCreateShotModal()}
-              className="px-4 py-2 bg-primary text-white rounded-3xl hover:bg-primary/90 transition-colors"
+              onClick={() => onCreateShotList?.()}
+              className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs text-primary hover:bg-primary/10 rounded-lg transition-colors"
             >
-              + Add Shot
+              <Plus className="w-3 h-3" />
+              New
             </button>
             <button
-              onClick={() => setIsBatchModalOpen(true)}
-              className="px-4 py-2 border border-border text-text-primary rounded-3xl hover:bg-surface-raised transition-colors"
+              onClick={() => onDeleteShotList?.(shotListId)}
+              className="flex items-center justify-center gap-1 px-2 py-1.5 text-xs text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
             >
-              + Add Multiple
-            </button>
-            <button
-              onClick={() => setIsBatchGenerationOpen(true)}
-              disabled={selectedShotIds.length === 0}
-              className="flex items-center gap-2 px-4 py-2 border border-border text-text-primary rounded-3xl hover:bg-surface-raised transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <Sparkles className="w-4 h-4" />
-              Generate Selected ({selectedShotIds.length})
+              <Trash2 className="w-3 h-3" />
+              Delete
             </button>
           </div>
+          {stats && (
+            <p className="text-xs text-text-secondary mt-2">
+              {stats.total} shots • {stats.completed} completed
+            </p>
+          )}
         </div>
 
-        {/* Toolbar */}
-        <div className="flex items-center gap-4">
-          {/* View Mode Toggle */}
-          <div className="flex bg-background rounded-3xl p-1">
-            {(['table', 'storyboard'] as const).map((mode) => (
+        {/* Actions */}
+        <div className="p-4 border-b border-border space-y-2">
+          <button
+            onClick={() => openCreateShotModal()}
+            className="w-full px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium"
+          >
+            + Add Shot
+          </button>
+          <button
+            onClick={() => setIsBatchModalOpen(true)}
+            className="w-full px-4 py-2 border border-border text-text-primary rounded-lg hover:bg-surface-raised transition-colors text-sm"
+          >
+            + Add Multiple
+          </button>
+          <button
+            onClick={() => setIsBatchGenerationOpen(true)}
+            disabled={selectedShotIds.length === 0}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg hover:opacity-90 transition-opacity text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Sparkles className="w-4 h-4" />
+            Generate ({selectedShotIds.length})
+          </button>
+        </div>
+
+        {/* View Mode */}
+        <div className="p-4 border-b border-border">
+          <label className="text-xs font-medium text-text-secondary uppercase tracking-wider">
+            View Mode
+          </label>
+          <div className="flex bg-background rounded-lg p-1 mt-2">
+            {(["table", "storyboard"] as const).map((mode) => (
               <button
                 key={mode}
                 onClick={() => setViewMode(mode)}
                 className={`
-                  px-3 py-1.5 text-sm font-medium rounded capitalize transition-colors flex items-center gap-1.5
-                  ${viewMode === mode
-                    ? 'bg-primary text-white'
-                    : 'text-text-secondary hover:text-text-primary'
+                  flex-1 px-3 py-1.5 text-sm font-medium rounded capitalize transition-colors flex items-center justify-center gap-1.5
+                  ${
+                    viewMode === mode
+                      ? "bg-primary text-white"
+                      : "text-text-secondary hover:text-text-primary"
                   }
                 `}
               >
-                {mode === 'table' ? <ClipboardList className="w-4 h-4" /> : <Film className="w-4 h-4" />} {mode}
+                {mode === "table" ? (
+                  <ClipboardList className="w-4 h-4" />
+                ) : (
+                  <Film className="w-4 h-4" />
+                )}
+                {mode}
               </button>
             ))}
           </div>
+        </div>
+
+        {/* Filters */}
+        <div className="p-4 border-b border-border space-y-3">
+          <label className="text-xs font-medium text-text-secondary uppercase tracking-wider">
+            Filters
+          </label>
 
           {/* Search */}
           <input
@@ -231,14 +349,16 @@ export function ShotListView({ shotListId, onEditShot, onGenerateShot }: ShotLis
             value={searchQuery}
             onChange={(e) => handleSearch(e.target.value)}
             placeholder="Search shots..."
-            className="flex-1 max-w-xs px-3 py-2 bg-background border border-border rounded-3xl text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+            className="w-full px-3 py-2 bg-background border border-border rounded-lg text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary text-sm"
           />
 
           {/* Status Filter */}
           <select
-            value={filterOptions.status?.[0] || ''}
-            onChange={(e) => handleStatusFilter(e.target.value as ShotStatus | '')}
-            className="px-3 py-2 bg-background border border-border rounded-3xl text-text-primary text-sm"
+            value={filterOptions.status?.[0] || ""}
+            onChange={(e) =>
+              handleStatusFilter(e.target.value as ShotStatus | "")
+            }
+            className="w-full px-3 py-2 bg-background border border-border rounded-lg text-text-primary text-sm"
           >
             <option value="">All Status</option>
             <option value="planned">Planned</option>
@@ -252,9 +372,11 @@ export function ShotListView({ shotListId, onEditShot, onGenerateShot }: ShotLis
 
           {/* Shot Type Filter */}
           <select
-            value={filterOptions.shotType?.[0] || ''}
-            onChange={(e) => handleShotTypeFilter(e.target.value as ShotType | '')}
-            className="px-3 py-2 bg-background border border-border rounded-3xl text-text-primary text-sm"
+            value={filterOptions.shotType?.[0] || ""}
+            onChange={(e) =>
+              handleShotTypeFilter(e.target.value as ShotType | "")
+            }
+            className="w-full px-3 py-2 bg-background border border-border rounded-lg text-text-primary text-sm"
           >
             <option value="">All Types</option>
             <option value="wide">Wide</option>
@@ -266,7 +388,9 @@ export function ShotListView({ shotListId, onEditShot, onGenerateShot }: ShotLis
           </select>
 
           {/* Clear Filters */}
-          {(filterOptions.status || filterOptions.shotType || filterOptions.searchQuery) && (
+          {(filterOptions.status ||
+            filterOptions.shotType ||
+            filterOptions.searchQuery) && (
             <button
               onClick={clearFilters}
               className="text-sm text-primary hover:underline"
@@ -275,12 +399,36 @@ export function ShotListView({ shotListId, onEditShot, onGenerateShot }: ShotLis
             </button>
           )}
         </div>
+
+        {/* Camera Settings (Placeholder for future) */}
+        <div className="p-4 border-b border-border">
+          <label className="text-xs font-medium text-text-secondary uppercase tracking-wider">
+            Camera
+          </label>
+          <div className="mt-2 p-3 bg-background/50 rounded-lg border border-dashed border-border">
+            <p className="text-xs text-text-secondary text-center">
+              Camera presets coming soon
+            </p>
+          </div>
+        </div>
+
+        {/* Lighting Settings (Placeholder for future) */}
+        <div className="p-4 flex-1">
+          <label className="text-xs font-medium text-text-secondary uppercase tracking-wider">
+            Lighting
+          </label>
+          <div className="mt-2 p-3 bg-background/50 rounded-lg border border-dashed border-border">
+            <p className="text-xs text-text-secondary text-center">
+              Lighting presets coming soon
+            </p>
+          </div>
+        </div>
       </div>
 
-      {/* Content */}
-      <div className="flex-1 overflow-x-auto overflow-y-auto">
-            {viewMode === 'table' ? (
-          <div className="min-w-[1200px]">
+      {/* Main Content Area */}
+      <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
+        {viewMode === "table" ? (
+          <div className="flex-1 min-w-0 overflow-auto">
             <EnhancedShotTable
               shots={shots}
               shotListId={shotListId}
@@ -363,7 +511,12 @@ interface ShotStoryboardProps {
   onGenerate?: (id: UUID) => void;
 }
 
-function ShotStoryboard({ shots, onSelect, onEdit, onGenerate }: ShotStoryboardProps) {
+function ShotStoryboard({
+  shots,
+  onSelect,
+  onEdit,
+  onGenerate,
+}: ShotStoryboardProps) {
   return (
     <div className="p-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
       {shots.map((shot) => (
@@ -396,12 +549,17 @@ function ShotStoryboard({ shots, onSelect, onEdit, onGenerate }: ShotStoryboardP
             </span>
 
             {/* Status badge */}
-            <span className={`absolute top-2 right-2 px-2 py-0.5 text-white text-xs rounded ${
-              shot.status === 'completed' ? 'bg-green-500' :
-              shot.status === 'in-progress' ? 'bg-yellow-500' :
-              shot.status === 'approved' ? 'bg-blue-500' :
-              'bg-gray-500'
-            }`}>
+            <span
+              className={`absolute top-2 right-2 px-2 py-0.5 text-white text-xs rounded ${
+                shot.status === "completed"
+                  ? "bg-green-500"
+                  : shot.status === "in-progress"
+                    ? "bg-yellow-500"
+                    : shot.status === "approved"
+                      ? "bg-blue-500"
+                      : "bg-gray-500"
+              }`}
+            >
               {shot.status}
             </span>
           </div>
@@ -418,10 +576,12 @@ function ShotStoryboard({ shots, onSelect, onEdit, onGenerate }: ShotStoryboardP
             {/* Meta */}
             <div className="flex items-center justify-between mt-2">
               <span className="text-xs text-text-secondary capitalize">
-                {shot.shotType.replace('-', ' ')}
+                {shot.shotType.replace("-", " ")}
               </span>
               {shot.duration && (
-                <span className="text-xs text-text-secondary">{shot.duration}s</span>
+                <span className="text-xs text-text-secondary">
+                  {shot.duration}s
+                </span>
               )}
             </div>
 
@@ -456,17 +616,22 @@ function ShotStoryboard({ shots, onSelect, onEdit, onGenerate }: ShotStoryboardP
 // Create Shot Modal
 interface CreateShotModalProps {
   onClose: () => void;
-  onCreate: (name: string, description: string) => void;
+  onCreate: (name: string, description: string, talentIds?: UUID[]) => void;
 }
 
 function CreateShotModal({ onClose, onCreate }: CreateShotModalProps) {
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [selectedTalentIds, setSelectedTalentIds] = useState<UUID[]>([]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (name.trim() && description.trim()) {
-      onCreate(name.trim(), description.trim());
+      onCreate(
+        name.trim(),
+        description.trim(),
+        selectedTalentIds.length > 0 ? selectedTalentIds : undefined,
+      );
     }
   };
 
@@ -502,6 +667,17 @@ function CreateShotModal({ onClose, onCreate }: CreateShotModalProps) {
               placeholder="Describe what happens in this shot..."
               rows={3}
               className="w-full px-3 py-2 bg-background border border-border rounded-3xl text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-text-primary mb-1">
+              Talent
+            </label>
+            <TalentSelector
+              selectedIds={selectedTalentIds}
+              onChange={setSelectedTalentIds}
+              placeholder="Select talent for this shot..."
             />
           </div>
 

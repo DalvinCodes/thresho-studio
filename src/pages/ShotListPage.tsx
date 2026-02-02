@@ -3,42 +3,50 @@
  * Manage shot lists and storyboards
  */
 
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { Film, Image, Video, Trash2 } from 'lucide-react';
-import type { UUID, ContentType } from '../core/types/common';
-import { ShotListView, ShotEditor, useShotListStore, useShotLists } from '../features/shotList';
+import { useState, useEffect } from "react";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { Film, Image, Video } from "lucide-react";
+import type { UUID, ContentType } from "../core/types/common";
+import {
+  ShotListView,
+  ShotEditor,
+  useShotListStore,
+  useShotLists,
+} from "../features/shotList";
 
 export function ShotListPage() {
   const { id, shotId } = useParams<{ id?: string; shotId?: string }>();
   const navigate = useNavigate();
   const location = useLocation();
   const shotLists = useShotLists();
-  const {
-    selectShotList,
-    createShotList,
-    deleteShotList,
-  } = useShotListStore();
+  const { selectShotList, createShotList, deleteShotList } = useShotListStore();
 
   const selectedListId = useShotListStore((state) => state.selectedShotListId);
   const [showCreateModal, setShowCreateModal] = useState(false);
 
   // Sync modal state with URL path
   useEffect(() => {
-    setShowCreateModal(location.pathname === '/shotlist/new');
+    setShowCreateModal(location.pathname === "/shotlist/new");
   }, [location.pathname]);
 
-  // Sync selected list with URL param
+  // Sync selected list with URL param, auto-select most recent if none specified
   useEffect(() => {
-    if (id && id !== 'new') {
+    if (id && id !== "new") {
       selectShotList(id as UUID);
+    } else if (!id && shotLists.length > 0 && !selectedListId) {
+      // Auto-select the most recently modified shot list
+      const mostRecent = [...shotLists].sort(
+        (a, b) =>
+          new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+      )[0];
+      navigate(`/shotlist/${mostRecent.id}`, { replace: true });
     } else if (!id) {
       selectShotList(null);
     }
-  }, [id, selectShotList]);
+  }, [id, selectShotList, shotLists, selectedListId, navigate]);
 
   // If editing a shot
-  if (shotId && id && id !== 'new') {
+  if (shotId && id && id !== "new") {
     return (
       <ShotEditor
         shotId={shotId as UUID}
@@ -48,77 +56,29 @@ export function ShotListPage() {
   }
 
   return (
-    <div className="h-full flex">
-      {/* Shot List Sidebar */}
-      <div className="w-64 border-r border-border bg-surface flex flex-col">
-        <div className="p-4 border-b border-border">
-          <h3 className="font-semibold text-text-primary mb-3">Shot Lists</h3>
-          <button
-            onClick={() => navigate('/shotlist/new')}
-            className="w-full py-2 bg-primary text-white rounded-3xl hover:bg-primary/90 transition-colors text-sm"
-          >
-            + New Shot List
-          </button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto p-2">
-          {shotLists.length === 0 ? (
-            <p className="text-sm text-text-secondary text-center py-4">
-              No shot lists yet
-            </p>
-          ) : (
-            <div className="space-y-1">
-              {shotLists.map((list) => (
-                <div
-                  key={list.id}
-                  className={`
-                    group flex items-center justify-between p-3 rounded-3xl cursor-pointer transition-colors
-                    ${selectedListId === list.id
-                      ? 'bg-primary/10 text-primary'
-                      : 'hover:bg-surface-hover text-text-primary'
-                    }
-                  `}
-                >
-                  <button
-                    onClick={() => navigate(`/shotlist/${list.id}`)}
-                    className="flex-1 text-left"
-                  >
-                    <p className="font-medium truncate">{list.name}</p>
-                    <p className="text-xs text-text-secondary mt-1">
-                      {list.totalShots} shots • {list.completedShots} done
-                    </p>
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (confirm(`Delete shot list "${list.name}"? This will also delete all ${list.totalShots} shots in this list. This action cannot be undone.`)) {
-                        deleteShotList(list.id);
-                        if (selectedListId === list.id) {
-                          navigate('/shotlist');
-                        }
-                      }
-                    }}
-                    className="opacity-0 group-hover:opacity-100 p-1.5 text-text-secondary hover:text-red-500 transition-all"
-                    title="Delete shot list"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
+    <div className="h-full flex flex-col">
       {/* Main Content */}
-      <div className="flex-1 min-w-0 overflow-hidden">
+      <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
         {selectedListId ? (
-          <div className="h-full overflow-auto">
-            <ShotListView
-              shotListId={selectedListId}
-              onEditShot={(shotId) => navigate(`/shotlist/${selectedListId}/shots/${shotId}/edit`)}
-            />
-          </div>
+          <ShotListView
+            shotListId={selectedListId}
+            allShotLists={shotLists}
+            onSelectShotList={(id) => navigate(`/shotlist/${id}`)}
+            onCreateShotList={() => navigate("/shotlist/new")}
+            onDeleteShotList={(id) => {
+              if (
+                confirm(
+                  `Delete this shot list? This will also delete all shots. This action cannot be undone.`,
+                )
+              ) {
+                deleteShotList(id);
+                navigate("/shotlist");
+              }
+            }}
+            onEditShot={(shotId) =>
+              navigate(`/shotlist/${selectedListId}/shots/${shotId}/edit`)
+            }
+          />
         ) : (
           <div className="h-full flex items-center justify-center">
             <div className="text-center">
@@ -127,10 +87,10 @@ export function ShotListPage() {
                 No Shot List Selected
               </h3>
               <p className="text-text-secondary mb-4">
-                Select a shot list from the sidebar or create a new one
+                Create a new shot list to get started
               </p>
               <button
-                onClick={() => navigate('/shotlist/new')}
+                onClick={() => navigate("/shotlist/new")}
                 className="px-4 py-2 bg-primary text-white rounded-3xl hover:bg-primary/90 transition-colors"
               >
                 Create Shot List
@@ -145,7 +105,7 @@ export function ShotListPage() {
         <CreateShotListModal
           onClose={() => {
             setShowCreateModal(false);
-            navigate('/shotlist');
+            navigate("/shotlist");
           }}
           onCreate={(name, type) => {
             const newId = createShotList(name, type);
@@ -165,8 +125,8 @@ interface CreateShotListModalProps {
 }
 
 function CreateShotListModal({ onClose, onCreate }: CreateShotListModalProps) {
-  const [name, setName] = useState('');
-  const [contentType, setContentType] = useState<ContentType>('image');
+  const [name, setName] = useState("");
+  const [contentType, setContentType] = useState<ContentType>("image");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -204,30 +164,36 @@ function CreateShotListModal({ onClose, onCreate }: CreateShotListModalProps) {
             <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
-                onClick={() => setContentType('image')}
+                onClick={() => setContentType("image")}
                 className={`
                   p-3 rounded-3xl border-2 transition-all text-center
-                  ${contentType === 'image'
-                    ? 'border-primary bg-primary/10'
-                    : 'border-border hover:border-primary/50'
+                  ${
+                    contentType === "image"
+                      ? "border-primary bg-primary/10"
+                      : "border-border hover:border-primary/50"
                   }
                 `}
               >
-                <Image className={`w-6 h-6 mx-auto mb-1 ${contentType === 'image' ? 'text-primary' : 'text-text-secondary'}`} />
+                <Image
+                  className={`w-6 h-6 mx-auto mb-1 ${contentType === "image" ? "text-primary" : "text-text-secondary"}`}
+                />
                 <span className="text-sm text-text-primary">Images</span>
               </button>
               <button
                 type="button"
-                onClick={() => setContentType('video')}
+                onClick={() => setContentType("video")}
                 className={`
                   p-3 rounded-3xl border-2 transition-all text-center
-                  ${contentType === 'video'
-                    ? 'border-primary bg-primary/10'
-                    : 'border-border hover:border-primary/50'
+                  ${
+                    contentType === "video"
+                      ? "border-primary bg-primary/10"
+                      : "border-border hover:border-primary/50"
                   }
                 `}
               >
-                <Video className={`w-6 h-6 mx-auto mb-1 ${contentType === 'video' ? 'text-primary' : 'text-text-secondary'}`} />
+                <Video
+                  className={`w-6 h-6 mx-auto mb-1 ${contentType === "video" ? "text-primary" : "text-text-secondary"}`}
+                />
                 <span className="text-sm text-text-primary">Videos</span>
               </button>
             </div>

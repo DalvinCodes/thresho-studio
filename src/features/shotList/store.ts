@@ -311,6 +311,7 @@ export const useShotListStore = create<ShotListStore>()(
         duration: input.duration,
         location: input.location,
         subjects: input.subjects || [],
+        talentIds: input.talentIds,
         props: [],
         status: 'planned',
         priority: input.priority || 3,
@@ -399,6 +400,7 @@ export const useShotListStore = create<ShotListStore>()(
           duration: input.duration,
           location: input.location,
           subjects: input.subjects || [],
+          talentIds: input.talentIds,
           props: [],
           status: 'planned',
           priority: input.priority || 3,
@@ -1215,8 +1217,8 @@ export const useShotsForList = (listId: UUID | null) => {
     () =>
       listId
         ? Array.from(shots.values())
-            .filter((s) => s.shotListId === listId)
-            .sort((a, b) => a.orderIndex - b.orderIndex)
+          .filter((s) => s.shotListId === listId)
+          .sort((a, b) => a.orderIndex - b.orderIndex)
         : [],
     [shots, listId]
   );

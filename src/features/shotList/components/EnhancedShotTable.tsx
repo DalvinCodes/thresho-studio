@@ -3,9 +3,22 @@
  * Full-featured table with inline editing, selection, and batch operations
  */
 
-import { useState, useCallback, useMemo, useEffect } from 'react';
-import { Pencil, Copy, Trash2, GripVertical, Sparkles, Loader2, Check, Image } from 'lucide-react';
-import type { UUID } from '../../../core/types/common';
+import { useState, useCallback, useMemo, useEffect, useRef } from "react";
+import {
+  Pencil,
+  Copy,
+  Trash2,
+  GripVertical,
+  Sparkles,
+  Loader2,
+  Check,
+  Image,
+  Columns3,
+  ChevronDown,
+  LayoutGrid,
+  LayoutList,
+} from "lucide-react";
+import type { UUID } from "../../../core/types/common";
 import type {
   Shot,
   ShotStatus,
@@ -13,10 +26,11 @@ import type {
   CameraMovement,
   LightingSetup,
   CreateShotInput,
-} from '../../../core/types/shotList';
-import { useGenerationStore } from '../../generation';
-import { InlineBatchRow } from './InlineBatchRow';
-import { ShotGenerationPanel } from './ShotGenerationPanel';
+} from "../../../core/types/shotList";
+import { useGenerationStore } from "../../generation";
+import { useTalentStore } from "../../talent/store";
+import { InlineBatchRow } from "./InlineBatchRow";
+import { ShotGenerationPanel } from "./ShotGenerationPanel";
 
 interface EnhancedShotTableProps {
   shots: Shot[];
@@ -35,97 +49,97 @@ interface EnhancedShotTableProps {
 
 // Dropdown options
 const SHOT_TYPES: ShotType[] = [
-  'wide',
-  'medium',
-  'close-up',
-  'extreme-close',
-  'over-shoulder',
-  'pov',
-  'aerial',
-  'low-angle',
-  'high-angle',
-  'dutch-angle',
-  'tracking',
-  'pan',
-  'tilt',
-  'zoom',
-  'static',
-  'handheld',
-  'steadicam',
-  'crane',
-  'dolly',
-  'custom',
+  "wide",
+  "medium",
+  "close-up",
+  "extreme-close",
+  "over-shoulder",
+  "pov",
+  "aerial",
+  "low-angle",
+  "high-angle",
+  "dutch-angle",
+  "tracking",
+  "pan",
+  "tilt",
+  "zoom",
+  "static",
+  "handheld",
+  "steadicam",
+  "crane",
+  "dolly",
+  "custom",
 ];
 
 const CAMERA_MOVEMENTS: CameraMovement[] = [
-  'static',
-  'pan-left',
-  'pan-right',
-  'tilt-up',
-  'tilt-down',
-  'dolly-in',
-  'dolly-out',
-  'truck-left',
-  'truck-right',
-  'crane-up',
-  'crane-down',
-  'zoom-in',
-  'zoom-out',
-  'follow',
-  'orbit',
-  'push-in',
-  'pull-out',
-  'whip-pan',
-  'rack-focus',
-  'custom',
+  "static",
+  "pan-left",
+  "pan-right",
+  "tilt-up",
+  "tilt-down",
+  "dolly-in",
+  "dolly-out",
+  "truck-left",
+  "truck-right",
+  "crane-up",
+  "crane-down",
+  "zoom-in",
+  "zoom-out",
+  "follow",
+  "orbit",
+  "push-in",
+  "pull-out",
+  "whip-pan",
+  "rack-focus",
+  "custom",
 ];
 
 const LIGHTING_SETUPS: LightingSetup[] = [
-  'natural',
-  'golden-hour',
-  'blue-hour',
-  'overcast',
-  'studio-three-point',
-  'studio-rembrandt',
-  'studio-split',
-  'studio-butterfly',
-  'studio-loop',
-  'high-key',
-  'low-key',
-  'silhouette',
-  'backlit',
-  'side-lit',
-  'neon',
-  'practical',
-  'mixed',
-  'custom',
+  "natural",
+  "golden-hour",
+  "blue-hour",
+  "overcast",
+  "studio-three-point",
+  "studio-rembrandt",
+  "studio-split",
+  "studio-butterfly",
+  "studio-loop",
+  "high-key",
+  "low-key",
+  "silhouette",
+  "backlit",
+  "side-lit",
+  "neon",
+  "practical",
+  "mixed",
+  "custom",
 ];
 
 const STATUSES: ShotStatus[] = [
-  'planned',
-  'scripted',
-  'storyboarded',
-  'approved',
-  'in-progress',
-  'review',
-  'completed',
-  'rejected',
+  "planned",
+  "scripted",
+  "storyboarded",
+  "approved",
+  "in-progress",
+  "review",
+  "completed",
+  "rejected",
 ];
 
 const PRIORITIES = [
-  { value: 1, label: 'Critical', color: 'bg-red-500/20 text-red-400' },
-  { value: 2, label: 'High', color: 'bg-orange-500/20 text-orange-400' },
-  { value: 3, label: 'Medium', color: 'bg-yellow-500/20 text-yellow-400' },
-  { value: 4, label: 'Low', color: 'bg-blue-500/20 text-blue-400' },
-  { value: 5, label: 'Optional', color: 'bg-gray-500/20 text-gray-400' },
+  { value: 1, label: "Critical", color: "bg-red-500/20 text-red-400" },
+  { value: 2, label: "High", color: "bg-orange-500/20 text-orange-400" },
+  { value: 3, label: "Medium", color: "bg-yellow-500/20 text-yellow-400" },
+  { value: 4, label: "Low", color: "bg-blue-500/20 text-blue-400" },
+  { value: 5, label: "Optional", color: "bg-gray-500/20 text-gray-400" },
 ];
 
 // Format label for display
 function formatLabel(value: string): string {
   return value
-    .split('-')
+    .split("-")
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
+    .join(" ");
 }
 
 // Fill handle component
@@ -141,7 +155,7 @@ function FillHandle({ onMouseDown, visible }: FillHandleProps) {
       className={`
         absolute -bottom-1 -right-1 w-3 h-3 bg-primary rounded-sm cursor-crosshair z-10
         transition-opacity duration-150
-        ${visible ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}
+        ${visible ? "opacity-100" : "opacity-0 group-hover:opacity-100"}
         hover:scale-125
       `}
       title="Drag to fill"
@@ -194,13 +208,13 @@ function EditableCell({
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
-      if (e.key === 'Enter' && !multiline) {
+      if (e.key === "Enter" && !multiline) {
         handleSave();
-      } else if (e.key === 'Escape') {
+      } else if (e.key === "Escape") {
         handleCancel();
       }
     },
-    [handleSave, handleCancel, multiline]
+    [handleSave, handleCancel, multiline],
   );
 
   const handleFillMouseDown = useCallback(
@@ -209,7 +223,7 @@ function EditableCell({
       e.stopPropagation();
       onFillStart(shotId, field);
     },
-    [onFillStart, shotId, field]
+    [onFillStart, shotId, field],
   );
 
   const handleMouseEnter = useCallback(() => {
@@ -252,12 +266,14 @@ function EditableCell({
       onMouseEnter={handleMouseEnter}
       className={`
         relative group cursor-pointer hover:bg-surface-raised rounded px-2 py-1 -mx-2 -my-1 transition-colors
-        ${isFillSource ? 'bg-primary/30 ring-2 ring-primary' : ''}
-        ${isFillTarget ? 'bg-primary/20' : ''}
+        ${isFillSource ? "bg-primary/30 ring-2 ring-primary" : ""}
+        ${isFillTarget ? "bg-primary/20" : ""}
         ${className}
       `}
     >
-      {value || <span className="text-text-secondary italic">Click to edit</span>}
+      {value || (
+        <span className="text-text-secondary italic">Click to edit</span>
+      )}
       <FillHandle
         onMouseDown={handleFillMouseDown}
         visible={isFillMode || isFillSource}
@@ -346,13 +362,197 @@ function SubjectsTags({ subjects }: { subjects?: string[] }) {
   );
 }
 
+// Compact Talent cell component for inline table editing
+interface TalentCellProps {
+  talentIds?: UUID[];
+  onChange: (talentIds: UUID[]) => void;
+}
+
+function TalentCell({ talentIds, onChange }: TalentCellProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Get talents from store
+  const talents = useTalentStore((state) => state.talents);
+
+  // Filter talents based on search
+  const filteredTalents = useMemo(() => {
+    let result = Array.from(talents.values()).filter((t) => !t.isArchived);
+
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(
+        (t) =>
+          t.name.toLowerCase().includes(query) ||
+          t.description.toLowerCase().includes(query),
+      );
+    }
+
+    return result.sort((a, b) => a.name.localeCompare(b.name));
+  }, [talents, searchQuery]);
+
+  // Get selected talent objects
+  const selectedTalents = useMemo(() => {
+    return (talentIds || [])
+      .map((id) => talents.get(id))
+      .filter((t): t is NonNullable<typeof t> => t !== undefined);
+  }, [talentIds, talents]);
+
+  // Handle toggle talent selection
+  const handleToggle = useCallback(
+    (talentId: UUID) => {
+      const currentIds = talentIds || [];
+      if (currentIds.includes(talentId)) {
+        onChange(currentIds.filter((id) => id !== talentId));
+      } else {
+        onChange([...currentIds, talentId]);
+      }
+    },
+    [talentIds, onChange],
+  );
+
+  // Close on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(e.target as Node)
+      ) {
+        setIsOpen(false);
+        setSearchQuery("");
+      }
+    };
+    if (isOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isOpen]);
+
+  return (
+    <div
+      ref={containerRef}
+      className="relative"
+      onClick={(e) => e.stopPropagation()}
+    >
+      {/* Compact trigger button showing tags or placeholder */}
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className={`
+          w-full min-h-[28px] px-2 py-1 text-left text-sm rounded transition-colors
+          flex items-center gap-1 flex-wrap
+          ${
+            isOpen
+              ? "bg-primary/10 border border-primary"
+              : "hover:bg-surface-raised border border-transparent"
+          }
+        `}
+      >
+        {selectedTalents.length === 0 ? (
+          <span className="text-text-secondary text-xs">+ Add talent...</span>
+        ) : (
+          <>
+            {selectedTalents.slice(0, 2).map((talent) => (
+              <span
+                key={talent.id}
+                className="inline-flex items-center px-1.5 py-0.5 bg-primary/15 text-primary text-xs rounded"
+              >
+                {talent.name}
+              </span>
+            ))}
+            {selectedTalents.length > 2 && (
+              <span className="text-text-secondary text-xs">
+                +{selectedTalents.length - 2}
+              </span>
+            )}
+          </>
+        )}
+      </button>
+
+      {/* Dropdown panel */}
+      {isOpen && (
+        <div className="absolute z-50 w-56 mt-1 bg-surface border border-border rounded-lg shadow-lg overflow-hidden">
+          {/* Search input */}
+          <div className="p-2 border-b border-border">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search..."
+              className="w-full px-2 py-1 text-xs bg-background border border-border rounded focus:outline-none focus:border-primary"
+              autoFocus
+            />
+          </div>
+
+          {/* Talent list */}
+          <div className="overflow-y-auto max-h-40">
+            {filteredTalents.length === 0 ? (
+              <div className="p-2 text-center text-text-secondary text-xs">
+                No talents found
+              </div>
+            ) : (
+              filteredTalents.map((talent) => {
+                const isSelected = (talentIds || []).includes(talent.id);
+                return (
+                  <button
+                    key={talent.id}
+                    type="button"
+                    onClick={() => handleToggle(talent.id)}
+                    className={`
+                      w-full px-3 py-2 text-left text-sm flex items-center gap-2
+                      hover:bg-surface-raised transition-colors
+                      ${isSelected ? "bg-primary/10" : ""}
+                    `}
+                  >
+                    <span
+                      className={`
+                        w-4 h-4 rounded border flex items-center justify-center text-xs
+                        ${
+                          isSelected
+                            ? "bg-primary border-primary text-white"
+                            : "border-border"
+                        }
+                      `}
+                    >
+                      {isSelected && "✓"}
+                    </span>
+                    <span className="truncate">{talent.name}</span>
+                  </button>
+                );
+              })
+            )}
+          </div>
+
+          {/* Selected count footer */}
+          {selectedTalents.length > 0 && (
+            <div className="p-2 border-t border-border text-xs text-text-secondary flex justify-between items-center">
+              <span>{selectedTalents.length} selected</span>
+              <button
+                type="button"
+                onClick={() => onChange([])}
+                className="text-red-500 hover:text-red-600"
+              >
+                Clear
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Generation status cell
 interface GenerationStatusCellProps {
   shot: Shot;
   isGenerating: boolean;
 }
 
-function GenerationStatusCell({ shot, isGenerating }: GenerationStatusCellProps) {
+function GenerationStatusCell({
+  shot,
+  isGenerating,
+}: GenerationStatusCellProps) {
   if (isGenerating) {
     return (
       <div className="flex items-center gap-1.5 text-text-secondary">
@@ -362,7 +562,7 @@ function GenerationStatusCell({ shot, isGenerating }: GenerationStatusCellProps)
     );
   }
 
-  if (shot.status === 'completed') {
+  if (shot.status === "completed") {
     return (
       <div className="flex items-center gap-1.5 text-green-400">
         <Check className="w-4 h-4" />
@@ -380,9 +580,7 @@ function GenerationStatusCell({ shot, isGenerating }: GenerationStatusCellProps)
     );
   }
 
-  return (
-    <span className="text-xs text-text-secondary">-</span>
-  );
+  return <span className="text-xs text-text-secondary">-</span>;
 }
 
 // Duration cell with inline editing
@@ -408,7 +606,7 @@ function DurationCell({
   isFillMode,
 }: DurationCellProps) {
   const [isEditing, setIsEditing] = useState(false);
-  const [editValue, setEditValue] = useState(value?.toString() || '');
+  const [editValue, setEditValue] = useState(value?.toString() || "");
 
   const handleSave = useCallback(() => {
     const num = editValue ? parseInt(editValue, 10) : undefined;
@@ -419,28 +617,28 @@ function DurationCell({
   }, [editValue, onChange]);
 
   const handleCancel = useCallback(() => {
-    setEditValue(value?.toString() || '');
+    setEditValue(value?.toString() || "");
     setIsEditing(false);
   }, [value]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
-      if (e.key === 'Enter') {
+      if (e.key === "Enter") {
         handleSave();
-      } else if (e.key === 'Escape') {
+      } else if (e.key === "Escape") {
         handleCancel();
       }
     },
-    [handleSave, handleCancel]
+    [handleSave, handleCancel],
   );
 
   const handleFillMouseDown = useCallback(
     (e: React.MouseEvent) => {
       e.preventDefault();
       e.stopPropagation();
-      onFillStart(shotId, 'duration');
+      onFillStart(shotId, "duration");
     },
-    [onFillStart, shotId]
+    [onFillStart, shotId],
   );
 
   const handleMouseEnter = useCallback(() => {
@@ -470,11 +668,11 @@ function DurationCell({
       onMouseEnter={handleMouseEnter}
       className={`
         relative group cursor-pointer hover:bg-surface-raised rounded px-2 py-1 -mx-2 -my-1 transition-colors text-sm text-text-secondary text-center
-        ${isFillSource ? 'bg-primary/30 ring-2 ring-primary' : ''}
-        ${isFillTarget ? 'bg-primary/20' : ''}
+        ${isFillSource ? "bg-primary/30 ring-2 ring-primary" : ""}
+        ${isFillTarget ? "bg-primary/20" : ""}
       `}
     >
-      {value ? `${value}s` : '-'}
+      {value ? `${value}s` : "-"}
       <FillHandle
         onMouseDown={handleFillMouseDown}
         visible={isFillMode || isFillSource}
@@ -530,6 +728,176 @@ function BatchActionsBar({
   );
 }
 
+// Column configuration
+type ColumnKey =
+  | "shotNumber"
+  | "name"
+  | "description"
+  | "type"
+  | "movement"
+  | "lighting"
+  | "location"
+  | "subjects"
+  | "talent"
+  | "status"
+  | "generation"
+  | "priority"
+  | "duration";
+
+interface ColumnConfig {
+  key: ColumnKey;
+  label: string;
+  defaultVisible: boolean;
+  width: string;
+  minWidth?: string;
+}
+
+const COLUMNS: ColumnConfig[] = [
+  { key: "shotNumber", label: "#", defaultVisible: true, width: "w-16" },
+  {
+    key: "name",
+    label: "Name",
+    defaultVisible: true,
+    width: "w-48",
+    minWidth: "min-w-[180px]",
+  },
+  {
+    key: "description",
+    label: "Description",
+    defaultVisible: true,
+    width: "w-72",
+    minWidth: "min-w-[200px]",
+  },
+  { key: "type", label: "Type", defaultVisible: true, width: "w-36" },
+  { key: "movement", label: "Movement", defaultVisible: false, width: "w-36" },
+  { key: "lighting", label: "Lighting", defaultVisible: false, width: "w-36" },
+  {
+    key: "location",
+    label: "Location",
+    defaultVisible: false,
+    width: "w-40",
+    minWidth: "min-w-[120px]",
+  },
+  { key: "subjects", label: "Subjects", defaultVisible: false, width: "w-36" },
+  {
+    key: "talent",
+    label: "Talent",
+    defaultVisible: true,
+    width: "w-40",
+    minWidth: "min-w-[140px]",
+  },
+  { key: "status", label: "Status", defaultVisible: true, width: "w-36" },
+  {
+    key: "generation",
+    label: "Generation",
+    defaultVisible: true,
+    width: "w-32",
+  },
+  { key: "priority", label: "Priority", defaultVisible: true, width: "w-28" },
+  { key: "duration", label: "Duration", defaultVisible: false, width: "w-24" },
+];
+
+// Column visibility dropdown
+interface ColumnVisibilityDropdownProps {
+  visibleColumns: Set<ColumnKey>;
+  onToggle: (key: ColumnKey) => void;
+}
+
+function ColumnVisibilityDropdown({
+  visibleColumns,
+  onToggle,
+}: ColumnVisibilityDropdownProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(e.target as Node)
+      ) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  return (
+    <div className="relative" ref={dropdownRef}>
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center gap-2 px-3 py-1.5 text-sm text-text-secondary hover:text-text-primary bg-surface-raised hover:bg-background border border-border rounded-lg transition-colors"
+      >
+        <Columns3 className="w-4 h-4" />
+        Columns
+        <ChevronDown
+          className={`w-3 h-3 transition-transform ${isOpen ? "rotate-180" : ""}`}
+        />
+      </button>
+      {isOpen && (
+        <div className="absolute top-full left-0 mt-1 w-52 bg-surface border border-border rounded-xl shadow-lg z-50 py-2">
+          <div className="px-3 py-1.5 text-xs font-medium text-text-secondary uppercase tracking-wider">
+            Toggle Columns
+          </div>
+          {COLUMNS.map((col) => (
+            <button
+              key={col.key}
+              onClick={() => onToggle(col.key)}
+              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-text-primary hover:bg-surface-raised transition-colors"
+            >
+              <input
+                type="checkbox"
+                checked={visibleColumns.has(col.key)}
+                onChange={() => {}}
+                className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
+              />
+              {col.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Density toggle
+type DensityMode = "compact" | "comfortable";
+
+interface DensityToggleProps {
+  density: DensityMode;
+  onChange: (density: DensityMode) => void;
+}
+
+function DensityToggle({ density, onChange }: DensityToggleProps) {
+  return (
+    <div className="flex items-center gap-1 p-1 bg-surface-raised border border-border rounded-lg">
+      <button
+        onClick={() => onChange("compact")}
+        className={`flex items-center gap-1.5 px-2.5 py-1 text-sm rounded-md transition-colors ${
+          density === "compact"
+            ? "bg-primary text-white"
+            : "text-text-secondary hover:text-text-primary"
+        }`}
+        title="Compact view"
+      >
+        <LayoutList className="w-4 h-4" />
+      </button>
+      <button
+        onClick={() => onChange("comfortable")}
+        className={`flex items-center gap-1.5 px-2.5 py-1 text-sm rounded-md transition-colors ${
+          density === "comfortable"
+            ? "bg-primary text-white"
+            : "text-text-secondary hover:text-text-primary"
+        }`}
+        title="Comfortable view"
+      >
+        <LayoutGrid className="w-4 h-4" />
+      </button>
+    </div>
+  );
+}
+
 export function EnhancedShotTable({
   shots,
   shotListId,
@@ -551,51 +919,121 @@ export function EnhancedShotTable({
   const [generationShotId, setGenerationShotId] = useState<UUID | null>(null);
 
   // Get active generations from store
-  const activeGenerations = useGenerationStore((state) => state.activeGenerations);
+  const activeGenerations = useGenerationStore(
+    (state) => state.activeGenerations,
+  );
 
   // Helper to check if a shot is currently being generated
-  const isShotGenerating = useCallback((shotId: UUID) => {
-    for (const gen of activeGenerations.values()) {
-      // Check if this generation is for this shot by looking at the request metadata
-      const request = (gen as any).request;
-      if (request?.metadata?.shotId === shotId) {
-        return gen.status === 'pending' || gen.status === 'validating' || gen.status === 'preparing' || gen.status === 'executing';
+  const isShotGenerating = useCallback(
+    (shotId: UUID) => {
+      for (const gen of activeGenerations.values()) {
+        // Check if this generation is for this shot by looking at the request metadata
+        const request = (gen as any).request;
+        if (request?.metadata?.shotId === shotId) {
+          return (
+            gen.status === "pending" ||
+            gen.status === "validating" ||
+            gen.status === "preparing" ||
+            gen.status === "executing"
+          );
+        }
       }
-    }
-    return false;
-  }, [activeGenerations]);
+      return false;
+    },
+    [activeGenerations],
+  );
 
   // Fill mode state
   const [isFillMode, setIsFillMode] = useState(false);
   const [fillSourceId, setFillSourceId] = useState<UUID | null>(null);
   const [fillField, setFillField] = useState<keyof Shot | null>(null);
   const [fillTargetIds, setFillTargetIds] = useState<Set<UUID>>(new Set());
-  const [fillSourceValue, setFillSourceValue] = useState<string | number | undefined>(undefined);
+  const [fillSourceValue, setFillSourceValue] = useState<
+    string | number | undefined
+  >(undefined);
 
-  // Fill handlers
-  const handleFillStart = useCallback((shotId: UUID, field: keyof Shot) => {
-    const shot = shots.find((s) => s.id === shotId);
-    if (!shot) return;
+  // Column visibility state - initialize from localStorage or defaults
+  const [visibleColumns, setVisibleColumns] = useState<Set<ColumnKey>>(() => {
+    const saved = localStorage.getItem("shotTable.visibleColumns");
+    if (saved) {
+      try {
+        return new Set(JSON.parse(saved) as ColumnKey[]);
+      } catch {
+        // Fall through to default
+      }
+    }
+    return new Set(COLUMNS.filter((c) => c.defaultVisible).map((c) => c.key));
+  });
 
-    setIsFillMode(true);
-    setFillSourceId(shotId);
-    setFillField(field);
-    setFillTargetIds(new Set());
-    setFillSourceValue(shot[field] as string | number | undefined);
-  }, [shots]);
+  // Density state
+  const [density, setDensity] = useState<DensityMode>(() => {
+    return (
+      (localStorage.getItem("shotTable.density") as DensityMode) ||
+      "comfortable"
+    );
+  });
 
-  const handleFillOver = useCallback((shotId: UUID) => {
-    if (!isFillMode || !fillSourceId || shotId === fillSourceId) return;
-
-    setFillTargetIds((prev) => {
+  // Persist visibility changes
+  const handleToggleColumn = useCallback((key: ColumnKey) => {
+    setVisibleColumns((prev) => {
       const next = new Set(prev);
-      next.add(shotId);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      localStorage.setItem(
+        "shotTable.visibleColumns",
+        JSON.stringify(Array.from(next)),
+      );
       return next;
     });
-  }, [isFillMode, fillSourceId]);
+  }, []);
+
+  // Persist density changes
+  const handleDensityChange = useCallback((newDensity: DensityMode) => {
+    setDensity(newDensity);
+    localStorage.setItem("shotTable.density", newDensity);
+  }, []);
+
+  // Density-based classes
+  const cellPadding = density === "compact" ? "px-2 py-2" : "px-3 py-3";
+
+  // Fill handlers
+  const handleFillStart = useCallback(
+    (shotId: UUID, field: keyof Shot) => {
+      const shot = shots.find((s) => s.id === shotId);
+      if (!shot) return;
+
+      setIsFillMode(true);
+      setFillSourceId(shotId);
+      setFillField(field);
+      setFillTargetIds(new Set());
+      setFillSourceValue(shot[field] as string | number | undefined);
+    },
+    [shots],
+  );
+
+  const handleFillOver = useCallback(
+    (shotId: UUID) => {
+      if (!isFillMode || !fillSourceId || shotId === fillSourceId) return;
+
+      setFillTargetIds((prev) => {
+        const next = new Set(prev);
+        next.add(shotId);
+        return next;
+      });
+    },
+    [isFillMode, fillSourceId],
+  );
 
   const handleFillEnd = useCallback(() => {
-    if (!isFillMode || !fillSourceId || !fillField || fillTargetIds.size === 0) {
+    if (
+      !isFillMode ||
+      !fillSourceId ||
+      !fillField ||
+      fillTargetIds.size === 0
+    ) {
       setIsFillMode(false);
       setFillSourceId(null);
       setFillField(null);
@@ -606,8 +1044,10 @@ export function EnhancedShotTable({
 
     // Apply the fill value to all target cells
     fillTargetIds.forEach((targetId) => {
-      if (fillField === 'duration') {
-        onUpdateShot(targetId, { [fillField]: fillSourceValue as number | undefined });
+      if (fillField === "duration") {
+        onUpdateShot(targetId, {
+          [fillField]: fillSourceValue as number | undefined,
+        });
       } else {
         onUpdateShot(targetId, { [fillField]: fillSourceValue });
       }
@@ -618,7 +1058,14 @@ export function EnhancedShotTable({
     setFillField(null);
     setFillTargetIds(new Set());
     setFillSourceValue(undefined);
-  }, [isFillMode, fillSourceId, fillField, fillTargetIds, fillSourceValue, onUpdateShot]);
+  }, [
+    isFillMode,
+    fillSourceId,
+    fillField,
+    fillTargetIds,
+    fillSourceValue,
+    onUpdateShot,
+  ]);
 
   // Global mouse up handler for fill end
   useEffect(() => {
@@ -628,16 +1075,16 @@ export function EnhancedShotTable({
       handleFillEnd();
     };
 
-    document.addEventListener('mouseup', handleMouseUp);
+    document.addEventListener("mouseup", handleMouseUp);
     return () => {
-      document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener("mouseup", handleMouseUp);
     };
   }, [isFillMode, handleFillEnd]);
 
   // Keyboard shortcut Ctrl+D for fill down
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.ctrlKey && e.key === 'd') {
+      if (e.ctrlKey && e.key === "d") {
         e.preventDefault();
         // This would need to be connected to the active cell editing state
         // For now, we'll implement a simpler version that fills selected rows
@@ -647,8 +1094,10 @@ export function EnhancedShotTable({
             const value = sourceShot[fillField];
             selectedIds.forEach((targetId) => {
               if (targetId !== fillSourceId) {
-                if (fillField === 'duration') {
-                  onUpdateShot(targetId, { [fillField]: value as number | undefined });
+                if (fillField === "duration") {
+                  onUpdateShot(targetId, {
+                    [fillField]: value as number | undefined,
+                  });
                 } else {
                   onUpdateShot(targetId, { [fillField]: value });
                 }
@@ -659,25 +1108,28 @@ export function EnhancedShotTable({
       }
     };
 
-    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener("keydown", handleKeyDown);
     return () => {
-      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener("keydown", handleKeyDown);
     };
   }, [selectedIds, fillSourceId, fillField, shots, onUpdateShot]);
 
   // Selection handlers
-  const toggleSelection = useCallback((id: UUID) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      onSelectionChange?.(Array.from(next));
-      return next;
-    });
-  }, [onSelectionChange]);
+  const toggleSelection = useCallback(
+    (id: UUID) => {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        if (next.has(id)) {
+          next.delete(id);
+        } else {
+          next.add(id);
+        }
+        onSelectionChange?.(Array.from(next));
+        return next;
+      });
+    },
+    [onSelectionChange],
+  );
 
   const toggleAll = useCallback(() => {
     setSelectedIds((prev) => {
@@ -715,20 +1167,20 @@ export function EnhancedShotTable({
       if (!onReorder) return;
       setDraggedId(shotId);
       setIsDragging(true);
-      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.effectAllowed = "move";
     },
-    [onReorder]
+    [onReorder],
   );
 
   const handleDragOver = useCallback(
     (e: React.DragEvent, shotId: UUID) => {
       e.preventDefault();
-      e.dataTransfer.dropEffect = 'move';
+      e.dataTransfer.dropEffect = "move";
       if (draggedId !== shotId) {
         setDragOverId(shotId);
       }
     },
-    [draggedId]
+    [draggedId],
   );
 
   const handleDragLeave = useCallback(() => {
@@ -769,7 +1221,7 @@ export function EnhancedShotTable({
       setDraggedId(null);
       setIsDragging(false);
     },
-    [onReorder, draggedId, shots]
+    [onReorder, draggedId, shots],
   );
 
   const handleDragEnd = useCallback(() => {
@@ -781,21 +1233,35 @@ export function EnhancedShotTable({
   // Memoized selection state
   const allSelected = useMemo(
     () => shots.length > 0 && selectedIds.size === shots.length,
-    [shots.length, selectedIds.size]
+    [shots.length, selectedIds.size],
   );
 
   const someSelected = useMemo(
     () => selectedIds.size > 0 && selectedIds.size < shots.length,
-    [selectedIds.size, shots.length]
+    [selectedIds.size, shots.length],
   );
 
   return (
-    <div className="relative">
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[1400px]">
+    <div className="relative h-full flex flex-col bg-surface">
+      {/* Table Controls Toolbar */}
+      <div className="flex items-center justify-between gap-4 px-4 py-3 border-b border-border bg-surface shrink-0">
+        <div className="flex items-center gap-3">
+          <ColumnVisibilityDropdown
+            visibleColumns={visibleColumns}
+            onToggle={handleToggleColumn}
+          />
+          <DensityToggle density={density} onChange={handleDensityChange} />
+        </div>
+        <div className="text-sm text-text-secondary">
+          {shots.length} shot{shots.length !== 1 ? "s" : ""}
+        </div>
+      </div>
+
+      <div className="overflow-x-auto flex-1">
+        <table className="w-full">
           <thead className="bg-surface sticky top-0 z-10">
             <tr className="text-left text-sm text-text-secondary border-b border-border">
-              <th className="px-2 py-3 font-medium w-10">
+              <th className={`${cellPadding} font-medium w-10`}>
                 <input
                   type="checkbox"
                   checked={allSelected}
@@ -808,22 +1274,59 @@ export function EnhancedShotTable({
                   className="w-4 h-4 rounded border-border text-primary focus:ring-primary cursor-pointer"
                 />
               </th>
-              <th className="px-2 py-3 font-medium w-10">
+              <th className={`${cellPadding} font-medium w-10`}>
                 {onReorder && <span className="sr-only">Drag</span>}
               </th>
-              <th className="px-3 py-3 font-medium w-16">#</th>
-              <th className="px-3 py-3 font-medium min-w-[150px]">Name</th>
-              <th className="px-3 py-3 font-medium min-w-[200px]">Description</th>
-              <th className="px-3 py-3 font-medium w-32">Type</th>
-              <th className="px-3 py-3 font-medium w-32">Movement</th>
-              <th className="px-3 py-3 font-medium w-32">Lighting</th>
-              <th className="px-3 py-3 font-medium min-w-[120px]">Location</th>
-              <th className="px-3 py-3 font-medium w-32">Subjects</th>
-              <th className="px-3 py-3 font-medium w-32">Status</th>
-              <th className="px-3 py-3 font-medium w-28">Generation</th>
-              <th className="px-3 py-3 font-medium w-28">Priority</th>
-              <th className="px-3 py-3 font-medium w-20">Duration</th>
-              <th className="px-3 py-3 font-medium w-36">Actions</th>
+              {visibleColumns.has("shotNumber") && (
+                <th className={`${cellPadding} font-medium w-16`}>#</th>
+              )}
+              {visibleColumns.has("name") && (
+                <th className={`${cellPadding} font-medium w-48 min-w-[180px]`}>
+                  Name
+                </th>
+              )}
+              {visibleColumns.has("description") && (
+                <th className={`${cellPadding} font-medium w-72 min-w-[200px]`}>
+                  Description
+                </th>
+              )}
+              {visibleColumns.has("type") && (
+                <th className={`${cellPadding} font-medium w-36`}>Type</th>
+              )}
+              {visibleColumns.has("movement") && (
+                <th className={`${cellPadding} font-medium w-36`}>Movement</th>
+              )}
+              {visibleColumns.has("lighting") && (
+                <th className={`${cellPadding} font-medium w-36`}>Lighting</th>
+              )}
+              {visibleColumns.has("location") && (
+                <th className={`${cellPadding} font-medium w-40 min-w-[120px]`}>
+                  Location
+                </th>
+              )}
+              {visibleColumns.has("subjects") && (
+                <th className={`${cellPadding} font-medium w-36`}>Subjects</th>
+              )}
+              {visibleColumns.has("talent") && (
+                <th className={`${cellPadding} font-medium w-40 min-w-[140px]`}>
+                  Talent
+                </th>
+              )}
+              {visibleColumns.has("status") && (
+                <th className={`${cellPadding} font-medium w-36`}>Status</th>
+              )}
+              {visibleColumns.has("generation") && (
+                <th className={`${cellPadding} font-medium w-32`}>
+                  Generation
+                </th>
+              )}
+              {visibleColumns.has("priority") && (
+                <th className={`${cellPadding} font-medium w-28`}>Priority</th>
+              )}
+              {visibleColumns.has("duration") && (
+                <th className={`${cellPadding} font-medium w-24`}>Duration</th>
+              )}
+              <th className={`${cellPadding} font-medium w-36`}>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -845,14 +1348,17 @@ export function EnhancedShotTable({
                   onDragEnd={handleDragEnd}
                   className={`
                     border-t border-border cursor-pointer transition-colors
-                    ${index % 2 === 0 ? 'bg-surface' : 'bg-bg-subtle'}
-                    ${isSelected ? 'bg-primary/5' : 'hover:bg-surface-raised'}
-                    ${isRowDragging ? 'opacity-40' : ''}
-                    ${isDragOver ? 'border-t-2 border-primary bg-primary/5' : ''}
+                    ${index % 2 === 0 ? "bg-surface" : "bg-bg-subtle"}
+                    ${isSelected ? "bg-primary/5" : "hover:bg-surface-raised"}
+                    ${isRowDragging ? "opacity-40" : ""}
+                    ${isDragOver ? "border-t-2 border-primary bg-primary/5" : ""}
                   `}
                 >
                   {/* Checkbox */}
-                  <td className="px-2 py-3" onClick={(e) => e.stopPropagation()}>
+                  <td
+                    className="px-2 py-3"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <input
                       type="checkbox"
                       checked={isSelected}
@@ -874,176 +1380,240 @@ export function EnhancedShotTable({
                   </td>
 
                   {/* Shot Number */}
-                  <td className="px-3 py-3 text-sm font-mono text-text-secondary">
-                    {shot.shotNumber}
-                  </td>
+                  {visibleColumns.has("shotNumber") && (
+                    <td
+                      className={`${cellPadding} text-sm font-mono text-text-secondary`}
+                    >
+                      {shot.shotNumber}
+                    </td>
+                  )}
 
                   {/* Name */}
-                  <td
-                    className="px-3 py-3"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <EditableCell
-                      value={shot.name}
-                      onSave={(value) =>
-                        onUpdateShot(shot.id, { name: value })
-                      }
-                      className="font-medium text-text-primary"
-                      shotId={shot.id}
-                      field="name"
-                      isFillSource={fillSourceId === shot.id && fillField === 'name'}
-                      isFillTarget={fillTargetIds.has(shot.id) && fillField === 'name'}
-                      onFillStart={handleFillStart}
-                      onFillOver={handleFillOver}
-                      isFillMode={isFillMode}
-                    />
-                  </td>
+                  {visibleColumns.has("name") && (
+                    <td
+                      className={cellPadding}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <EditableCell
+                        value={shot.name}
+                        onSave={(value) =>
+                          onUpdateShot(shot.id, { name: value })
+                        }
+                        className="font-medium text-text-primary"
+                        shotId={shot.id}
+                        field="name"
+                        isFillSource={
+                          fillSourceId === shot.id && fillField === "name"
+                        }
+                        isFillTarget={
+                          fillTargetIds.has(shot.id) && fillField === "name"
+                        }
+                        onFillStart={handleFillStart}
+                        onFillOver={handleFillOver}
+                        isFillMode={isFillMode}
+                      />
+                    </td>
+                  )}
 
                   {/* Description */}
-                  <td
-                    className="px-3 py-3"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <EditableCell
-                      value={shot.description}
-                      onSave={(value) =>
-                        onUpdateShot(shot.id, { description: value })
-                      }
-                      multiline
-                      className="text-sm text-text-secondary line-clamp-2"
-                      shotId={shot.id}
-                      field="description"
-                      isFillSource={fillSourceId === shot.id && fillField === 'description'}
-                      isFillTarget={fillTargetIds.has(shot.id) && fillField === 'description'}
-                      onFillStart={handleFillStart}
-                      onFillOver={handleFillOver}
-                      isFillMode={isFillMode}
-                    />
-                  </td>
+                  {visibleColumns.has("description") && (
+                    <td
+                      className={cellPadding}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <EditableCell
+                        value={shot.description}
+                        onSave={(value) =>
+                          onUpdateShot(shot.id, { description: value })
+                        }
+                        multiline
+                        className="text-sm text-text-secondary line-clamp-2"
+                        shotId={shot.id}
+                        field="description"
+                        isFillSource={
+                          fillSourceId === shot.id &&
+                          fillField === "description"
+                        }
+                        isFillTarget={
+                          fillTargetIds.has(shot.id) &&
+                          fillField === "description"
+                        }
+                        onFillStart={handleFillStart}
+                        onFillOver={handleFillOver}
+                        isFillMode={isFillMode}
+                      />
+                    </td>
+                  )}
 
                   {/* Type */}
-                  <td
-                    className="px-3 py-3"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <DropdownCell
-                      value={shot.shotType}
-                      options={SHOT_TYPES}
-                      onChange={(value) =>
-                        onUpdateShot(shot.id, { shotType: value })
-                      }
-                    />
-                  </td>
+                  {visibleColumns.has("type") && (
+                    <td
+                      className={cellPadding}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <DropdownCell
+                        value={shot.shotType}
+                        options={SHOT_TYPES}
+                        onChange={(value) =>
+                          onUpdateShot(shot.id, { shotType: value })
+                        }
+                      />
+                    </td>
+                  )}
 
                   {/* Movement */}
-                  <td
-                    className="px-3 py-3"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <DropdownCell
-                      value={shot.cameraMovement}
-                      options={CAMERA_MOVEMENTS}
-                      onChange={(value) =>
-                        onUpdateShot(shot.id, { cameraMovement: value })
-                      }
-                    />
-                  </td>
+                  {visibleColumns.has("movement") && (
+                    <td
+                      className={cellPadding}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <DropdownCell
+                        value={shot.cameraMovement}
+                        options={CAMERA_MOVEMENTS}
+                        onChange={(value) =>
+                          onUpdateShot(shot.id, { cameraMovement: value })
+                        }
+                      />
+                    </td>
+                  )}
 
                   {/* Lighting */}
-                  <td
-                    className="px-3 py-3"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <DropdownCell
-                      value={shot.lighting}
-                      options={LIGHTING_SETUPS}
-                      onChange={(value) =>
-                        onUpdateShot(shot.id, { lighting: value })
-                      }
-                    />
-                  </td>
+                  {visibleColumns.has("lighting") && (
+                    <td
+                      className={cellPadding}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <DropdownCell
+                        value={shot.lighting}
+                        options={LIGHTING_SETUPS}
+                        onChange={(value) =>
+                          onUpdateShot(shot.id, { lighting: value })
+                        }
+                      />
+                    </td>
+                  )}
 
                   {/* Location */}
-                  <td
-                    className="px-3 py-3"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <EditableCell
-                      value={shot.location || ''}
-                      onSave={(value) =>
-                        onUpdateShot(shot.id, { location: value || undefined })
-                      }
-                      className="text-sm text-text-primary"
-                      shotId={shot.id}
-                      field="location"
-                      isFillSource={fillSourceId === shot.id && fillField === 'location'}
-                      isFillTarget={fillTargetIds.has(shot.id) && fillField === 'location'}
-                      onFillStart={handleFillStart}
-                      onFillOver={handleFillOver}
-                      isFillMode={isFillMode}
-                    />
-                  </td>
+                  {visibleColumns.has("location") && (
+                    <td
+                      className={cellPadding}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <EditableCell
+                        value={shot.location || ""}
+                        onSave={(value) =>
+                          onUpdateShot(shot.id, {
+                            location: value || undefined,
+                          })
+                        }
+                        className="text-sm text-text-primary"
+                        shotId={shot.id}
+                        field="location"
+                        isFillSource={
+                          fillSourceId === shot.id && fillField === "location"
+                        }
+                        isFillTarget={
+                          fillTargetIds.has(shot.id) && fillField === "location"
+                        }
+                        onFillStart={handleFillStart}
+                        onFillOver={handleFillOver}
+                        isFillMode={isFillMode}
+                      />
+                    </td>
+                  )}
 
                   {/* Subjects */}
-                  <td className="px-3 py-3">
-                    <SubjectsTags subjects={shot.subjects} />
-                  </td>
+                  {visibleColumns.has("subjects") && (
+                    <td className={cellPadding}>
+                      <SubjectsTags subjects={shot.subjects} />
+                    </td>
+                  )}
+
+                  {/* Talent */}
+                  {visibleColumns.has("talent") && (
+                    <td
+                      className={cellPadding}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <TalentCell
+                        talentIds={shot.talentIds}
+                        onChange={(newTalentIds) =>
+                          onUpdateShot(shot.id, { talentIds: newTalentIds })
+                        }
+                      />
+                    </td>
+                  )}
 
                   {/* Status */}
-                  <td
-                    className="px-3 py-3"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <DropdownCell
-                      value={shot.status}
-                      options={STATUSES}
-                      onChange={(value) => onStatusChange(shot.id, value)}
-                    />
-                  </td>
+                  {visibleColumns.has("status") && (
+                    <td
+                      className={cellPadding}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <DropdownCell
+                        value={shot.status}
+                        options={STATUSES}
+                        onChange={(value) => onStatusChange(shot.id, value)}
+                      />
+                    </td>
+                  )}
 
                   {/* Generation Status */}
-                  <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
-                    <GenerationStatusCell
-                      shot={shot}
-                      isGenerating={isShotGenerating(shot.id)}
-                    />
-                  </td>
+                  {visibleColumns.has("generation") && (
+                    <td
+                      className={cellPadding}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <GenerationStatusCell
+                        shot={shot}
+                        isGenerating={isShotGenerating(shot.id)}
+                      />
+                    </td>
+                  )}
 
                   {/* Priority */}
-                  <td
-                    className="px-3 py-3"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <PriorityCell
-                      value={shot.priority}
-                      onChange={(value) =>
-                        onUpdateShot(shot.id, { priority: value })
-                      }
-                    />
-                  </td>
+                  {visibleColumns.has("priority") && (
+                    <td
+                      className={cellPadding}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <PriorityCell
+                        value={shot.priority}
+                        onChange={(value) =>
+                          onUpdateShot(shot.id, { priority: value })
+                        }
+                      />
+                    </td>
+                  )}
 
                   {/* Duration */}
-                  <td
-                    className="px-3 py-3"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <DurationCell
-                      value={shot.duration}
-                      onChange={(value) =>
-                        onUpdateShot(shot.id, { duration: value })
-                      }
-                      shotId={shot.id}
-                      isFillSource={fillSourceId === shot.id && fillField === 'duration'}
-                      isFillTarget={fillTargetIds.has(shot.id) && fillField === 'duration'}
-                      onFillStart={handleFillStart}
-                      onFillOver={handleFillOver}
-                      isFillMode={isFillMode}
-                    />
-                  </td>
+                  {visibleColumns.has("duration") && (
+                    <td
+                      className={cellPadding}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <DurationCell
+                        value={shot.duration}
+                        onChange={(value) =>
+                          onUpdateShot(shot.id, { duration: value })
+                        }
+                        shotId={shot.id}
+                        isFillSource={
+                          fillSourceId === shot.id && fillField === "duration"
+                        }
+                        isFillTarget={
+                          fillTargetIds.has(shot.id) && fillField === "duration"
+                        }
+                        onFillStart={handleFillStart}
+                        onFillOver={handleFillOver}
+                        isFillMode={isFillMode}
+                      />
+                    </td>
+                  )}
 
                   {/* Actions */}
                   <td
-                    className="px-3 py-3"
+                    className={cellPadding}
                     onClick={(e) => e.stopPropagation()}
                   >
                     <div className="flex items-center gap-1">
@@ -1088,6 +1658,7 @@ export function EnhancedShotTable({
               shotListId={shotListId}
               nextShotNumber={String(shots.length + 1)}
               onCreate={onCreateShot}
+              visibleColumns={visibleColumns}
             />
           </tbody>
         </table>

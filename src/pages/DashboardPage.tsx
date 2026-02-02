@@ -1,6 +1,18 @@
 import { Card } from "../components/common/Card";
 import { useToastHelpers } from "../components/Toast";
-import { Wand2, Film, UserPlus, LayoutTemplate, Image, Video, FileText, Clock, TrendingUp, CheckCircle2, Sparkles } from "lucide-react";
+import {
+  Wand2,
+  Film,
+  UserPlus,
+  LayoutTemplate,
+  Image,
+  Video,
+  FileText,
+  Clock,
+  TrendingUp,
+  CheckCircle2,
+  Sparkles,
+} from "lucide-react";
 
 export function DashboardPage() {
   const { success, error, warning, info } = useToastHelpers();
@@ -27,189 +39,197 @@ export function DashboardPage() {
   };
 
   return (
-    <div className="space-y-8">
-      {/* Greeting Section - Large serif heading */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="font-serif text-4xl text-text mb-2">
-            {getGreeting()}, DJ
-          </h1>
-          <p className="text-text-muted text-base">
-            Here's what's happening with your creative production today.
-          </p>
-        </div>
-        <button
-          onClick={showTestToasts}
-          className="px-5 py-2.5 bg-primary text-white rounded-full hover:bg-primary-hover transition-all duration-200 text-sm font-medium shadow-md hover:shadow-lg"
-        >
-          Test Toasts
-        </button>
-      </div>
-
-      {/* Quick Actions */}
-      <section className="border-b border-border pb-8">
-        <h2 className="font-serif text-xl text-text mb-4">Quick Actions</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <QuickActionCard
-            icon={<Wand2 className="w-6 h-6" />}
-            label="Generate Image"
-            onClick={() => {}}
-          />
-          <QuickActionCard
-            icon={<Film className="w-6 h-6" />}
-            label="New Shot List"
-            onClick={() => {}}
-          />
-          <QuickActionCard
-            icon={<UserPlus className="w-6 h-6" />}
-            label="Create Talent"
-            onClick={() => {}}
-          />
-          <QuickActionCard
-            icon={<LayoutTemplate className="w-6 h-6" />}
-            label="New Template"
-            onClick={() => {}}
-          />
-        </div>
-      </section>
-
-      {/* Stats Grid - Today at a glance */}
-      <section className="border-b border-border pb-8">
-        <h2 className="font-serif text-xl text-text mb-4">Today at a glance</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard
-            label="Generations"
-            value="24"
-            change="+12%"
-            trend="up"
-            icon={<Image className="w-5 h-5" />}
-          />
-          <StatCard
-            label="Active Shot Lists"
-            value="3"
-            change="+1"
-            trend="up"
-            icon={<Film className="w-5 h-5" />}
-          />
-          <StatCard
-            label="Assets Created"
-            value="147"
-            change="+8"
-            trend="up"
-            icon={<CheckCircle2 className="w-5 h-5" />}
-          />
-          <StatCard
-            label="Time Saved"
-            value="4.2h"
-            change="+15%"
-            trend="up"
-            icon={<Clock className="w-5 h-5" />}
-          />
-        </div>
-      </section>
-
-      {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 border-b border-border pb-8">
-        {/* Schedule / Timeline */}
-        <div className="lg:col-span-2">
-          <Card className="h-full">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="font-serif text-lg text-text">Today's Schedule</h3>
-              <button className="text-sm text-text-muted hover:text-text transition-colors">
-                View all
-              </button>
-            </div>
-            <div className="space-y-4">
-              <TimelineItem
-                time="9:00 AM"
-                title="Q1 Campaign Review"
-                status="completed"
-                description="Review generated assets with marketing team"
-              />
-              <TimelineItem
-                time="11:30 AM"
-                title="Product Shoot Generation"
-                status="in-progress"
-                description="Generate 12 product images for catalog"
-              />
-              <TimelineItem
-                time="2:00 PM"
-                title="Talent Upload Session"
-                status="upcoming"
-                description="Upload and process new talent headshots"
-              />
-              <TimelineItem
-                time="4:30 PM"
-                title="Social Media Batch"
-                status="upcoming"
-                description="Create 20 social media variations"
-              />
-            </div>
-          </Card>
-        </div>
-
-        {/* Recent Activity */}
-        <div>
-          <Card className="h-full">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="font-serif text-lg text-text">Recent Activity</h3>
-              <button className="text-sm text-text-muted hover:text-text transition-colors">
-                View all
-              </button>
-            </div>
-            <div className="space-y-4">
-              <ActivityItem
-                icon={<Image className="w-4 h-4" />}
-                action="Generated"
-                item="Q1 Campaign Hero"
-                time="2m ago"
-              />
-              <ActivityItem
-                icon={<Video className="w-4 h-4" />}
-                action="Created"
-                item="Product Video Batch"
-                time="15m ago"
-              />
-              <ActivityItem
-                icon={<FileText className="w-4 h-4" />}
-                action="Updated"
-                item="Brand Guidelines"
-                time="1h ago"
-              />
-              <ActivityItem
-                icon={<UserPlus className="w-4 h-4" />}
-                action="Added"
-                item="New Talent: Marcus"
-                time="2h ago"
-              />
-              <ActivityItem
-                icon={<LayoutTemplate className="w-4 h-4" />}
-                action="Created"
-                item="Social Template v3"
-                time="3h ago"
-              />
-            </div>
-          </Card>
-        </div>
-      </div>
-
-      {/* Recent Generations Grid */}
-      <section>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="font-serif text-xl text-text">Recent Generations</h2>
-          <button className="text-sm text-text-muted hover:text-text transition-colors">
-            View all →
+    <div className="p-8 max-w-[1600px] mx-auto w-full">
+      <div className="space-y-8">
+        {/* Greeting Section - Large serif heading */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="font-serif text-4xl text-text mb-2">
+              {getGreeting()}, DJ
+            </h1>
+            <p className="text-text-muted text-base">
+              Here's what's happening with your creative production today.
+            </p>
+          </div>
+          <button
+            onClick={showTestToasts}
+            className="px-5 py-2.5 bg-primary text-white rounded-full hover:bg-primary-hover transition-all duration-200 text-sm font-medium shadow-md hover:shadow-lg"
+          >
+            Test Toasts
           </button>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-          <GenerationThumbnail type="image" time="2m ago" />
-          <GenerationThumbnail type="image" time="15m ago" />
-          <GenerationThumbnail type="video" time="1h ago" />
-          <GenerationThumbnail type="image" time="2h ago" />
-          <GenerationThumbnail type="text" time="3h ago" />
-          <GenerationThumbnail type="image" time="5h ago" />
+
+        {/* Quick Actions */}
+        <section className="border-b border-border pb-8">
+          <h2 className="font-serif text-xl text-text mb-4">Quick Actions</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <QuickActionCard
+              icon={<Wand2 className="w-6 h-6" />}
+              label="Generate Image"
+              onClick={() => {}}
+            />
+            <QuickActionCard
+              icon={<Film className="w-6 h-6" />}
+              label="New Shot List"
+              onClick={() => {}}
+            />
+            <QuickActionCard
+              icon={<UserPlus className="w-6 h-6" />}
+              label="Create Talent"
+              onClick={() => {}}
+            />
+            <QuickActionCard
+              icon={<LayoutTemplate className="w-6 h-6" />}
+              label="New Template"
+              onClick={() => {}}
+            />
+          </div>
+        </section>
+
+        {/* Stats Grid - Today at a glance */}
+        <section className="border-b border-border pb-8">
+          <h2 className="font-serif text-xl text-text mb-4">
+            Today at a glance
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <StatCard
+              label="Generations"
+              value="24"
+              change="+12%"
+              trend="up"
+              icon={<Image className="w-5 h-5" />}
+            />
+            <StatCard
+              label="Active Shot Lists"
+              value="3"
+              change="+1"
+              trend="up"
+              icon={<Film className="w-5 h-5" />}
+            />
+            <StatCard
+              label="Assets Created"
+              value="147"
+              change="+8"
+              trend="up"
+              icon={<CheckCircle2 className="w-5 h-5" />}
+            />
+            <StatCard
+              label="Time Saved"
+              value="4.2h"
+              change="+15%"
+              trend="up"
+              icon={<Clock className="w-5 h-5" />}
+            />
+          </div>
+        </section>
+
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 border-b border-border pb-8">
+          {/* Schedule / Timeline */}
+          <div className="lg:col-span-2">
+            <Card className="h-full">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="font-serif text-lg text-text">
+                  Today's Schedule
+                </h3>
+                <button className="text-sm text-text-muted hover:text-text transition-colors">
+                  View all
+                </button>
+              </div>
+              <div className="space-y-4">
+                <TimelineItem
+                  time="9:00 AM"
+                  title="Q1 Campaign Review"
+                  status="completed"
+                  description="Review generated assets with marketing team"
+                />
+                <TimelineItem
+                  time="11:30 AM"
+                  title="Product Shoot Generation"
+                  status="in-progress"
+                  description="Generate 12 product images for catalog"
+                />
+                <TimelineItem
+                  time="2:00 PM"
+                  title="Talent Upload Session"
+                  status="upcoming"
+                  description="Upload and process new talent headshots"
+                />
+                <TimelineItem
+                  time="4:30 PM"
+                  title="Social Media Batch"
+                  status="upcoming"
+                  description="Create 20 social media variations"
+                />
+              </div>
+            </Card>
+          </div>
+
+          {/* Recent Activity */}
+          <div>
+            <Card className="h-full">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="font-serif text-lg text-text">
+                  Recent Activity
+                </h3>
+                <button className="text-sm text-text-muted hover:text-text transition-colors">
+                  View all
+                </button>
+              </div>
+              <div className="space-y-4">
+                <ActivityItem
+                  icon={<Image className="w-4 h-4" />}
+                  action="Generated"
+                  item="Q1 Campaign Hero"
+                  time="2m ago"
+                />
+                <ActivityItem
+                  icon={<Video className="w-4 h-4" />}
+                  action="Created"
+                  item="Product Video Batch"
+                  time="15m ago"
+                />
+                <ActivityItem
+                  icon={<FileText className="w-4 h-4" />}
+                  action="Updated"
+                  item="Brand Guidelines"
+                  time="1h ago"
+                />
+                <ActivityItem
+                  icon={<UserPlus className="w-4 h-4" />}
+                  action="Added"
+                  item="New Talent: Marcus"
+                  time="2h ago"
+                />
+                <ActivityItem
+                  icon={<LayoutTemplate className="w-4 h-4" />}
+                  action="Created"
+                  item="Social Template v3"
+                  time="3h ago"
+                />
+              </div>
+            </Card>
+          </div>
         </div>
-      </section>
+
+        {/* Recent Generations Grid */}
+        <section>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-serif text-xl text-text">Recent Generations</h2>
+            <button className="text-sm text-text-muted hover:text-text transition-colors">
+              View all →
+            </button>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            <GenerationThumbnail type="image" time="2m ago" />
+            <GenerationThumbnail type="image" time="15m ago" />
+            <GenerationThumbnail type="video" time="1h ago" />
+            <GenerationThumbnail type="image" time="2h ago" />
+            <GenerationThumbnail type="text" time="3h ago" />
+            <GenerationThumbnail type="image" time="5h ago" />
+          </div>
+        </section>
+      </div>
     </div>
   );
 }
@@ -263,8 +283,12 @@ function StatCard({
         </div>
       </div>
       <div className="flex items-center gap-1 mt-3">
-        <TrendingUp className={`w-3 h-3 ${trend === "up" ? "text-status-success" : "text-status-danger"}`} />
-        <span className={`text-xs ${trend === "up" ? "text-status-success" : "text-status-danger"}`}>
+        <TrendingUp
+          className={`w-3 h-3 ${trend === "up" ? "text-status-success" : "text-status-danger"}`}
+        />
+        <span
+          className={`text-xs ${trend === "up" ? "text-status-success" : "text-status-danger"}`}
+        >
           {change}
         </span>
         <span className="text-xs text-text-subtle">vs yesterday</span>
@@ -312,7 +336,9 @@ function TimelineItem({
       <div className="flex-1 pb-6">
         <div className="flex items-center justify-between mb-1">
           <span className="text-xs text-text-subtle">{time}</span>
-          <span className={`text-xs px-2 py-0.5 rounded-full ${statusBadgeStyles[status]}`}>
+          <span
+            className={`text-xs px-2 py-0.5 rounded-full ${statusBadgeStyles[status]}`}
+          >
             {statusLabels[status]}
           </span>
         </div>

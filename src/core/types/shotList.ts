@@ -225,6 +225,7 @@ export interface CreateShotInput {
   duration?: number;
   location?: string;
   subjects?: string[];
+  talentIds?: UUID[];
   priority?: number;
   tags?: string[];
 }
