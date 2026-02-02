@@ -4,7 +4,7 @@
  */
 
 import { useState, useCallback, useMemo, useEffect } from 'react';
-import { Pencil, Copy, Trash2, Play, GripVertical } from 'lucide-react';
+import { Pencil, Copy, Trash2, GripVertical, Sparkles } from 'lucide-react';
 import type { UUID } from '../../../core/types/common';
 import type {
   Shot,
@@ -15,6 +15,7 @@ import type {
   CreateShotInput,
 } from '../../../core/types/shotList';
 import { InlineBatchRow } from './InlineBatchRow';
+import { ShotGenerationPanel } from './ShotGenerationPanel';
 
 interface EnhancedShotTableProps {
   shots: Shot[];
@@ -505,6 +506,7 @@ export function EnhancedShotTable({
   const [draggedId, setDraggedId] = useState<UUID | null>(null);
   const [dragOverId, setDragOverId] = useState<UUID | null>(null);
   const [, setIsDragging] = useState(false);
+  const [generationShotId, setGenerationShotId] = useState<UUID | null>(null);
 
   // Fill mode state
   const [isFillMode, setIsFillMode] = useState(false);
@@ -982,11 +984,11 @@ export function EnhancedShotTable({
                         <Pencil className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={() => onGenerate?.(shot.id)}
+                        onClick={() => setGenerationShotId(shot.id)}
                         className="p-1.5 text-text-secondary hover:text-primary transition-colors"
-                        title="Generate"
+                        title="Generate with AI"
                       >
-                        <Play className="w-4 h-4" />
+                        <Sparkles className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => onDuplicate(shot.id)}
@@ -1027,6 +1029,18 @@ export function EnhancedShotTable({
         onDeleteSelected={handleDeleteSelected}
         onDuplicateSelected={handleDuplicateSelected}
       />
+
+      {/* Shot Generation Panel */}
+      {generationShotId && (
+        <ShotGenerationPanel
+          shot={shots.find((s) => s.id === generationShotId)!}
+          onClose={() => setGenerationShotId(null)}
+          onGenerate={(shotId, config) => {
+            console.log('Generate:', shotId, config);
+            setGenerationShotId(null);
+          }}
+        />
+      )}
     </div>
   );
 }
