@@ -111,12 +111,14 @@ export function ShotListPage() {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1">
+      <div className="flex-1 min-w-0 overflow-hidden">
         {selectedListId ? (
-          <ShotListView
-            shotListId={selectedListId}
-            onEditShot={(shotId) => navigate(`/shotlist/${selectedListId}/shots/${shotId}/edit`)}
-          />
+          <div className="h-full overflow-auto">
+            <ShotListView
+              shotListId={selectedListId}
+              onEditShot={(shotId) => navigate(`/shotlist/${selectedListId}/shots/${shotId}/edit`)}
+            />
+          </div>
         ) : (
           <div className="h-full flex items-center justify-center">
             <div className="text-center">
