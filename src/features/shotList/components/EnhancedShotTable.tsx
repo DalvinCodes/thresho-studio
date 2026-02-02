@@ -12,16 +12,20 @@ import type {
   ShotType,
   CameraMovement,
   LightingSetup,
+  CreateShotInput,
 } from '../../../core/types/shotList';
+import { InlineBatchRow } from './InlineBatchRow';
 
 interface EnhancedShotTableProps {
   shots: Shot[];
+  shotListId: UUID;
   onSelect: (id: UUID) => void;
   onEdit?: (id: UUID) => void;
   onDelete: (id: UUID) => void;
   onDuplicate: (id: UUID) => void;
   onStatusChange: (id: UUID, status: ShotStatus) => void;
   onUpdateShot: (id: UUID, updates: Partial<Shot>) => void;
+  onCreateShot: (input: CreateShotInput) => void;
   onGenerate?: (id: UUID) => void;
   onReorder?: (shotId: UUID, newIndex: number) => void;
 }
@@ -382,12 +386,14 @@ function BatchActionsBar({
 
 export function EnhancedShotTable({
   shots,
+  shotListId,
   onSelect,
   onEdit,
   onDelete,
   onDuplicate,
   onStatusChange,
   onUpdateShot,
+  onCreateShot,
   onGenerate,
   onReorder,
 }: EnhancedShotTableProps) {
@@ -723,6 +729,11 @@ export function EnhancedShotTable({
                 </tr>
               );
             })}
+            <InlineBatchRow
+              shotListId={shotListId}
+              nextShotNumber={String(shots.length + 1)}
+              onCreate={onCreateShot}
+            />
           </tbody>
         </table>
       </div>

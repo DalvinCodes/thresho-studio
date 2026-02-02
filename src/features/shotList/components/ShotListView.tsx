@@ -225,12 +225,14 @@ export function ShotListView({ shotListId, onEditShot, onGenerateShot }: ShotLis
         ) : viewMode === 'table' ? (
           <EnhancedShotTable
             shots={shots}
+            shotListId={shotListId}
             onSelect={selectShot}
             onEdit={onEditShot}
             onDelete={deleteShot}
             onDuplicate={duplicateShot}
             onStatusChange={updateShotStatus}
             onUpdateShot={handleUpdateShot}
+            onCreateShot={createShot}
             onReorder={reorderShot}
             onGenerate={onGenerateShot}
           />
