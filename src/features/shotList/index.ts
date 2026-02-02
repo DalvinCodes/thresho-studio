@@ -44,6 +44,7 @@ export { ShotEditor } from './components/ShotEditor';
 export { BatchCreateModal } from './components/BatchCreateModal';
 export { EnhancedShotTable } from './components/EnhancedShotTable';
 export { InlineBatchRow } from './components/InlineBatchRow';
+export { CsvInstructionsModal } from './components/CsvInstructionsModal';
 
 // Types (re-export from core)
 export type {

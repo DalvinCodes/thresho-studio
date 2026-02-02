@@ -4,7 +4,8 @@
  */
 
 import { useState, useCallback, useRef } from 'react';
-import { X, Plus, Upload, FileDown } from 'lucide-react';
+import { X, Plus, Upload, FileDown, HelpCircle } from 'lucide-react';
+import { CsvInstructionsModal } from './CsvInstructionsModal';
 import type { UUID } from '../../../core/types/common';
 import type {
   CreateShotInput,
@@ -96,6 +97,7 @@ export function BatchCreateModal({ shotListId, onClose, onCreate }: BatchCreateM
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [csvPreview, setCsvPreview] = useState<CreateShotInput[] | null>(null);
   const [csvErrors, setCsvErrors] = useState<string[]>([]);
+  const [showInstructions, setShowInstructions] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Update a specific field in a row
@@ -458,7 +460,16 @@ export function BatchCreateModal({ shotListId, onClose, onCreate }: BatchCreateM
             <div className="p-6 space-y-6">
               <div className="flex items-start gap-4">
                 <div className="flex-1">
-                  <h3 className="text-sm font-medium text-text-primary mb-2">Upload CSV File</h3>
+                  <div className="flex items-center gap-3 mb-2">
+                    <h3 className="text-sm font-medium text-text-primary">Upload CSV File</h3>
+                    <button
+                      onClick={() => setShowInstructions(true)}
+                      className="flex items-center gap-1.5 px-2.5 py-1 text-xs text-primary bg-primary/10 rounded-lg hover:bg-primary/20 transition-colors"
+                    >
+                      <HelpCircle className="w-3.5 h-3.5" />
+                      Instructions
+                    </button>
+                  </div>
                   <p className="text-sm text-text-secondary mb-4">
                     Import shots from a CSV file. Download the template below to see the expected
                     format.
@@ -587,6 +598,11 @@ export function BatchCreateModal({ shotListId, onClose, onCreate }: BatchCreateM
             Create {activeTab === 'manual' ? rows.length : csvPreview?.length || 0} Shots
           </button>
         </div>
+
+        {/* CSV Instructions Modal */}
+        {showInstructions && (
+          <CsvInstructionsModal onClose={() => setShowInstructions(false)} />
+        )}
       </div>
     </div>
   );
