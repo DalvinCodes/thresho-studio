@@ -279,12 +279,7 @@ export interface ShotSuggestion {
 export interface ShotPromptContext {
   shot: Shot;
   shotList: ShotList;
-  brand?: {
-    aesthetic: string;
-    photographyStyle: string;
-    mood: string;
-    colorPalette: string;
-  };
+  brand?: import('./brand').BrandProfile;
   equipmentPreset?: EquipmentPreset;
   talents?: import('./talent').TalentProfile[];
 }

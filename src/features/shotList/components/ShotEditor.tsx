@@ -12,6 +12,7 @@ import type {
   LightingSetup,
   AspectRatio,
   ShotStatus,
+  ComposedShotPrompt,
 } from '../../../core/types/shotList';
 import {
   useShotListStore,
@@ -21,7 +22,7 @@ import {
 } from '../store';
 import {
   composeShotPrompt,
-  validateShotForGeneration,
+  validateShotForGenerationDetailed,
   suggestShotType,
   suggestLighting,
 } from '../services/shotPromptService';
@@ -109,16 +110,16 @@ export function ShotEditor({ shotId: _shotId, onClose, onGenerate }: ShotEditorP
   // Validation
   const validation = useMemo(() => {
     if (!shot) return null;
-    return validateShotForGeneration({ ...shot, ...formData } as Shot);
+    return validateShotForGenerationDetailed({ ...shot, ...formData } as Shot);
   }, [shot, formData]);
 
   // Generated prompt preview
-  const promptPreview = useMemo(() => {
+  const promptPreview = useMemo<ComposedShotPrompt | null>(() => {
     if (!shot || !shotList) return null;
     return composeShotPrompt({
       shot: { ...shot, ...formData } as Shot,
       shotList,
-    });
+    }) as ComposedShotPrompt;
   }, [shot, shotList, formData]);
 
   // Shot type suggestions based on description
@@ -764,7 +765,7 @@ function TechnicalTab({
 
 // Prompt Tab
 interface PromptTabProps {
-  promptPreview: ReturnType<typeof composeShotPrompt> | null;
+  promptPreview: ComposedShotPrompt | null;
   shot: Shot;
 }
 

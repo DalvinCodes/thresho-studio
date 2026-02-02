@@ -23,9 +23,18 @@ export {
   composeShotPrompt,
   generateStoryboardDescription,
   validateShotForGeneration,
+  validateShotForGenerationDetailed,
   suggestShotType,
   suggestLighting,
   calculateShotComplexity,
+  formatShotType,
+  formatCameraMovement,
+  formatLighting,
+} from './services/shotPromptService';
+
+export type {
+  ShotGenerationContext,
+  ShotPromptResult,
 } from './services/shotPromptService';
 
 export {

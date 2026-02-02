@@ -1,6 +1,7 @@
 /**
  * Shot Prompt Service
- * Auto-generates professional prompts from shot metadata
+ * Composes AI generation prompts for shots, incorporating brand style,
+ * talent details, and reference frames
  */
 
 import type {
@@ -12,8 +13,37 @@ import type {
   LightingSetup,
   AspectRatio,
 } from '../../../core/types/shotList';
+import type { BrandProfile } from '../../../core/types/brand';
 import type { TalentProfile } from '../../../core/types/talent';
+import type { Asset } from '../../../core/types/asset';
 import { buildTalentDescription, matchTalentsToSubjects } from '../../../core/utils/talentInjection';
+
+/**
+ * Context for shot generation prompt composition (simplified interface)
+ */
+export interface ShotGenerationContext {
+  shot: Shot;
+  brand?: BrandProfile;
+  talent?: TalentProfile;
+  referenceAssets?: Asset[];
+}
+
+/**
+ * Result of composed shot prompt (simplified interface)
+ */
+export interface ShotPromptResult {
+  prompt: string;
+  negativePrompt: string;
+  systemPrompt?: string;
+  metadata: {
+    shotType: ShotType;
+    cameraMovement: CameraMovement;
+    lighting: LightingSetup;
+    hasBrand: boolean;
+    hasTalent: boolean;
+    referenceAssetCount: number;
+  };
+}
 
 // Shot type descriptions for prompt composition
 const SHOT_TYPE_DESCRIPTIONS: Record<ShotType, string> = {
@@ -98,9 +128,56 @@ const ASPECT_RATIO_HINTS: Record<AspectRatio, string> = {
 };
 
 /**
- * Compose a professional prompt from shot metadata
+ * Format shot type for display in prompts
  */
-export function composeShotPrompt(context: ShotPromptContext): ComposedShotPrompt {
+export function formatShotType(shotType: ShotType): string {
+  return SHOT_TYPE_DESCRIPTIONS[shotType] || shotType;
+}
+
+/**
+ * Format camera movement for display in prompts
+ */
+export function formatCameraMovement(movement: CameraMovement): string {
+  return MOVEMENT_DESCRIPTIONS[movement] || movement;
+}
+
+/**
+ * Format lighting setup for display in prompts
+ */
+export function formatLighting(lighting: LightingSetup): string {
+  return LIGHTING_DESCRIPTIONS[lighting] || lighting;
+}
+
+/**
+ * Compose a professional prompt from shot metadata using the legacy ShotPromptContext interface
+ * This is the primary implementation used by the shot list feature
+ */
+export function composeShotPrompt(context: ShotPromptContext): ComposedShotPrompt;
+/**
+ * Compose a professional prompt from shot metadata using the simplified ShotGenerationContext interface
+ * This provides a simpler API for direct shot generation
+ */
+export function composeShotPrompt(context: ShotGenerationContext): ShotPromptResult;
+/**
+ * Implementation that handles both context types
+ */
+export function composeShotPrompt(
+  context: ShotPromptContext | ShotGenerationContext
+): ComposedShotPrompt | ShotPromptResult {
+  // Check which context type we're dealing with
+  const isLegacyContext = 'shotList' in context;
+
+  if (isLegacyContext) {
+    return composeShotPromptLegacy(context as ShotPromptContext);
+  } else {
+    return composeShotPromptSimple(context as ShotGenerationContext);
+  }
+}
+
+/**
+ * Legacy implementation using ShotPromptContext
+ */
+function composeShotPromptLegacy(context: ShotPromptContext): ComposedShotPrompt {
   const { shot, shotList, brand, equipmentPreset, talents } = context;
 
   // Build the main prompt components
@@ -158,14 +235,17 @@ export function composeShotPrompt(context: ShotPromptContext): ComposedShotPromp
 
   // 8. Brand aesthetic (if available)
   if (brand) {
-    if (brand.aesthetic) {
-      components.push(brand.aesthetic + ' aesthetic');
-    }
-    if (brand.mood) {
-      components.push(brand.mood + ' mood');
-    }
-    if (brand.photographyStyle) {
-      components.push(brand.photographyStyle);
+    const visualStyle = brand.tokens?.visualStyle;
+    if (visualStyle) {
+      if (visualStyle.aesthetic) {
+        components.push(visualStyle.aesthetic + ' aesthetic');
+      }
+      if (visualStyle.mood) {
+        components.push(visualStyle.mood + ' mood');
+      }
+      if (visualStyle.photographyStyle) {
+        components.push(visualStyle.photographyStyle);
+      }
     }
   }
 
@@ -217,7 +297,7 @@ export function composeShotPrompt(context: ShotPromptContext): ComposedShotPromp
   // Technical parameters
   const technicalParameters: ComposedShotPrompt['technicalParameters'] = {
     aspectRatio: shot.aspectRatio,
-    style: brand?.aesthetic,
+    style: brand?.tokens?.visualStyle?.aesthetic,
     lighting: shot.lighting,
     camera: equipmentPreset?.camera,
   };
@@ -227,6 +307,108 @@ export function composeShotPrompt(context: ShotPromptContext): ComposedShotPromp
     userPrompt,
     negativePrompt,
     technicalParameters,
+  };
+}
+
+/**
+ * Simplified implementation using ShotGenerationContext
+ */
+function composeShotPromptSimple(context: ShotGenerationContext): ShotPromptResult {
+  const { shot, brand, talent, referenceAssets } = context;
+
+  // Build the main prompt components
+  const components: string[] = [];
+
+  // 1. Shot type and framing
+  components.push(SHOT_TYPE_DESCRIPTIONS[shot.shotType]);
+
+  // 2. Main description
+  if (shot.description) {
+    components.push(shot.description);
+  }
+
+  // 3. Camera movement (if not static)
+  if (shot.cameraMovement !== 'static') {
+    components.push(MOVEMENT_DESCRIPTIONS[shot.cameraMovement]);
+  }
+
+  // 4. Lighting
+  components.push(LIGHTING_DESCRIPTIONS[shot.lighting]);
+
+  // 5. Location
+  if (shot.location) {
+    components.push(`set in ${shot.location}`);
+  }
+
+  // 6. Subjects
+  if (shot.subjects && shot.subjects.length > 0) {
+    components.push(`featuring ${shot.subjects.join(', ')}`);
+  }
+
+  // 7. Props
+  if (shot.props && shot.props.length > 0) {
+    components.push(`with ${shot.props.join(', ')}`);
+  }
+
+  // 8. Brand aesthetic (if available)
+  if (brand) {
+    const visualStyle = brand.tokens?.visualStyle;
+    if (visualStyle) {
+      if (visualStyle.aesthetic) {
+        components.push(visualStyle.aesthetic + ' aesthetic');
+      }
+      if (visualStyle.mood) {
+        components.push(visualStyle.mood + ' mood');
+      }
+      if (visualStyle.photographyStyle) {
+        components.push(visualStyle.photographyStyle);
+      }
+    }
+  }
+
+  // Compose the user prompt
+  let prompt = components.join(', ') + '.';
+
+  // Add detailed talent description if available
+  if (talent) {
+    const talentDescription = buildTalentDescription([talent]);
+    prompt += `\n\n--- Character Details ---\n${talentDescription}`;
+  }
+
+  // Build system prompt for context
+  const systemPrompt = `Generate a high-quality image. ` +
+    `Style: professional photography. ` +
+    `Aspect ratio: ${ASPECT_RATIO_HINTS[shot.aspectRatio]}.`;
+
+  // Build negative prompt (things to avoid)
+  const negativePromptParts: string[] = [
+    'low quality',
+    'blurry',
+    'distorted',
+    'amateur',
+    'overexposed',
+    'underexposed',
+  ];
+
+  // Add brand forbidden elements
+  if (brand?.tokens?.voice?.forbiddenElements) {
+    negativePromptParts.push(...brand.tokens.voice.forbiddenElements);
+  }
+
+  const negativePrompt = negativePromptParts.join(', ');
+
+  return {
+    prompt,
+    negativePrompt,
+    systemPrompt,
+    metadata: {
+      shotType: shot.shotType,
+      cameraMovement: shot.cameraMovement,
+      lighting: shot.lighting,
+      hasBrand: !!brand,
+      hasTalent: !!talent,
+      referenceAssetCount: referenceAssets?.length || 0,
+    },
   };
 }
 
@@ -266,9 +448,25 @@ export function generateStoryboardDescription(shot: Shot): string {
 }
 
 /**
- * Validate a shot for AI generation readiness
+ * Validate a shot has sufficient information for generation
+ * Checks that description length is at least 10 characters
  */
-export function validateShotForGeneration(shot: Shot): {
+export function validateShotForGeneration(shot: Shot): { valid: boolean; error?: string } {
+  if (!shot.description || shot.description.length < 10) {
+    return {
+      valid: false,
+      error: 'Shot description must be at least 10 characters long',
+    };
+  }
+
+  return { valid: true };
+}
+
+/**
+ * Validate a shot for AI generation readiness with detailed feedback
+ * Returns comprehensive issues and warnings
+ */
+export function validateShotForGenerationDetailed(shot: Shot): {
   isReady: boolean;
   issues: string[];
   warnings: string[];

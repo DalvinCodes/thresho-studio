@@ -13,6 +13,7 @@ import { useProviderStore } from '../providers/store';
 import { useBrandStore } from '../brands/store';
 import { useTalentStore } from '../talent/store';
 import { composeShotPrompt } from './services/shotPromptService';
+import type { BrandProfile } from '../../core/types/brand';
 import {
   saveShotListToDb,
   saveShotToDb,
@@ -1037,18 +1038,10 @@ export const useShotListStore = create<ShotListStore>()(
       }
 
       // Get brand if brandId is set on the shot list
-      let brand: Parameters<typeof composeShotPrompt>[0]['brand'] | undefined;
+      let brand: BrandProfile | undefined;
       if (shotList.brandId) {
         const brandStore = useBrandStore.getState();
-        const brandProfile = brandStore.brands.get(shotList.brandId);
-        if (brandProfile) {
-          brand = {
-            aesthetic: brandProfile.tokens.visualStyle.aesthetic || '',
-            photographyStyle: brandProfile.tokens.visualStyle.photographyStyle || '',
-            mood: brandProfile.tokens.visualStyle.mood || '',
-            colorPalette: brandProfile.tokens.colors.paletteDescription || '',
-          };
-        }
+        brand = brandStore.brands.get(shotList.brandId);
       }
 
       // Get talents if talentIds are set on the shot
