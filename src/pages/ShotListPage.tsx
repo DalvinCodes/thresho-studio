@@ -5,7 +5,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { Film, Image, Video } from 'lucide-react';
+import { Film, Image, Video, Trash2 } from 'lucide-react';
 import type { UUID, ContentType } from '../core/types/common';
 import { ShotListView, ShotEditor, useShotListStore, useShotLists } from '../features/shotList';
 
@@ -17,6 +17,7 @@ export function ShotListPage() {
   const {
     selectShotList,
     createShotList,
+    deleteShotList,
   } = useShotListStore();
 
   const selectedListId = useShotListStore((state) => state.selectedShotListId);
@@ -68,22 +69,41 @@ export function ShotListPage() {
           ) : (
             <div className="space-y-1">
               {shotLists.map((list) => (
-                <button
+                <div
                   key={list.id}
-                  onClick={() => navigate(`/shotlist/${list.id}`)}
                   className={`
-                    w-full p-3 rounded-3xl text-left transition-colors
+                    group flex items-center justify-between p-3 rounded-3xl cursor-pointer transition-colors
                     ${selectedListId === list.id
                       ? 'bg-primary/10 text-primary'
                       : 'hover:bg-surface-hover text-text-primary'
                     }
                   `}
                 >
-                  <p className="font-medium truncate">{list.name}</p>
-                  <p className="text-xs text-text-secondary mt-1">
-                    {list.totalShots} shots • {list.completedShots} done
-                  </p>
-                </button>
+                  <button
+                    onClick={() => navigate(`/shotlist/${list.id}`)}
+                    className="flex-1 text-left"
+                  >
+                    <p className="font-medium truncate">{list.name}</p>
+                    <p className="text-xs text-text-secondary mt-1">
+                      {list.totalShots} shots • {list.completedShots} done
+                    </p>
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (confirm(`Delete shot list "${list.name}"? This will also delete all ${list.totalShots} shots in this list. This action cannot be undone.`)) {
+                        deleteShotList(list.id);
+                        if (selectedListId === list.id) {
+                          navigate('/shotlist');
+                        }
+                      }
+                    }}
+                    className="opacity-0 group-hover:opacity-100 p-1.5 text-text-secondary hover:text-red-500 transition-all"
+                    title="Delete shot list"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
               ))}
             </div>
           )}
