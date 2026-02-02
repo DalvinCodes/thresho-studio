@@ -3,7 +3,7 @@
  * Full-featured table with inline editing, selection, and batch operations
  */
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { Pencil, Copy, Trash2, Play, GripVertical } from 'lucide-react';
 import type { UUID } from '../../../core/types/common';
 import type {
@@ -125,15 +125,55 @@ function formatLabel(value: string): string {
     .join(' ');
 }
 
+// Fill handle component
+interface FillHandleProps {
+  onMouseDown: (e: React.MouseEvent) => void;
+  visible: boolean;
+}
+
+function FillHandle({ onMouseDown, visible }: FillHandleProps) {
+  return (
+    <div
+      onMouseDown={onMouseDown}
+      className={`
+        absolute -bottom-1 -right-1 w-3 h-3 bg-primary rounded-sm cursor-crosshair z-10
+        transition-opacity duration-150
+        ${visible ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}
+        hover:scale-125
+      `}
+      title="Drag to fill"
+    />
+  );
+}
+
 // Inline editable cell component
 interface EditableCellProps {
   value: string;
   onSave: (value: string) => void;
   multiline?: boolean;
   className?: string;
+  shotId: UUID;
+  field: keyof Shot;
+  isFillSource: boolean;
+  isFillTarget: boolean;
+  onFillStart: (shotId: UUID, field: keyof Shot) => void;
+  onFillOver: (shotId: UUID) => void;
+  isFillMode: boolean;
 }
 
-function EditableCell({ value, onSave, multiline, className }: EditableCellProps) {
+function EditableCell({
+  value,
+  onSave,
+  multiline,
+  className,
+  shotId,
+  field,
+  isFillSource,
+  isFillTarget,
+  onFillStart,
+  onFillOver,
+  isFillMode,
+}: EditableCellProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(value);
 
@@ -159,6 +199,21 @@ function EditableCell({ value, onSave, multiline, className }: EditableCellProps
     },
     [handleSave, handleCancel, multiline]
   );
+
+  const handleFillMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      onFillStart(shotId, field);
+    },
+    [onFillStart, shotId, field]
+  );
+
+  const handleMouseEnter = useCallback(() => {
+    if (isFillMode) {
+      onFillOver(shotId);
+    }
+  }, [isFillMode, onFillOver, shotId]);
 
   if (isEditing) {
     if (multiline) {
@@ -191,9 +246,19 @@ function EditableCell({ value, onSave, multiline, className }: EditableCellProps
   return (
     <div
       onClick={() => setIsEditing(true)}
-      className={`cursor-pointer hover:bg-surface-raised rounded px-2 py-1 -mx-2 -my-1 transition-colors ${className}`}
+      onMouseEnter={handleMouseEnter}
+      className={`
+        relative group cursor-pointer hover:bg-surface-raised rounded px-2 py-1 -mx-2 -my-1 transition-colors
+        ${isFillSource ? 'bg-primary/30 ring-2 ring-primary' : ''}
+        ${isFillTarget ? 'bg-primary/20' : ''}
+        ${className}
+      `}
     >
       {value || <span className="text-text-secondary italic">Click to edit</span>}
+      <FillHandle
+        onMouseDown={handleFillMouseDown}
+        visible={isFillMode || isFillSource}
+      />
     </div>
   );
 }
@@ -282,9 +347,24 @@ function SubjectsTags({ subjects }: { subjects?: string[] }) {
 interface DurationCellProps {
   value?: number;
   onChange: (value: number | undefined) => void;
+  shotId: UUID;
+  isFillSource: boolean;
+  isFillTarget: boolean;
+  onFillStart: (shotId: UUID, field: keyof Shot) => void;
+  onFillOver: (shotId: UUID) => void;
+  isFillMode: boolean;
 }
 
-function DurationCell({ value, onChange }: DurationCellProps) {
+function DurationCell({
+  value,
+  onChange,
+  shotId,
+  isFillSource,
+  isFillTarget,
+  onFillStart,
+  onFillOver,
+  isFillMode,
+}: DurationCellProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(value?.toString() || '');
 
@@ -312,6 +392,21 @@ function DurationCell({ value, onChange }: DurationCellProps) {
     [handleSave, handleCancel]
   );
 
+  const handleFillMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      onFillStart(shotId, 'duration');
+    },
+    [onFillStart, shotId]
+  );
+
+  const handleMouseEnter = useCallback(() => {
+    if (isFillMode) {
+      onFillOver(shotId);
+    }
+  }, [isFillMode, onFillOver, shotId]);
+
   if (isEditing) {
     return (
       <input
@@ -330,9 +425,18 @@ function DurationCell({ value, onChange }: DurationCellProps) {
   return (
     <div
       onClick={() => setIsEditing(true)}
-      className="cursor-pointer hover:bg-surface-raised rounded px-2 py-1 -mx-2 -my-1 transition-colors text-sm text-text-secondary text-center"
+      onMouseEnter={handleMouseEnter}
+      className={`
+        relative group cursor-pointer hover:bg-surface-raised rounded px-2 py-1 -mx-2 -my-1 transition-colors text-sm text-text-secondary text-center
+        ${isFillSource ? 'bg-primary/30 ring-2 ring-primary' : ''}
+        ${isFillTarget ? 'bg-primary/20' : ''}
+      `}
     >
       {value ? `${value}s` : '-'}
+      <FillHandle
+        onMouseDown={handleFillMouseDown}
+        visible={isFillMode || isFillSource}
+      />
     </div>
   );
 }
@@ -401,6 +505,106 @@ export function EnhancedShotTable({
   const [draggedId, setDraggedId] = useState<UUID | null>(null);
   const [dragOverId, setDragOverId] = useState<UUID | null>(null);
   const [, setIsDragging] = useState(false);
+
+  // Fill mode state
+  const [isFillMode, setIsFillMode] = useState(false);
+  const [fillSourceId, setFillSourceId] = useState<UUID | null>(null);
+  const [fillField, setFillField] = useState<keyof Shot | null>(null);
+  const [fillTargetIds, setFillTargetIds] = useState<Set<UUID>>(new Set());
+  const [fillSourceValue, setFillSourceValue] = useState<string | number | undefined>(undefined);
+
+  // Fill handlers
+  const handleFillStart = useCallback((shotId: UUID, field: keyof Shot) => {
+    const shot = shots.find((s) => s.id === shotId);
+    if (!shot) return;
+
+    setIsFillMode(true);
+    setFillSourceId(shotId);
+    setFillField(field);
+    setFillTargetIds(new Set());
+    setFillSourceValue(shot[field] as string | number | undefined);
+  }, [shots]);
+
+  const handleFillOver = useCallback((shotId: UUID) => {
+    if (!isFillMode || !fillSourceId || shotId === fillSourceId) return;
+
+    setFillTargetIds((prev) => {
+      const next = new Set(prev);
+      next.add(shotId);
+      return next;
+    });
+  }, [isFillMode, fillSourceId]);
+
+  const handleFillEnd = useCallback(() => {
+    if (!isFillMode || !fillSourceId || !fillField || fillTargetIds.size === 0) {
+      setIsFillMode(false);
+      setFillSourceId(null);
+      setFillField(null);
+      setFillTargetIds(new Set());
+      setFillSourceValue(undefined);
+      return;
+    }
+
+    // Apply the fill value to all target cells
+    fillTargetIds.forEach((targetId) => {
+      if (fillField === 'duration') {
+        onUpdateShot(targetId, { [fillField]: fillSourceValue as number | undefined });
+      } else {
+        onUpdateShot(targetId, { [fillField]: fillSourceValue });
+      }
+    });
+
+    setIsFillMode(false);
+    setFillSourceId(null);
+    setFillField(null);
+    setFillTargetIds(new Set());
+    setFillSourceValue(undefined);
+  }, [isFillMode, fillSourceId, fillField, fillTargetIds, fillSourceValue, onUpdateShot]);
+
+  // Global mouse up handler for fill end
+  useEffect(() => {
+    if (!isFillMode) return;
+
+    const handleMouseUp = () => {
+      handleFillEnd();
+    };
+
+    document.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isFillMode, handleFillEnd]);
+
+  // Keyboard shortcut Ctrl+D for fill down
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.key === 'd') {
+        e.preventDefault();
+        // This would need to be connected to the active cell editing state
+        // For now, we'll implement a simpler version that fills selected rows
+        if (selectedIds.size > 0 && fillSourceId && fillField) {
+          const sourceShot = shots.find((s) => s.id === fillSourceId);
+          if (sourceShot) {
+            const value = sourceShot[fillField];
+            selectedIds.forEach((targetId) => {
+              if (targetId !== fillSourceId) {
+                if (fillField === 'duration') {
+                  onUpdateShot(targetId, { [fillField]: value as number | undefined });
+                } else {
+                  onUpdateShot(targetId, { [fillField]: value });
+                }
+              }
+            });
+          }
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [selectedIds, fillSourceId, fillField, shots, onUpdateShot]);
 
   // Selection handlers
   const toggleSelection = useCallback((id: UUID) => {
@@ -620,6 +824,13 @@ export function EnhancedShotTable({
                         onUpdateShot(shot.id, { name: value })
                       }
                       className="font-medium text-text-primary"
+                      shotId={shot.id}
+                      field="name"
+                      isFillSource={fillSourceId === shot.id && fillField === 'name'}
+                      isFillTarget={fillTargetIds.has(shot.id) && fillField === 'name'}
+                      onFillStart={handleFillStart}
+                      onFillOver={handleFillOver}
+                      isFillMode={isFillMode}
                     />
                   </td>
 
@@ -635,6 +846,13 @@ export function EnhancedShotTable({
                       }
                       multiline
                       className="text-sm text-text-secondary line-clamp-2"
+                      shotId={shot.id}
+                      field="description"
+                      isFillSource={fillSourceId === shot.id && fillField === 'description'}
+                      isFillTarget={fillTargetIds.has(shot.id) && fillField === 'description'}
+                      onFillStart={handleFillStart}
+                      onFillOver={handleFillOver}
+                      isFillMode={isFillMode}
                     />
                   </td>
 
@@ -691,6 +909,13 @@ export function EnhancedShotTable({
                         onUpdateShot(shot.id, { location: value || undefined })
                       }
                       className="text-sm text-text-primary"
+                      shotId={shot.id}
+                      field="location"
+                      isFillSource={fillSourceId === shot.id && fillField === 'location'}
+                      isFillTarget={fillTargetIds.has(shot.id) && fillField === 'location'}
+                      onFillStart={handleFillStart}
+                      onFillOver={handleFillOver}
+                      isFillMode={isFillMode}
                     />
                   </td>
 
@@ -734,6 +959,12 @@ export function EnhancedShotTable({
                       onChange={(value) =>
                         onUpdateShot(shot.id, { duration: value })
                       }
+                      shotId={shot.id}
+                      isFillSource={fillSourceId === shot.id && fillField === 'duration'}
+                      isFillTarget={fillTargetIds.has(shot.id) && fillField === 'duration'}
+                      onFillStart={handleFillStart}
+                      onFillOver={handleFillOver}
+                      isFillMode={isFillMode}
                     />
                   </td>
 
