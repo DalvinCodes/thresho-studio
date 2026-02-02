@@ -203,7 +203,21 @@ export function ShotListView({ shotListId, onEditShot, onGenerateShot }: ShotLis
 
       {/* Content */}
       <div className="flex-1 overflow-auto">
-        {shots.length === 0 ? (
+        {viewMode === 'table' ? (
+          <EnhancedShotTable
+            shots={shots}
+            shotListId={shotListId}
+            onSelect={selectShot}
+            onEdit={onEditShot}
+            onDelete={deleteShot}
+            onDuplicate={duplicateShot}
+            onStatusChange={updateShotStatus}
+            onUpdateShot={handleUpdateShot}
+            onCreateShot={createShot}
+            onReorder={reorderShot}
+            onGenerate={onGenerateShot}
+          />
+        ) : shots.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-text-secondary">
             <p className="mb-4">No shots found</p>
             <div className="flex items-center gap-4">
@@ -222,20 +236,6 @@ export function ShotListView({ shotListId, onEditShot, onGenerateShot }: ShotLis
               </button>
             </div>
           </div>
-        ) : viewMode === 'table' ? (
-          <EnhancedShotTable
-            shots={shots}
-            shotListId={shotListId}
-            onSelect={selectShot}
-            onEdit={onEditShot}
-            onDelete={deleteShot}
-            onDuplicate={duplicateShot}
-            onStatusChange={updateShotStatus}
-            onUpdateShot={handleUpdateShot}
-            onCreateShot={createShot}
-            onReorder={reorderShot}
-            onGenerate={onGenerateShot}
-          />
         ) : (
           <ShotStoryboard
             shots={shots}
