@@ -6,7 +6,9 @@
 import { useState, useCallback } from 'react';
 import { Film, ClipboardList, Sparkles } from 'lucide-react';
 import type { UUID } from '../../../core/types/common';
-import type { Shot, ShotStatus, ShotType, CreateShotInput } from '../../../core/types/shotList';
+import type { Shot, ShotStatus, ShotType, CreateShotInput, AspectRatio } from '../../../core/types/shotList';
+import { useGenerationStore } from '../../generation';
+import { composeShotPrompt, validateShotForGeneration } from '../services/shotPromptService';
 import {
   useShotListStore,
   useSelectedShotList,
@@ -47,6 +49,8 @@ export function ShotListView({ shotListId, onEditShot, onGenerateShot }: ShotLis
   const updateShot = store.updateShot;
   const createMultipleShots = store.createMultipleShots;
   const reorderShot = store.reorderShot;
+
+  const { startGeneration } = useGenerationStore();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
@@ -93,6 +97,67 @@ export function ShotListView({ shotListId, onEditShot, onGenerateShot }: ShotLis
   const handleUpdateShot = useCallback((shotId: UUID, updates: Partial<Shot>) => {
     updateShot(shotId, updates);
   }, [updateShot]);
+
+  // Handle single shot generation
+  const handleSingleGeneration = useCallback((shotId: UUID, config: { prompt: string; negativePrompt: string; aspectRatio: string; referenceAssetIds?: UUID[]; brandId?: UUID; talentIds?: UUID[] }) => {
+    const shot = shots.find(s => s.id === shotId);
+    if (!shot) return;
+
+    // Create generation request
+    const request = {
+      type: 'image' as const,
+      customPrompt: config.prompt,
+      parameters: {
+        negativePrompt: config.negativePrompt,
+        aspectRatio: config.aspectRatio,
+      },
+      brandId: config.brandId,
+      talentIds: config.talentIds,
+      metadata: {
+        shotId: shot.id,
+        shotNumber: shot.shotNumber,
+        referenceAssetIds: config.referenceAssetIds,
+      },
+    };
+
+    // Trigger generation
+    startGeneration(request);
+
+    // Update shot status to 'in-progress'
+    updateShot(shotId, { status: 'in-progress' as ShotStatus });
+  }, [shots, startGeneration, updateShot]);
+
+  // Handle batch generation
+  const handleBatchGeneration = useCallback((shotIds: UUID[]) => {
+    shotIds.forEach(shotId => {
+      const shot = shots.find(s => s.id === shotId);
+      if (!shot) return;
+
+      // Validate shot
+      const validation = validateShotForGeneration(shot);
+      if (!validation.valid) return;
+
+      // Compose prompt
+      const promptResult = composeShotPrompt({ shot });
+
+      // Trigger generation
+      startGeneration({
+        type: 'image',
+        customPrompt: promptResult.prompt,
+        parameters: {
+          negativePrompt: promptResult.negativePrompt,
+          aspectRatio: shot.aspectRatio,
+        },
+        metadata: {
+          shotId: shot.id,
+          shotNumber: shot.shotNumber,
+        },
+      });
+
+      // Update status
+      updateShot(shotId, { status: 'in-progress' as ShotStatus });
+    });
+  }, [shots, startGeneration, updateShot]);
 
   if (!shotList) {
     return (
@@ -283,10 +348,7 @@ export function ShotListView({ shotListId, onEditShot, onGenerateShot }: ShotLis
           shots={shots}
           selectedShotIds={selectedShotIds}
           onClose={() => setIsBatchGenerationOpen(false)}
-          onGenerateBatch={(shotIds) => {
-            console.log('Batch generate:', shotIds);
-            shotIds.forEach((id) => onGenerateShot?.(id));
-          }}
+          onGenerateBatch={handleBatchGeneration}
         />
       )}
     </div>

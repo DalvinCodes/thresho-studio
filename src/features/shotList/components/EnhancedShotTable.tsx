@@ -4,7 +4,7 @@
  */
 
 import { useState, useCallback, useMemo, useEffect } from 'react';
-import { Pencil, Copy, Trash2, GripVertical, Sparkles } from 'lucide-react';
+import { Pencil, Copy, Trash2, GripVertical, Sparkles, Loader2, Check, Image } from 'lucide-react';
 import type { UUID } from '../../../core/types/common';
 import type {
   Shot,
@@ -14,6 +14,7 @@ import type {
   LightingSetup,
   CreateShotInput,
 } from '../../../core/types/shotList';
+import { useGenerationStore } from '../../generation';
 import { InlineBatchRow } from './InlineBatchRow';
 import { ShotGenerationPanel } from './ShotGenerationPanel';
 
@@ -345,6 +346,45 @@ function SubjectsTags({ subjects }: { subjects?: string[] }) {
   );
 }
 
+// Generation status cell
+interface GenerationStatusCellProps {
+  shot: Shot;
+  isGenerating: boolean;
+}
+
+function GenerationStatusCell({ shot, isGenerating }: GenerationStatusCellProps) {
+  if (isGenerating) {
+    return (
+      <div className="flex items-center gap-1.5 text-text-secondary">
+        <Loader2 className="w-4 h-4 animate-spin text-primary" />
+        <span className="text-xs">Generating...</span>
+      </div>
+    );
+  }
+
+  if (shot.status === 'completed') {
+    return (
+      <div className="flex items-center gap-1.5 text-green-400">
+        <Check className="w-4 h-4" />
+        <span className="text-xs">Completed</span>
+      </div>
+    );
+  }
+
+  if (shot.generatedAssetId) {
+    return (
+      <div className="flex items-center gap-1.5 text-primary">
+        <Image className="w-4 h-4" />
+        <span className="text-xs">Has Asset</span>
+      </div>
+    );
+  }
+
+  return (
+    <span className="text-xs text-text-secondary">-</span>
+  );
+}
+
 // Duration cell with inline editing
 interface DurationCellProps {
   value?: number;
@@ -509,6 +549,21 @@ export function EnhancedShotTable({
   const [dragOverId, setDragOverId] = useState<UUID | null>(null);
   const [, setIsDragging] = useState(false);
   const [generationShotId, setGenerationShotId] = useState<UUID | null>(null);
+
+  // Get active generations from store
+  const activeGenerations = useGenerationStore((state) => state.activeGenerations);
+
+  // Helper to check if a shot is currently being generated
+  const isShotGenerating = useCallback((shotId: UUID) => {
+    for (const gen of activeGenerations.values()) {
+      // Check if this generation is for this shot by looking at the request metadata
+      const request = (gen as any).request;
+      if (request?.metadata?.shotId === shotId) {
+        return gen.status === 'pending' || gen.status === 'validating' || gen.status === 'preparing' || gen.status === 'executing';
+      }
+    }
+    return false;
+  }, [activeGenerations]);
 
   // Fill mode state
   const [isFillMode, setIsFillMode] = useState(false);
@@ -765,6 +820,7 @@ export function EnhancedShotTable({
               <th className="px-3 py-3 font-medium min-w-[120px]">Location</th>
               <th className="px-3 py-3 font-medium w-32">Subjects</th>
               <th className="px-3 py-3 font-medium w-32">Status</th>
+              <th className="px-3 py-3 font-medium w-28">Generation</th>
               <th className="px-3 py-3 font-medium w-28">Priority</th>
               <th className="px-3 py-3 font-medium w-20">Duration</th>
               <th className="px-3 py-3 font-medium w-36">Actions</th>
@@ -945,6 +1001,14 @@ export function EnhancedShotTable({
                     />
                   </td>
 
+                  {/* Generation Status */}
+                  <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
+                    <GenerationStatusCell
+                      shot={shot}
+                      isGenerating={isShotGenerating(shot.id)}
+                    />
+                  </td>
+
                   {/* Priority */}
                   <td
                     className="px-3 py-3"
@@ -1043,7 +1107,7 @@ export function EnhancedShotTable({
           shot={shots.find((s) => s.id === generationShotId)!}
           onClose={() => setGenerationShotId(null)}
           onGenerate={(shotId, config) => {
-            console.log('Generate:', shotId, config);
+            onGenerate?.(shotId);
             setGenerationShotId(null);
           }}
         />
