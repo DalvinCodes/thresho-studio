@@ -3,8 +3,8 @@
  * Full editor panel for talent profiles
  */
 
-import { useState, useEffect, useCallback } from 'react';
-import type { UUID } from '../../../core/types/common';
+import { useState, useEffect, useCallback } from "react";
+import type { UUID } from "../../../core/types/common";
 import type {
   TalentProfile,
   TalentType,
@@ -12,29 +12,49 @@ import type {
   TalentPersonality,
   TalentPromptFragments,
   TalentReferenceImage,
-} from '../../../core/types/talent';
+} from "../../../core/types/talent";
+import { useTalentStore, useSelectedTalent, useTalentEditor } from "../store";
+import { composeTalentPrompt } from "../services/talentPromptService";
+import { TalentAIGenerationTab } from "./TalentAIGenerationTab";
+import { StorageImage } from "../../../components/StorageMedia";
 import {
-  useTalentStore,
-  useSelectedTalent,
-  useTalentEditor,
-} from '../store';
-import { composeTalentPrompt } from '../services/talentPromptService';
-import { TalentAIGenerationTab } from './TalentAIGenerationTab';
-import { StorageImage } from '../../../components/StorageMedia';
-import { Image as ImageIcon, Star, Trash2, User, Users, Cat, Package, Mountain, Palette, X, Maximize2 } from 'lucide-react';
+  Image as ImageIcon,
+  Star,
+  Trash2,
+  User,
+  Users,
+  Cat,
+  Package,
+  Mountain,
+  Palette,
+  X,
+  Maximize2,
+} from "lucide-react";
 
 interface TalentEditorProps {
   talentId: UUID;
   onClose?: () => void;
 }
 
-const TALENT_TYPES: Array<{ value: TalentType; label: string; icon: React.ReactNode }> = [
-  { value: 'character', label: 'Character', icon: <User className="w-5 h-5" /> },
-  { value: 'person', label: 'Person', icon: <Users className="w-5 h-5" /> },
-  { value: 'creature', label: 'Creature', icon: <Cat className="w-5 h-5" /> },
-  { value: 'object', label: 'Object', icon: <Package className="w-5 h-5" /> },
-  { value: 'environment', label: 'Environment', icon: <Mountain className="w-5 h-5" /> },
-  { value: 'style', label: 'Style', icon: <Palette className="w-5 h-5" /> },
+const TALENT_TYPES: Array<{
+  value: TalentType;
+  label: string;
+  icon: React.ReactNode;
+}> = [
+  {
+    value: "character",
+    label: "Character",
+    icon: <User className="w-5 h-5" />,
+  },
+  { value: "person", label: "Person", icon: <Users className="w-5 h-5" /> },
+  { value: "creature", label: "Creature", icon: <Cat className="w-5 h-5" /> },
+  { value: "object", label: "Object", icon: <Package className="w-5 h-5" /> },
+  {
+    value: "environment",
+    label: "Environment",
+    icon: <Mountain className="w-5 h-5" />,
+  },
+  { value: "style", label: "Style", icon: <Palette className="w-5 h-5" /> },
 ];
 
 export function TalentEditor({ talentId, onClose }: TalentEditorProps) {
@@ -54,10 +74,17 @@ export function TalentEditor({ talentId, onClose }: TalentEditorProps) {
   } = useTalentStore();
 
   const [activeTab, setActiveTab] = useState<
-    'general' | 'appearance' | 'ai-generation' | 'personality' | 'images' | 'prompts'
-  >('general');
-  const [validationResult, setValidationResult] = useState<ReturnType<typeof validateTalent> | null>(null);
-  const [promptPreview, setPromptPreview] = useState('');
+    | "general"
+    | "appearance"
+    | "ai-generation"
+    | "personality"
+    | "images"
+    | "prompts"
+  >("general");
+  const [validationResult, setValidationResult] = useState<ReturnType<
+    typeof validateTalent
+  > | null>(null);
+  const [promptPreview, setPromptPreview] = useState("");
 
   // Initialize editor
   useEffect(() => {
@@ -95,7 +122,7 @@ export function TalentEditor({ talentId, onClose }: TalentEditorProps) {
       document.title = `${talent.name} | Thresho Studio`;
     }
     return () => {
-      document.title = 'Thresho Studio';
+      document.title = "Thresho Studio";
     };
   }, [talent]);
 
@@ -107,7 +134,8 @@ export function TalentEditor({ talentId, onClose }: TalentEditorProps) {
     );
   }
 
-  const showPersonalityTab = talent.type === 'character' || talent.type === 'person';
+  const showPersonalityTab =
+    talent.type === "character" || talent.type === "person";
 
   return (
     <div className="h-full flex flex-col bg-background">
@@ -144,7 +172,9 @@ export function TalentEditor({ talentId, onClose }: TalentEditorProps) {
           </button>
           <button
             onClick={handleSave}
-            disabled={!isDirty || (validationResult && !validationResult.isValid)}
+            disabled={
+              !isDirty || (validationResult && !validationResult.isValid)
+            }
             className="px-4 py-1.5 bg-primary text-white text-sm rounded-3xl hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             Save Changes
@@ -156,21 +186,26 @@ export function TalentEditor({ talentId, onClose }: TalentEditorProps) {
       <div className="border-b border-border bg-surface pt-3">
         <nav className="flex gap-10 px-6 overflow-x-auto">
           {[
-            { key: 'general', label: 'General' },
-            { key: 'appearance', label: 'Appearance' },
-            ...(showPersonalityTab ? [{ key: 'ai-generation', label: 'AI Generation' }] : []),
-            ...(showPersonalityTab ? [{ key: 'personality', label: 'Personality' }] : []),
-            { key: 'images', label: 'Reference Images' },
-            { key: 'prompts', label: 'Prompt Fragments' },
+            { key: "general", label: "General" },
+            { key: "appearance", label: "Appearance" },
+            ...(showPersonalityTab
+              ? [{ key: "ai-generation", label: "AI Generation" }]
+              : []),
+            ...(showPersonalityTab
+              ? [{ key: "personality", label: "Personality" }]
+              : []),
+            { key: "images", label: "Reference Images" },
+            { key: "prompts", label: "Prompt Fragments" },
           ].map((tab) => (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key as typeof activeTab)}
               className={`
                 pb-3 text-sm font-medium whitespace-nowrap transition-colors relative
-                ${activeTab === tab.key
-                  ? 'text-text-primary'
-                  : 'text-text-muted hover:text-text-primary'
+                ${
+                  activeTab === tab.key
+                    ? "text-text-primary"
+                    : "text-text-muted hover:text-text-primary"
                 }
               `}
             >
@@ -185,7 +220,7 @@ export function TalentEditor({ talentId, onClose }: TalentEditorProps) {
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto px-6 py-8">
-        {activeTab === 'general' && (
+        {activeTab === "general" && (
           <GeneralTab
             draft={draft as TalentProfile}
             onUpdate={updateDraft}
@@ -194,69 +229,77 @@ export function TalentEditor({ talentId, onClose }: TalentEditorProps) {
           />
         )}
 
-        {activeTab === 'appearance' && (
+        {activeTab === "appearance" && (
           <AppearanceTab
             appearance={draft.appearance || {}}
             onUpdate={(appearance) => updateDraft({ appearance })}
           />
         )}
 
-        {activeTab === 'personality' && showPersonalityTab && (
+        {activeTab === "personality" && showPersonalityTab && (
           <PersonalityTab
             personality={draft.personality || {}}
             onUpdate={(personality) => updateDraft({ personality })}
           />
         )}
 
-        {activeTab === 'ai-generation' && showPersonalityTab && (
+        {activeTab === "ai-generation" && showPersonalityTab && (
           <TalentAIGenerationTab talent={talent} />
         )}
 
-        {activeTab === 'images' && (
+        {activeTab === "images" && (
           <ReferenceImagesTab
             talentId={talentId}
             images={talent.referenceImages}
             primaryImageId={talent.primaryImageId}
-            onAddImage={(url, caption) => addReferenceImage(talentId, url, caption)}
+            onAddImage={(url, caption) =>
+              addReferenceImage(talentId, url, caption)
+            }
             onRemoveImage={(imageId) => removeReferenceImage(talentId, imageId)}
             onSetPrimary={(imageId) => setPrimaryImage(talentId, imageId)}
           />
         )}
 
-        {activeTab === 'prompts' && (
+        {activeTab === "prompts" && (
           <PromptFragmentsTab
-            promptFragments={draft.promptFragments || { default: '' }}
+            promptFragments={draft.promptFragments || { default: "" }}
             onUpdate={(promptFragments) => updateDraft({ promptFragments })}
             preview={promptPreview}
           />
         )}
 
         {/* Validation Messages */}
-        {validationResult && (validationResult.errors.length > 0 || validationResult.warnings.length > 0) && (
-          <div className="mt-6 space-y-3">
-            {validationResult.errors.length > 0 && (
-              <div className="p-4 bg-red-100 border border-red-300 rounded-3xl">
-                <p className="text-sm font-medium text-red-700 mb-2">Errors</p>
-                <ul className="text-sm text-red-700 space-y-1">
-                  {validationResult.errors.map((error, i) => (
-                    <li key={i}>• {error.message}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
+        {validationResult &&
+          (validationResult.errors.length > 0 ||
+            validationResult.warnings.length > 0) && (
+            <div className="mt-6 space-y-3">
+              {validationResult.errors.length > 0 && (
+                <div className="p-4 bg-red-100 border border-red-300 rounded-3xl">
+                  <p className="text-sm font-medium text-red-700 mb-2">
+                    Errors
+                  </p>
+                  <ul className="text-sm text-red-700 space-y-1">
+                    {validationResult.errors.map((error, i) => (
+                      <li key={i}>• {error.message}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
 
-            {validationResult.warnings.length > 0 && (
-              <div className="p-4 bg-yellow-100 border border-yellow-300 rounded-3xl">
-                <p className="text-sm font-medium text-yellow-700 mb-2">Suggestions</p>
-                <ul className="text-sm text-yellow-700 space-y-1">
-                  {validationResult.warnings.map((warning, i) => (
-                    <li key={i}>• {warning.message}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
-        )}
+              {validationResult.warnings.length > 0 && (
+                <div className="p-4 bg-yellow-100 border border-yellow-300 rounded-3xl">
+                  <p className="text-sm font-medium text-yellow-700 mb-2">
+                    Suggestions
+                  </p>
+                  <ul className="text-sm text-yellow-700 space-y-1">
+                    {validationResult.warnings.map((warning, i) => (
+                      <li key={i}>• {warning.message}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
       </div>
     </div>
   );
@@ -270,13 +313,18 @@ interface GeneralTabProps {
   onRemoveTag: (tag: string) => void;
 }
 
-function GeneralTab({ draft, onUpdate, onAddTag, onRemoveTag }: GeneralTabProps) {
-  const [newTag, setNewTag] = useState('');
+function GeneralTab({
+  draft,
+  onUpdate,
+  onAddTag,
+  onRemoveTag,
+}: GeneralTabProps) {
+  const [newTag, setNewTag] = useState("");
 
   const handleAddTag = () => {
     if (newTag.trim() && !draft.tags.includes(newTag.trim())) {
       onAddTag(newTag.trim());
-      setNewTag('');
+      setNewTag("");
     }
   };
 
@@ -308,9 +356,10 @@ function GeneralTab({ draft, onUpdate, onAddTag, onRemoveTag }: GeneralTabProps)
               className={`
                 flex flex-col items-center gap-2 p-4 rounded-3xl
                 transition-all duration-200
-                ${draft.type === t.value
-                  ? 'bg-primary-light text-primary ring-1 ring-primary'
-                  : 'bg-surface text-text-muted hover:bg-bg-subtle hover:text-text'
+                ${
+                  draft.type === t.value
+                    ? "bg-primary-light text-primary ring-1 ring-primary"
+                    : "bg-surface text-text-muted hover:bg-bg-subtle hover:text-text"
                 }
               `}
             >
@@ -361,7 +410,7 @@ function GeneralTab({ draft, onUpdate, onAddTag, onRemoveTag }: GeneralTabProps)
             type="text"
             value={newTag}
             onChange={(e) => setNewTag(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleAddTag()}
+            onKeyDown={(e) => e.key === "Enter" && handleAddTag()}
             placeholder="Add tag..."
             className="flex-1 h-10 px-4 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-3xl text-[var(--color-text)] placeholder:text-[var(--color-text-subtle)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all"
           />
@@ -385,14 +434,18 @@ interface AppearanceTabProps {
 }
 
 function AppearanceTab({ appearance, onUpdate }: AppearanceTabProps) {
-  const [newFeature, setNewFeature] = useState('');
-  const [newAccessory, setNewAccessory] = useState('');
+  const [newFeature, setNewFeature] = useState("");
+  const [newAccessory, setNewAccessory] = useState("");
 
   const updateField = (field: keyof TalentAppearance, value: any) => {
     onUpdate({ ...appearance, [field]: value });
   };
 
-  const updateNested = (field: 'hair' | 'eyes' | 'skin', subfield: string, value: string) => {
+  const updateNested = (
+    field: "hair" | "eyes" | "skin",
+    subfield: string,
+    value: string,
+  ) => {
     onUpdate({
       ...appearance,
       [field]: { ...appearance[field], [subfield]: value || undefined },
@@ -404,51 +457,65 @@ function AppearanceTab({ appearance, onUpdate }: AppearanceTabProps) {
       {/* Basic Attributes */}
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-[var(--color-text)] mb-2">Age</label>
+          <label className="block text-sm font-medium text-[var(--color-text)] mb-2">
+            Age
+          </label>
           <input
             type="text"
-            value={appearance.age || ''}
-            onChange={(e) => updateField('age', e.target.value || undefined)}
+            value={appearance.age || ""}
+            onChange={(e) => updateField("age", e.target.value || undefined)}
             placeholder="e.g., mid-20s, elderly"
             className="w-full h-10 px-4 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-3xl text-[var(--color-text)] placeholder:text-[var(--color-text-subtle)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-[var(--color-text)] mb-2">Gender</label>
+          <label className="block text-sm font-medium text-[var(--color-text)] mb-2">
+            Gender
+          </label>
           <input
             type="text"
-            value={appearance.gender || ''}
-            onChange={(e) => updateField('gender', e.target.value || undefined)}
+            value={appearance.gender || ""}
+            onChange={(e) => updateField("gender", e.target.value || undefined)}
             placeholder="e.g., female, male, non-binary"
             className="w-full h-10 px-4 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-3xl text-[var(--color-text)] placeholder:text-[var(--color-text-subtle)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-[var(--color-text)] mb-2">Ethnicity</label>
+          <label className="block text-sm font-medium text-[var(--color-text)] mb-2">
+            Ethnicity
+          </label>
           <input
             type="text"
-            value={appearance.ethnicity || ''}
-            onChange={(e) => updateField('ethnicity', e.target.value || undefined)}
+            value={appearance.ethnicity || ""}
+            onChange={(e) =>
+              updateField("ethnicity", e.target.value || undefined)
+            }
             placeholder="e.g., East Asian, Mediterranean"
             className="w-full h-10 px-4 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-3xl text-[var(--color-text)] placeholder:text-[var(--color-text-subtle)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-[var(--color-text)] mb-2">Body Type</label>
+          <label className="block text-sm font-medium text-[var(--color-text)] mb-2">
+            Body Type
+          </label>
           <input
             type="text"
-            value={appearance.bodyType || ''}
-            onChange={(e) => updateField('bodyType', e.target.value || undefined)}
+            value={appearance.bodyType || ""}
+            onChange={(e) =>
+              updateField("bodyType", e.target.value || undefined)
+            }
             placeholder="e.g., athletic, slender, muscular"
             className="w-full h-10 px-4 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-3xl text-[var(--color-text)] placeholder:text-[var(--color-text-subtle)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-[var(--color-text)] mb-2">Height</label>
+          <label className="block text-sm font-medium text-[var(--color-text)] mb-2">
+            Height
+          </label>
           <input
             type="text"
-            value={appearance.height || ''}
-            onChange={(e) => updateField('height', e.target.value || undefined)}
+            value={appearance.height || ""}
+            onChange={(e) => updateField("height", e.target.value || undefined)}
             placeholder="e.g., tall, average, petite"
             className="w-full h-10 px-4 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-3xl text-[var(--color-text)] placeholder:text-[var(--color-text-subtle)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all"
           />
@@ -463,31 +530,37 @@ function AppearanceTab({ appearance, onUpdate }: AppearanceTabProps) {
         </h4>
         <div className="grid grid-cols-3 gap-4">
           <div>
-            <label className="block text-xs text-[var(--color-text-muted)] mb-1.5">Color</label>
+            <label className="block text-xs text-[var(--color-text-muted)] mb-1.5">
+              Color
+            </label>
             <input
               type="text"
-              value={appearance.hair?.color || ''}
-              onChange={(e) => updateNested('hair', 'color', e.target.value)}
+              value={appearance.hair?.color || ""}
+              onChange={(e) => updateNested("hair", "color", e.target.value)}
               placeholder="e.g., dark brown"
               className="w-full h-10 px-4 bg-bg-subtle border border-border rounded-3xl text-text text-sm placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
             />
           </div>
           <div>
-            <label className="block text-xs text-[var(--color-text-muted)] mb-1.5">Length</label>
+            <label className="block text-xs text-[var(--color-text-muted)] mb-1.5">
+              Length
+            </label>
             <input
               type="text"
-              value={appearance.hair?.length || ''}
-              onChange={(e) => updateNested('hair', 'length', e.target.value)}
+              value={appearance.hair?.length || ""}
+              onChange={(e) => updateNested("hair", "length", e.target.value)}
               placeholder="e.g., shoulder-length"
               className="w-full h-10 px-4 bg-bg-subtle border border-border rounded-3xl text-text text-sm placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
             />
           </div>
           <div>
-            <label className="block text-xs text-[var(--color-text-muted)] mb-1.5">Style</label>
+            <label className="block text-xs text-[var(--color-text-muted)] mb-1.5">
+              Style
+            </label>
             <input
               type="text"
-              value={appearance.hair?.style || ''}
-              onChange={(e) => updateNested('hair', 'style', e.target.value)}
+              value={appearance.hair?.style || ""}
+              onChange={(e) => updateNested("hair", "style", e.target.value)}
               placeholder="e.g., wavy, straight"
               className="w-full h-10 px-4 bg-bg-subtle border border-border rounded-3xl text-text text-sm placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
             />
@@ -503,21 +576,25 @@ function AppearanceTab({ appearance, onUpdate }: AppearanceTabProps) {
         </h4>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs text-[var(--color-text-muted)] mb-1.5">Color</label>
+            <label className="block text-xs text-[var(--color-text-muted)] mb-1.5">
+              Color
+            </label>
             <input
               type="text"
-              value={appearance.eyes?.color || ''}
-              onChange={(e) => updateNested('eyes', 'color', e.target.value)}
+              value={appearance.eyes?.color || ""}
+              onChange={(e) => updateNested("eyes", "color", e.target.value)}
               placeholder="e.g., hazel, deep blue"
               className="w-full h-10 px-4 bg-bg-subtle border border-border rounded-3xl text-text text-sm placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
             />
           </div>
           <div>
-            <label className="block text-xs text-[var(--color-text-muted)] mb-1.5">Shape</label>
+            <label className="block text-xs text-[var(--color-text-muted)] mb-1.5">
+              Shape
+            </label>
             <input
               type="text"
-              value={appearance.eyes?.shape || ''}
-              onChange={(e) => updateNested('eyes', 'shape', e.target.value)}
+              value={appearance.eyes?.shape || ""}
+              onChange={(e) => updateNested("eyes", "shape", e.target.value)}
               placeholder="e.g., almond, round"
               className="w-full h-10 px-4 bg-bg-subtle border border-border rounded-3xl text-text text-sm placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
             />
@@ -533,21 +610,25 @@ function AppearanceTab({ appearance, onUpdate }: AppearanceTabProps) {
         </h4>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs text-[var(--color-text-muted)] mb-1.5">Tone</label>
+            <label className="block text-xs text-[var(--color-text-muted)] mb-1.5">
+              Tone
+            </label>
             <input
               type="text"
-              value={appearance.skin?.tone || ''}
-              onChange={(e) => updateNested('skin', 'tone', e.target.value)}
+              value={appearance.skin?.tone || ""}
+              onChange={(e) => updateNested("skin", "tone", e.target.value)}
               placeholder="e.g., olive, fair, dark"
               className="w-full h-10 px-4 bg-bg-subtle border border-border rounded-3xl text-text text-sm placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all"
             />
           </div>
           <div>
-            <label className="block text-xs text-[var(--color-text-muted)] mb-1.5">Texture</label>
+            <label className="block text-xs text-[var(--color-text-muted)] mb-1.5">
+              Texture
+            </label>
             <input
               type="text"
-              value={appearance.skin?.texture || ''}
-              onChange={(e) => updateNested('skin', 'texture', e.target.value)}
+              value={appearance.skin?.texture || ""}
+              onChange={(e) => updateNested("skin", "texture", e.target.value)}
               placeholder="e.g., smooth, freckled"
               className="w-full h-10 px-4 bg-bg-subtle border border-border rounded-3xl text-text text-sm placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all"
             />
@@ -557,11 +638,13 @@ function AppearanceTab({ appearance, onUpdate }: AppearanceTabProps) {
 
       {/* Clothing */}
       <div>
-        <label className="block text-sm font-medium text-[var(--color-text)] mb-2">Clothing</label>
+        <label className="block text-sm font-medium text-[var(--color-text)] mb-2">
+          Clothing
+        </label>
         <input
           type="text"
-          value={appearance.clothing || ''}
-          onChange={(e) => updateField('clothing', e.target.value || undefined)}
+          value={appearance.clothing || ""}
+          onChange={(e) => updateField("clothing", e.target.value || undefined)}
           placeholder="Describe typical clothing/outfit"
           className="w-full h-10 px-4 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-3xl text-[var(--color-text)] placeholder:text-[var(--color-text-subtle)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all"
         />
@@ -582,8 +665,10 @@ function AppearanceTab({ appearance, onUpdate }: AppearanceTabProps) {
               <button
                 onClick={() =>
                   updateField(
-                    'distinguishingFeatures',
-                    (appearance.distinguishingFeatures || []).filter((_, idx) => idx !== i)
+                    "distinguishingFeatures",
+                    (appearance.distinguishingFeatures || []).filter(
+                      (_, idx) => idx !== i,
+                    ),
                   )
                 }
                 className="hover:text-text hover:bg-primary rounded-full w-4 h-4 flex items-center justify-center transition-colors"
@@ -599,12 +684,12 @@ function AppearanceTab({ appearance, onUpdate }: AppearanceTabProps) {
             value={newFeature}
             onChange={(e) => setNewFeature(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' && newFeature.trim()) {
-                updateField('distinguishingFeatures', [
+              if (e.key === "Enter" && newFeature.trim()) {
+                updateField("distinguishingFeatures", [
                   ...(appearance.distinguishingFeatures || []),
                   newFeature.trim(),
                 ]);
-                setNewFeature('');
+                setNewFeature("");
               }
             }}
             placeholder="e.g., scar on left cheek"
@@ -613,11 +698,11 @@ function AppearanceTab({ appearance, onUpdate }: AppearanceTabProps) {
           <button
             onClick={() => {
               if (newFeature.trim()) {
-                updateField('distinguishingFeatures', [
+                updateField("distinguishingFeatures", [
                   ...(appearance.distinguishingFeatures || []),
                   newFeature.trim(),
                 ]);
-                setNewFeature('');
+                setNewFeature("");
               }
             }}
             className="px-4 py-2 bg-primary text-white rounded-3xl hover:bg-primary-hover transition-colors font-medium"
@@ -642,8 +727,10 @@ function AppearanceTab({ appearance, onUpdate }: AppearanceTabProps) {
               <button
                 onClick={() =>
                   updateField(
-                    'accessories',
-                    (appearance.accessories || []).filter((_, idx) => idx !== i)
+                    "accessories",
+                    (appearance.accessories || []).filter(
+                      (_, idx) => idx !== i,
+                    ),
                   )
                 }
                 className="hover:text-text hover:bg-cyan-200 rounded-full w-4 h-4 flex items-center justify-center transition-colors"
@@ -659,12 +746,12 @@ function AppearanceTab({ appearance, onUpdate }: AppearanceTabProps) {
             value={newAccessory}
             onChange={(e) => setNewAccessory(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' && newAccessory.trim()) {
-                updateField('accessories', [
+              if (e.key === "Enter" && newAccessory.trim()) {
+                updateField("accessories", [
                   ...(appearance.accessories || []),
                   newAccessory.trim(),
                 ]);
-                setNewAccessory('');
+                setNewAccessory("");
               }
             }}
             placeholder="e.g., silver necklace, glasses"
@@ -673,11 +760,11 @@ function AppearanceTab({ appearance, onUpdate }: AppearanceTabProps) {
           <button
             onClick={() => {
               if (newAccessory.trim()) {
-                updateField('accessories', [
+                updateField("accessories", [
                   ...(appearance.accessories || []),
                   newAccessory.trim(),
                 ]);
-                setNewAccessory('');
+                setNewAccessory("");
               }
             }}
             className="px-4 py-2 bg-cyan-500 text-white rounded-3xl hover:bg-cyan-600 transition-colors font-medium"
@@ -697,7 +784,7 @@ interface PersonalityTabProps {
 }
 
 function PersonalityTab({ personality, onUpdate }: PersonalityTabProps) {
-  const [newTrait, setNewTrait] = useState('');
+  const [newTrait, setNewTrait] = useState("");
 
   const updateField = (field: keyof TalentPersonality, value: any) => {
     onUpdate({ ...personality, [field]: value });
@@ -720,8 +807,8 @@ function PersonalityTab({ personality, onUpdate }: PersonalityTabProps) {
               <button
                 onClick={() =>
                   updateField(
-                    'traits',
-                    (personality.traits || []).filter((_, idx) => idx !== i)
+                    "traits",
+                    (personality.traits || []).filter((_, idx) => idx !== i),
                   )
                 }
                 className="hover:text-text hover:bg-purple-200 rounded-full w-4 h-4 flex items-center justify-center transition-colors"
@@ -737,9 +824,12 @@ function PersonalityTab({ personality, onUpdate }: PersonalityTabProps) {
             value={newTrait}
             onChange={(e) => setNewTrait(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' && newTrait.trim()) {
-                updateField('traits', [...(personality.traits || []), newTrait.trim()]);
-                setNewTrait('');
+              if (e.key === "Enter" && newTrait.trim()) {
+                updateField("traits", [
+                  ...(personality.traits || []),
+                  newTrait.trim(),
+                ]);
+                setNewTrait("");
               }
             }}
             placeholder="e.g., confident, introverted, curious"
@@ -748,8 +838,11 @@ function PersonalityTab({ personality, onUpdate }: PersonalityTabProps) {
           <button
             onClick={() => {
               if (newTrait.trim()) {
-                updateField('traits', [...(personality.traits || []), newTrait.trim()]);
-                setNewTrait('');
+                updateField("traits", [
+                  ...(personality.traits || []),
+                  newTrait.trim(),
+                ]);
+                setNewTrait("");
               }
             }}
             className="px-5 py-2.5 bg-purple-500 text-white rounded-3xl hover:bg-purple-600 font-medium transition-all"
@@ -766,8 +859,8 @@ function PersonalityTab({ personality, onUpdate }: PersonalityTabProps) {
         </label>
         <input
           type="text"
-          value={personality.mood || ''}
-          onChange={(e) => updateField('mood', e.target.value || undefined)}
+          value={personality.mood || ""}
+          onChange={(e) => updateField("mood", e.target.value || undefined)}
           placeholder="e.g., contemplative, joyful, melancholic"
           className="w-full h-10 px-4 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-3xl text-[var(--color-text)] placeholder:text-[var(--color-text-subtle)] focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all"
         />
@@ -780,8 +873,10 @@ function PersonalityTab({ personality, onUpdate }: PersonalityTabProps) {
         </label>
         <input
           type="text"
-          value={personality.expression || ''}
-          onChange={(e) => updateField('expression', e.target.value || undefined)}
+          value={personality.expression || ""}
+          onChange={(e) =>
+            updateField("expression", e.target.value || undefined)
+          }
           placeholder="e.g., warm smile, thoughtful frown, neutral"
           className="w-full h-10 px-4 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-3xl text-[var(--color-text)] placeholder:text-[var(--color-text-subtle)] focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all"
         />
@@ -794,8 +889,8 @@ function PersonalityTab({ personality, onUpdate }: PersonalityTabProps) {
         </label>
         <input
           type="text"
-          value={personality.posture || ''}
-          onChange={(e) => updateField('posture', e.target.value || undefined)}
+          value={personality.posture || ""}
+          onChange={(e) => updateField("posture", e.target.value || undefined)}
           placeholder="e.g., confident stance, relaxed, defensive"
           className="w-full h-10 px-4 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-3xl text-[var(--color-text)] placeholder:text-[var(--color-text-subtle)] focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all"
         />
@@ -821,16 +916,17 @@ function ReferenceImagesTab({
   onRemoveImage,
   onSetPrimary,
 }: ReferenceImagesTabProps) {
-  const [newUrl, setNewUrl] = useState('');
-  const [newCaption, setNewCaption] = useState('');
-  const [selectedImage, setSelectedImage] = useState<TalentReferenceImage | null>(null);
+  const [newUrl, setNewUrl] = useState("");
+  const [newCaption, setNewCaption] = useState("");
+  const [selectedImage, setSelectedImage] =
+    useState<TalentReferenceImage | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const handleAdd = () => {
     if (newUrl.trim()) {
       onAddImage(newUrl.trim(), newCaption.trim() || undefined);
-      setNewUrl('');
-      setNewCaption('');
+      setNewUrl("");
+      setNewCaption("");
     }
   };
 
@@ -848,10 +944,14 @@ function ReferenceImagesTab({
     <div className="space-y-6">
       {/* Add New Image */}
       <div className="p-4 bg-[var(--color-bg)] rounded-3xl border-2 border-dashed border-[var(--color-border)]">
-        <h4 className="text-sm font-medium text-text-primary mb-3">Add Reference Image</h4>
+        <h4 className="text-sm font-medium text-text-primary mb-3">
+          Add Reference Image
+        </h4>
         <div className="space-y-3">
           <div>
-            <label className="block text-xs text-text-secondary mb-1">Image URL</label>
+            <label className="block text-xs text-text-secondary mb-1">
+              Image URL
+            </label>
             <input
               type="url"
               value={newUrl}
@@ -861,7 +961,9 @@ function ReferenceImagesTab({
             />
           </div>
           <div>
-            <label className="block text-xs text-text-secondary mb-1">Caption (optional)</label>
+            <label className="block text-xs text-text-secondary mb-1">
+              Caption (optional)
+            </label>
             <input
               type="text"
               value={newCaption}
@@ -886,9 +988,12 @@ function ReferenceImagesTab({
           <div className="w-16 h-16 rounded-full bg-surface flex items-center justify-center mb-4">
             <ImageIcon className="w-8 h-8 text-text-muted" />
           </div>
-          <h3 className="text-base font-medium text-text-primary mb-1">No reference images yet</h3>
+          <h3 className="text-base font-medium text-text-primary mb-1">
+            No reference images yet
+          </h3>
           <p className="text-sm text-text-secondary max-w-xs">
-            Add images to help visualize this talent. The primary image will be featured in previews.
+            Add images to help visualize this talent. The primary image will be
+            featured in previews.
           </p>
         </div>
       ) : (
@@ -898,18 +1003,18 @@ function ReferenceImagesTab({
               key={image.id}
               className={`relative group rounded-3xl overflow-hidden bg-[var(--color-bg)] border ${
                 image.id === primaryImageId
-                  ? 'border-[var(--color-primary)]'
-                  : 'border-[var(--color-border)]'
+                  ? "border-[var(--color-primary)]"
+                  : "border-[var(--color-border)]"
               }`}
             >
               <div className="aspect-square">
                 <StorageImage
                   src={image.thumbnailUrl || image.url}
-                  alt={image.caption || 'Reference image'}
-                  className="w-full h-full object-cover"
+                  alt={image.caption || "Reference image"}
+                  className="w-full h-full object-cover object-top"
                 />
               </div>
-              
+
               {/* Primary badge */}
               {image.id === primaryImageId && (
                 <div className="absolute top-2 left-2 px-2 py-0.5 bg-[var(--color-primary)] text-white text-xs font-medium rounded-3xl shadow-lg z-10">
@@ -981,7 +1086,11 @@ interface PromptFragmentsTabProps {
   preview: string;
 }
 
-function PromptFragmentsTab({ promptFragments, onUpdate, preview }: PromptFragmentsTabProps) {
+function PromptFragmentsTab({
+  promptFragments,
+  onUpdate,
+  preview,
+}: PromptFragmentsTabProps) {
   const updateFragment = (key: keyof TalentPromptFragments, value: string) => {
     onUpdate({ ...promptFragments, [key]: value || undefined });
   };
@@ -989,8 +1098,9 @@ function PromptFragmentsTab({ promptFragments, onUpdate, preview }: PromptFragme
   return (
     <div className="space-y-6 max-w-3xl">
       <p className="text-sm text-[var(--color-text-muted)] leading-relaxed">
-        Define how this talent should be described in prompts. You can create provider-specific
-        fragments for optimal results with different AI models.
+        Define how this talent should be described in prompts. You can create
+        provider-specific fragments for optimal results with different AI
+        models.
       </p>
 
       {/* Default Fragment */}
@@ -1000,7 +1110,7 @@ function PromptFragmentsTab({ promptFragments, onUpdate, preview }: PromptFragme
         </label>
         <textarea
           value={promptFragments.default}
-          onChange={(e) => updateFragment('default', e.target.value)}
+          onChange={(e) => updateFragment("default", e.target.value)}
           placeholder="Write a description for this talent that will be inserted into prompts..."
           rows={4}
           className="w-full px-4 py-3 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-3xl text-[var(--color-text)] placeholder:text-[var(--color-text-subtle)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent resize-y min-h-[100px] transition-all"
@@ -1017,8 +1127,8 @@ function PromptFragmentsTab({ promptFragments, onUpdate, preview }: PromptFragme
             Midjourney
           </label>
           <textarea
-            value={promptFragments.midjourney || ''}
-            onChange={(e) => updateFragment('midjourney', e.target.value)}
+            value={promptFragments.midjourney || ""}
+            onChange={(e) => updateFragment("midjourney", e.target.value)}
             placeholder="Optimized for Midjourney..."
             rows={3}
             className="w-full px-3 py-2 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-3xl text-[var(--color-text)] placeholder:text-[var(--color-text-subtle)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent resize-none text-sm transition-all"
@@ -1029,8 +1139,8 @@ function PromptFragmentsTab({ promptFragments, onUpdate, preview }: PromptFragme
             DALL-E
           </label>
           <textarea
-            value={promptFragments.dalle || ''}
-            onChange={(e) => updateFragment('dalle', e.target.value)}
+            value={promptFragments.dalle || ""}
+            onChange={(e) => updateFragment("dalle", e.target.value)}
             placeholder="Optimized for DALL-E..."
             rows={3}
             className="w-full px-3 py-2 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-3xl text-[var(--color-text)] placeholder:text-[var(--color-text-subtle)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent resize-none text-sm transition-all"
@@ -1041,8 +1151,8 @@ function PromptFragmentsTab({ promptFragments, onUpdate, preview }: PromptFragme
             Flux
           </label>
           <textarea
-            value={promptFragments.flux || ''}
-            onChange={(e) => updateFragment('flux', e.target.value)}
+            value={promptFragments.flux || ""}
+            onChange={(e) => updateFragment("flux", e.target.value)}
             placeholder="Optimized for Flux..."
             rows={3}
             className="w-full px-3 py-2 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-3xl text-[var(--color-text)] placeholder:text-[var(--color-text-subtle)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent resize-none text-sm transition-all"
@@ -1053,8 +1163,8 @@ function PromptFragmentsTab({ promptFragments, onUpdate, preview }: PromptFragme
             Runway
           </label>
           <textarea
-            value={promptFragments.runway || ''}
-            onChange={(e) => updateFragment('runway', e.target.value)}
+            value={promptFragments.runway || ""}
+            onChange={(e) => updateFragment("runway", e.target.value)}
             placeholder="Optimized for Runway..."
             rows={3}
             className="w-full px-3 py-2 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-3xl text-[var(--color-text)] placeholder:text-[var(--color-text-subtle)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent resize-none text-sm transition-all"
@@ -1068,10 +1178,11 @@ function PromptFragmentsTab({ promptFragments, onUpdate, preview }: PromptFragme
           Auto-generated Preview
         </h4>
         <p className="text-xs text-[var(--color-text-subtle)] mb-3">
-          This preview is generated from the talent&apos;s attributes when no custom fragment is provided.
+          This preview is generated from the talent&apos;s attributes when no
+          custom fragment is provided.
         </p>
         <pre className="p-3 bg-[var(--color-bg)] rounded-3xl text-sm text-[var(--color-text-muted)] whitespace-pre-wrap font-mono leading-relaxed">
-          {preview || 'No preview available'}
+          {preview || "No preview available"}
         </pre>
       </div>
     </div>
@@ -1086,26 +1197,29 @@ interface ImageModalProps {
 }
 
 function ImageModal({ image, isOpen, onClose }: ImageModalProps) {
-  const [imageDimensions, setImageDimensions] = useState<{ width: number; height: number } | null>(null);
+  const [imageDimensions, setImageDimensions] = useState<{
+    width: number;
+    height: number;
+  } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
+      if (e.key === "Escape") {
         onClose();
       }
     };
 
     if (isOpen) {
-      document.addEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = 'hidden';
+      document.addEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = "hidden";
       setIsLoading(true);
       setImageDimensions(null);
     }
 
     return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = '';
+      document.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = "";
     };
   }, [isOpen, onClose]);
 
@@ -1139,15 +1253,15 @@ function ImageModal({ image, isOpen, onClose }: ImageModalProps) {
 
   // Get resolution label for display
   const getResolutionLabel = () => {
-    if (!imageDimensions) return '';
+    if (!imageDimensions) return "";
     const { width, height } = imageDimensions;
-    
+
     // Common resolution names
-    if (width >= 3840 || height >= 2160) return '4K';
-    if (width >= 2560 || height >= 1440) return '2K';
-    if (width >= 1920 || height >= 1080) return 'Full HD';
-    if (width >= 1280 || height >= 720) return 'HD';
-    return 'SD';
+    if (width >= 3840 || height >= 2160) return "4K";
+    if (width >= 2560 || height >= 1440) return "2K";
+    if (width >= 1920 || height >= 1080) return "Full HD";
+    if (width >= 1280 || height >= 720) return "HD";
+    return "SD";
   };
 
   return (
@@ -1167,7 +1281,8 @@ function ImageModal({ image, isOpen, onClose }: ImageModalProps) {
       {/* Resolution badge */}
       {imageDimensions && (
         <div className="absolute top-4 left-4 px-3 py-1.5 bg-white/10 backdrop-blur-sm rounded-full text-white text-xs font-medium z-10">
-          {imageDimensions.width} × {imageDimensions.height} ({getResolutionLabel()})
+          {imageDimensions.width} × {imageDimensions.height} (
+          {getResolutionLabel()})
         </div>
       )}
 
@@ -1182,16 +1297,27 @@ function ImageModal({ image, isOpen, onClose }: ImageModalProps) {
       <div
         className="flex items-center justify-center p-6"
         onClick={(e) => e.stopPropagation()}
-        style={displaySize.width ? { width: displaySize.width, height: displaySize.height } : undefined}
+        style={
+          displaySize.width
+            ? { width: displaySize.width, height: displaySize.height }
+            : undefined
+        }
       >
         <StorageImage
           src={image.url}
-          alt={image.caption || 'Reference image'}
-          className={`max-w-full max-h-full object-contain transition-opacity duration-200 ${isLoading ? 'opacity-0' : 'opacity-100'}`}
-          style={displaySize.width ? { width: displaySize.width, height: displaySize.height } : undefined}
+          alt={image.caption || "Reference image"}
+          className={`max-w-full max-h-full object-contain transition-opacity duration-200 ${isLoading ? "opacity-0" : "opacity-100"}`}
+          style={
+            displaySize.width
+              ? { width: displaySize.width, height: displaySize.height }
+              : undefined
+          }
           onLoad={(e) => {
             const img = e.currentTarget;
-            setImageDimensions({ width: img.naturalWidth, height: img.naturalHeight });
+            setImageDimensions({
+              width: img.naturalWidth,
+              height: img.naturalHeight,
+            });
             setIsLoading(false);
           }}
         />
@@ -1201,7 +1327,9 @@ function ImageModal({ image, isOpen, onClose }: ImageModalProps) {
       {(image.caption || imageDimensions) && (
         <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
           {image.caption && (
-            <p className="text-white text-center text-sm mb-1">{image.caption}</p>
+            <p className="text-white text-center text-sm mb-1">
+              {image.caption}
+            </p>
           )}
         </div>
       )}
