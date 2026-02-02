@@ -399,6 +399,8 @@ export function EnhancedShotTable({
 }: EnhancedShotTableProps) {
   const [selectedIds, setSelectedIds] = useState<Set<UUID>>(new Set());
   const [draggedId, setDraggedId] = useState<UUID | null>(null);
+  const [dragOverId, setDragOverId] = useState<UUID | null>(null);
+  const [, setIsDragging] = useState(false);
 
   // Selection handlers
   const toggleSelection = useCallback((id: UUID) => {
@@ -444,25 +446,69 @@ export function EnhancedShotTable({
     (e: React.DragEvent, shotId: UUID) => {
       if (!onReorder) return;
       setDraggedId(shotId);
+      setIsDragging(true);
       e.dataTransfer.effectAllowed = 'move';
     },
     [onReorder]
   );
 
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
+  const handleDragOver = useCallback(
+    (e: React.DragEvent, shotId: UUID) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      if (draggedId !== shotId) {
+        setDragOverId(shotId);
+      }
+    },
+    [draggedId]
+  );
+
+  const handleDragLeave = useCallback(() => {
+    setDragOverId(null);
   }, []);
 
   const handleDrop = useCallback(
-    (e: React.DragEvent, targetIndex: number) => {
+    (e: React.DragEvent, targetShot: Shot, targetIndex: number) => {
       e.preventDefault();
-      if (!onReorder || !draggedId) return;
-      onReorder(draggedId, targetIndex);
+      if (!onReorder || !draggedId || draggedId === targetShot.id) {
+        setDragOverId(null);
+        setDraggedId(null);
+        setIsDragging(false);
+        return;
+      }
+
+      // Find the index of the dragged shot
+      const draggedIndex = shots.findIndex((s) => s.id === draggedId);
+      if (draggedIndex === -1) {
+        setDragOverId(null);
+        setDraggedId(null);
+        setIsDragging(false);
+        return;
+      }
+
+      // Calculate new index based on drag direction
+      let newIndex: number;
+      if (draggedIndex < targetIndex) {
+        // Dragging down: insert after target
+        newIndex = targetIndex;
+      } else {
+        // Dragging up: insert before target
+        newIndex = targetIndex;
+      }
+
+      onReorder(draggedId, newIndex);
+      setDragOverId(null);
       setDraggedId(null);
+      setIsDragging(false);
     },
-    [onReorder, draggedId]
+    [onReorder, draggedId, shots]
   );
+
+  const handleDragEnd = useCallback(() => {
+    setDraggedId(null);
+    setDragOverId(null);
+    setIsDragging(false);
+  }, []);
 
   // Memoized selection state
   const allSelected = useMemo(
@@ -514,7 +560,9 @@ export function EnhancedShotTable({
           <tbody>
             {shots.map((shot, index) => {
               const isSelected = selectedIds.has(shot.id);
-              const isDragging = draggedId === shot.id;
+
+              const isDragOver = dragOverId === shot.id;
+              const isRowDragging = draggedId === shot.id;
 
               return (
                 <tr
@@ -522,13 +570,16 @@ export function EnhancedShotTable({
                   onClick={() => onSelect(shot.id)}
                   draggable={!!onReorder}
                   onDragStart={(e) => handleDragStart(e, shot.id)}
-                  onDragOver={handleDragOver}
-                  onDrop={(e) => handleDrop(e, index)}
+                  onDragOver={(e) => handleDragOver(e, shot.id)}
+                  onDragLeave={handleDragLeave}
+                  onDrop={(e) => handleDrop(e, shot, index)}
+                  onDragEnd={handleDragEnd}
                   className={`
                     border-t border-border cursor-pointer transition-colors
                     ${index % 2 === 0 ? 'bg-surface' : 'bg-bg-subtle'}
                     ${isSelected ? 'bg-primary/5' : 'hover:bg-surface-raised'}
-                    ${isDragging ? 'opacity-50' : ''}
+                    ${isRowDragging ? 'opacity-40' : ''}
+                    ${isDragOver ? 'border-t-2 border-primary bg-primary/5' : ''}
                   `}
                 >
                   {/* Checkbox */}
@@ -547,7 +598,7 @@ export function EnhancedShotTable({
                     onClick={(e) => e.stopPropagation()}
                   >
                     {onReorder && (
-                      <div className="cursor-grab active:cursor-grabbing text-text-secondary hover:text-text-primary">
+                      <div className="cursor-grab active:cursor-grabbing text-text-secondary hover:text-text-primary hover:bg-background rounded p-1 transition-colors">
                         <GripVertical className="w-4 h-4" />
                       </div>
                     )}
