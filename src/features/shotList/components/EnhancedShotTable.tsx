@@ -29,6 +29,7 @@ interface EnhancedShotTableProps {
   onCreateShot: (input: CreateShotInput) => void;
   onGenerate?: (id: UUID) => void;
   onReorder?: (shotId: UUID, newIndex: number) => void;
+  onSelectionChange?: (selectedIds: UUID[]) => void;
 }
 
 // Dropdown options
@@ -501,6 +502,7 @@ export function EnhancedShotTable({
   onCreateShot,
   onGenerate,
   onReorder,
+  onSelectionChange,
 }: EnhancedShotTableProps) {
   const [selectedIds, setSelectedIds] = useState<Set<UUID>>(new Set());
   const [draggedId, setDraggedId] = useState<UUID | null>(null);
@@ -617,22 +619,27 @@ export function EnhancedShotTable({
       } else {
         next.add(id);
       }
+      onSelectionChange?.(Array.from(next));
       return next;
     });
-  }, []);
+  }, [onSelectionChange]);
 
   const toggleAll = useCallback(() => {
     setSelectedIds((prev) => {
       if (prev.size === shots.length) {
+        onSelectionChange?.([]);
         return new Set();
       }
-      return new Set(shots.map((s) => s.id));
+      const allIds = new Set(shots.map((s) => s.id));
+      onSelectionChange?.(Array.from(allIds));
+      return allIds;
     });
-  }, [shots]);
+  }, [shots, onSelectionChange]);
 
   const clearSelection = useCallback(() => {
     setSelectedIds(new Set());
-  }, []);
+    onSelectionChange?.([]);
+  }, [onSelectionChange]);
 
   // Batch action handlers
   const handleDeleteSelected = useCallback(() => {

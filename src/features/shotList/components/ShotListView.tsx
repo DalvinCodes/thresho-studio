@@ -4,7 +4,7 @@
  */
 
 import { useState, useCallback } from 'react';
-import { Film, ClipboardList } from 'lucide-react';
+import { Film, ClipboardList, Sparkles } from 'lucide-react';
 import type { UUID } from '../../../core/types/common';
 import type { Shot, ShotStatus, ShotType, CreateShotInput } from '../../../core/types/shotList';
 import {
@@ -17,6 +17,7 @@ import {
 } from '../store';
 import { EnhancedShotTable } from './EnhancedShotTable';
 import { BatchCreateModal } from './BatchCreateModal';
+import { BatchGenerationPanel } from './BatchGenerationPanel';
 
 interface ShotListViewProps {
   shotListId: UUID;
@@ -49,6 +50,8 @@ export function ShotListView({ shotListId, onEditShot, onGenerateShot }: ShotLis
 
   const [searchQuery, setSearchQuery] = useState('');
   const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
+  const [isBatchGenerationOpen, setIsBatchGenerationOpen] = useState(false);
+  const [selectedShotIds, setSelectedShotIds] = useState<UUID[]>([]);
 
   // Handle search
   const handleSearch = useCallback((query: string) => {
@@ -124,6 +127,14 @@ export function ShotListView({ shotListId, onEditShot, onGenerateShot }: ShotLis
               className="px-4 py-2 border border-border text-text-primary rounded-3xl hover:bg-surface-raised transition-colors"
             >
               + Add Multiple
+            </button>
+            <button
+              onClick={() => setIsBatchGenerationOpen(true)}
+              disabled={selectedShotIds.length === 0}
+              className="flex items-center gap-2 px-4 py-2 border border-border text-text-primary rounded-3xl hover:bg-surface-raised transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Sparkles className="w-4 h-4" />
+              Generate Selected ({selectedShotIds.length})
             </button>
           </div>
         </div>
@@ -203,7 +214,7 @@ export function ShotListView({ shotListId, onEditShot, onGenerateShot }: ShotLis
 
       {/* Content */}
       <div className="flex-1 overflow-x-auto overflow-y-auto">
-        {viewMode === 'table' ? (
+            {viewMode === 'table' ? (
           <div className="min-w-[1200px]">
             <EnhancedShotTable
               shots={shots}
@@ -217,6 +228,7 @@ export function ShotListView({ shotListId, onEditShot, onGenerateShot }: ShotLis
               onCreateShot={createShot}
               onReorder={reorderShot}
               onGenerate={onGenerateShot}
+              onSelectionChange={setSelectedShotIds}
             />
           </div>
         ) : shots.length === 0 ? (
@@ -262,6 +274,19 @@ export function ShotListView({ shotListId, onEditShot, onGenerateShot }: ShotLis
           shotListId={shotListId}
           onClose={() => setIsBatchModalOpen(false)}
           onCreate={handleCreateMultipleShots}
+        />
+      )}
+
+      {/* Batch Generation Panel */}
+      {isBatchGenerationOpen && (
+        <BatchGenerationPanel
+          shots={shots}
+          selectedShotIds={selectedShotIds}
+          onClose={() => setIsBatchGenerationOpen(false)}
+          onGenerateBatch={(shotIds) => {
+            console.log('Batch generate:', shotIds);
+            shotIds.forEach((id) => onGenerateShot?.(id));
+          }}
         />
       )}
     </div>
