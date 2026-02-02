@@ -7,6 +7,7 @@ export const TopBar = () => {
   const location = useLocation();
   const currentPage = location.pathname === "/" ? "dashboard" : location.pathname.slice(1);
   const openCreateShotModal = useShotListStore((state) => state.openCreateShotModal);
+  const selectedShotListId = useShotListStore((state) => state.selectedShotListId);
 
   // Helper to get breadcrumbs based on page
   const getBreadcrumbs = () => {
@@ -65,8 +66,19 @@ export const TopBar = () => {
         {/* Primary Action Button (Context Aware) */}
         {location.pathname.startsWith("/shotlist") && (
           <button 
-            onClick={() => openCreateShotModal()}
-            className="flex items-center gap-2 px-3 py-1.5 bg-primary text-text-on-brand text-sm font-medium rounded-3xl hover:bg-primary-hover transition-colors"
+            onClick={() => {
+              if (!selectedShotListId) {
+                alert("Please select a shot list first");
+                return;
+              }
+              openCreateShotModal();
+            }}
+            className={`flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-3xl transition-colors ${
+              selectedShotListId
+                ? 'bg-primary text-text-on-brand hover:bg-primary-hover'
+                : 'bg-primary/50 text-text-on-brand/50 cursor-not-allowed'
+            }`}
+            title={selectedShotListId ? "Add new shot" : "Select a shot list first"}
           >
             <Plus className="w-4 h-4" />
             <span>New Shot</span>
