@@ -93,7 +93,7 @@ export class OpenRouterAdapter extends BaseAdapter {
       },
       {
         type: 'image' as ContentType,
-        models: ['black-forest-labs/flux-1.1-pro', 'google/gemini-2.5-flash-image-preview'],
+        models: ['black-forest-labs/flux-1.1-pro', 'google/gemini-3-flash-preview-preview'],
         supportsStreaming: false,
         supportsBatching: false,
         supportsAsyncJobs: false,

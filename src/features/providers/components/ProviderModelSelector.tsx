@@ -107,14 +107,13 @@ const MODEL_DISPLAY_NAMES: Record<string, string> = {
   'imagen-3.0-generate-001': 'Imagen 3 v1',
   'imagen-3.0-fast-generate-001': 'Imagen 3 Fast',
   // Gemini image (correct model names per API docs)
-  'gemini-2.5-flash-image': 'Gemini 2.5 Flash (Image)',
+  'gemini-3-flash-preview': 'Gemini 2.5 Flash (Image)',
   'gemini-3-pro-image-preview': 'Gemini 3 Pro (Image)',
   // Gemini text
   'gemini-3.0-pro-preview': 'Gemini 3.0 Pro',
   'gemini-3.0-flash-preview': 'Gemini 3.0 Flash',
   'gemini-2.5-pro-preview-06-05': 'Gemini 2.5 Pro',
-  'gemini-2.5-flash-preview-05-20': 'Gemini 2.5 Flash',
-  'gemini-2.5-flash-lite-preview-06-17': 'Gemini 2.5 Flash Lite',
+
   'gemini-2.0-flash': 'Gemini 2.0 Flash',
   'gemini-2.0-flash-lite': 'Gemini 2.0 Flash Lite',
   // Veo

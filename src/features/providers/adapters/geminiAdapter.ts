@@ -24,20 +24,16 @@ import type { ContentType } from '../../../core/types/common';
 
 // Text-focused models
 const TEXT_MODELS = [
-  'gemini-2.5-pro-preview-06-05',
-  'gemini-2.5-flash-preview-05-20',
-  'gemini-2.5-flash-lite-preview-06-17',
-  'gemini-2.0-flash',
-  'gemini-2.0-flash-lite',
+
   // Preview models
   'gemini-3.0-pro-preview',
   'gemini-3.0-flash-preview',
 ];
 
 // Image generation models (native image output)
-// Per docs: gemini-2.5-flash-image and gemini-3-pro-image-preview
+// Per docs: gemini-3-flash-preview and gemini-3-pro-image-preview
 const IMAGE_MODELS = [
-  'gemini-2.5-flash-image',
+  'gemini-3-flash-preview',
   'gemini-3-pro-image-preview',
 ];
 
@@ -99,7 +95,7 @@ export class GeminiAdapter extends BaseAdapter {
       throw this.createError('NO_CREDENTIALS', 'Gemini API key not configured', false);
     }
 
-    const model = request.model || 'gemini-2.5-flash-preview-05-20';
+    const model = request.model || 'gemini-3-flash-preview';
     const url = `${this.baseUrl}/models/${model}:generateContent?key=${this.credential!.apiKey}`;
 
     const response = await this.fetchWithRetry(url, {
@@ -153,7 +149,7 @@ export class GeminiAdapter extends BaseAdapter {
       throw this.createError('NO_CREDENTIALS', 'Gemini API key not configured', false);
     }
 
-    const model = request.model || 'gemini-2.5-flash-preview-05-20';
+    const model = request.model || 'gemini-3-flash-preview';
     const url = `${this.baseUrl}/models/${model}:streamGenerateContent?key=${this.credential!.apiKey}&alt=sse`;
 
     const response = await fetch(url, {
@@ -248,7 +244,7 @@ export class GeminiAdapter extends BaseAdapter {
    * Uses Gemini 2.5 Flash Image or Gemini 3 Pro Image Preview
    * 
    * API structure per docs:
-   * - Model names: gemini-2.5-flash-image, gemini-3-pro-image-preview
+   * - Model names: gemini-3-flash-preview, gemini-3-pro-image-preview
    * - Uses imageConfig inside generationConfig (not responseModalities)
    * - Supports aspectRatio and imageSize parameters
    */
@@ -258,7 +254,7 @@ export class GeminiAdapter extends BaseAdapter {
     }
 
     // Use appropriate image model
-    const model = request.model || 'gemini-2.5-flash-image';
+    const model = request.model || 'gemini-3-flash-preview';
     const url = `${this.baseUrl}/models/${model}:generateContent?key=${this.credential!.apiKey}`;
 
     // Map dimensions to aspect ratio
