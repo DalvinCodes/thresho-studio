@@ -176,7 +176,7 @@ function AboutSettings() {
         <div className="p-4">
           <p className="font-medium text-text-primary mb-1">Multi-Provider Support</p>
           <p className="text-sm text-text-secondary">
-            Connect to OpenAI, Anthropic, Google, Flux Pro, Runway, and more
+            Connect to Google Gemini, Imagen, and Veo
           </p>
         </div>
 

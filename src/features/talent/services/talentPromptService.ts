@@ -136,9 +136,6 @@ export function composeTalentPrompt(talent: TalentProfile, provider?: string): s
     if (providerKey === 'flux' && fragments.flux) {
       return fragments.flux;
     }
-    if (providerKey === 'runway' && fragments.runway) {
-      return fragments.runway;
-    }
   }
 
   // Use custom default fragment if provided

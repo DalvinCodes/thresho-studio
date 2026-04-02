@@ -70,7 +70,6 @@ export interface TalentPromptFragments {
   midjourney?: string;
   dalle?: string;
   flux?: string;
-  runway?: string;
 }
 
 /**

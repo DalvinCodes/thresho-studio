@@ -511,7 +511,7 @@ export function createGenerationRecord(
     requestId: request.id,
     status: error ? 'failed' : result ? 'completed' : 'pending',
     providerId: request.providerId || ('' as UUID),
-    providerType: request.providerType || 'openai',
+    providerType: request.providerType || 'gemini',
     model: request.model || 'default',
     type: request.type,
     promptTemplateId: request.promptTemplateId,

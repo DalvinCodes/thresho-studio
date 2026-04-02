@@ -41,11 +41,10 @@ Return ONLY valid JSON with these fields. Use null for any attribute you cannot 
 Return ONLY the JSON object, no explanation or markdown formatting.`;
 
 /** Preferred provider order for vision analysis */
-const VISION_PROVIDER_PREFERENCE = ['openai', 'anthropic', 'gemini'];
+const VISION_PROVIDER_PREFERENCE = ['gemini'];
 
 /**
  * Find an active provider with vision capability
- * Prefers openai > anthropic > gemini
  */
 export function findVisionProvider(): UUID | null {
   const state = useProviderStore.getState();
@@ -151,7 +150,7 @@ export async function analyzeHeadshotImage(imageUrl: string): Promise<VisionAnal
     return {
       success: false,
       attributes: {},
-      error: 'No vision-capable provider available. Please configure OpenAI, Anthropic, or Gemini.',
+      error: 'No vision-capable provider available. Please configure Gemini.',
     };
   }
 

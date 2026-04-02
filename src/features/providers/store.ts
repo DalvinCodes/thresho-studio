@@ -18,7 +18,6 @@ import type {
 } from '../../core/types/provider';
 import { createAdapter, providerMeta } from './adapters';
 import type { BaseAdapter } from './adapters';
-import type { OpenRouterAPIModel } from './adapters/openRouterAdapter';
 import {
   loadProvidersFromDb,
   saveProviderToDb,
@@ -33,9 +32,6 @@ interface ProviderStoreState {
   // Provider registry
   providers: Map<UUID, ProviderState>;
   activeAdapters: Map<UUID, BaseAdapter>;
-
-  // OpenRouter models cache
-  openRouterModels: Map<UUID, OpenRouterAPIModel[]>;
 
   // Selection
   defaultTextProvider: UUID | null;
@@ -69,10 +65,6 @@ interface ProviderStoreActions {
   // Status
   setProviderStatus: (providerId: UUID, status: ProviderStatus, error?: ProviderError) => void;
 
-  // OpenRouter specific
-  fetchOpenRouterModels: (providerId: UUID) => Promise<OpenRouterAPIModel[]>;
-  getOpenRouterModels: (providerId: UUID) => OpenRouterAPIModel[];
-
   // Bulk operations
   loadFromDatabase: () => Promise<void>;
   initializeDefaults: () => Promise<void>;
@@ -87,7 +79,6 @@ export const useProviderStore = create<ProviderStore>()(
         // Initial state
         providers: new Map(),
         activeAdapters: new Map(),
-        openRouterModels: new Map(),
         defaultTextProvider: null,
         defaultImageProvider: null,
         defaultVideoProvider: null,
@@ -386,38 +377,6 @@ export const useProviderStore = create<ProviderStore>()(
               if (error) p.lastError = error;
             }
           });
-        },
-
-        // Fetch OpenRouter models
-        fetchOpenRouterModels: async (providerId) => {
-          const adapter = get().activeAdapters.get(providerId);
-          if (!adapter || adapter.providerType !== 'openrouter') {
-            return [];
-          }
-
-          try {
-            // Dynamic import for OpenRouter adapter
-            const { OpenRouterAdapter } = await import('./adapters/openRouterAdapter');
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const openRouterAdapter = adapter as any;
-            if (!(openRouterAdapter instanceof OpenRouterAdapter)) {
-              return [];
-            }
-            const models = await openRouterAdapter.fetchAvailableModels();
-
-            set((s) => {
-              s.openRouterModels.set(providerId, models);
-            });
-
-            return models;
-          } catch {
-            return [];
-          }
-        },
-
-        // Get cached OpenRouter models
-        getOpenRouterModels: (providerId) => {
-          return get().openRouterModels.get(providerId) || [];
         },
 
         // Load from database

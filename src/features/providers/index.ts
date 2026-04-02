@@ -16,13 +16,9 @@ export {
 // Adapters
 export {
   BaseAdapter,
-  OpenAIAdapter,
-  AnthropicAdapter,
   GeminiAdapter,
   GeminiNanoAdapter,
-  FluxProAdapter,
   ImagenAdapter,
-  RunwayAdapter,
   VeoAdapter,
   createAdapter,
   getAdapterClass,

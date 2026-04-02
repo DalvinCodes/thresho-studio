@@ -1158,18 +1158,6 @@ function PromptFragmentsTab({
             className="w-full px-3 py-2 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-3xl text-[var(--color-text)] placeholder:text-[var(--color-text-subtle)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent resize-none text-sm transition-all"
           />
         </div>
-        <div>
-          <label className="block text-sm font-medium text-[var(--color-text)] mb-2">
-            Runway
-          </label>
-          <textarea
-            value={promptFragments.runway || ""}
-            onChange={(e) => updateFragment("runway", e.target.value)}
-            placeholder="Optimized for Runway..."
-            rows={3}
-            className="w-full px-3 py-2 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-3xl text-[var(--color-text)] placeholder:text-[var(--color-text-subtle)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent resize-none text-sm transition-all"
-          />
-        </div>
       </div>
 
       {/* Preview */}

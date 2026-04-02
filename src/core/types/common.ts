@@ -8,17 +8,10 @@ export type Timestamp = number; // Unix milliseconds
 
 // Provider and content types
 export type ProviderType =
-  | 'openai'      // GPT-4, DALL-E 3
-  | 'anthropic'   // Claude
-  | 'gemini'      // Google Gemini Pro/Ultra
+  | 'gemini'      // Google Gemini Pro/Flash
   | 'gemini-nano' // Chrome built-in AI
-  | 'kimi'        // Kimi K2.5 (Moonshot AI) - 256K context
-  | 'flux-pro'    // Black Forest Labs
-  | 'imagen'      // Google Imagen 3
-  | 'runway'      // Runway Gen-4
-  | 'veo'         // Google Veo 3
-  | 'kling'       // Kling AI
-  | 'openrouter'; // OpenRouter - unified API for multiple providers
+  | 'imagen'      // Google Imagen
+  | 'veo';        // Google Veo
 export type ContentType = 'text' | 'image' | 'video';
 export type AssetFormat = 'jpg' | 'jpeg' | 'png' | 'gif' | 'webp' | 'svg' | 'mp4' | 'webm' | 'mov' | 'txt' | 'md';
 
